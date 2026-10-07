@@ -1,0 +1,51 @@
+name: 🐛 Báo lỗi / Bug report
+description: Báo một lỗi để chúng tôi sửa
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn bạn đã báo lỗi! **Xóa cookie, proxy có mật khẩu và thông tin tài khoản** trước khi dán log.
+        Lỗ hổng bảo mật xin báo riêng theo [SECURITY.md](../blob/main/SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: Mô tả lỗi
+      description: Chuyện gì xảy ra, và bạn mong đợi điều gì?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Các bước tái hiện
+      placeholder: |
+        1. Tạo profile macOS có proxy socks5
+        2. Bấm Mở
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Phiên bản FoxProfile / commit
+      placeholder: "2.0.0 hoặc abc1234"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Hệ điều hành của máy
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Phiên bản Python
+      placeholder: "3.12.4"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log liên quan
+      description: Trích đoạn trong thư mục `logs/`
+      render: text
