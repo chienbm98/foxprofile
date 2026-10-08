@@ -143,14 +143,16 @@ async def run_browser(
 
     # Camoufox's own headless="virtual" starts Xvfb before it builds the launch
     # options and stops it only when the browser closes, so every failed launch
-    # left an Xvfb behind. Own the display here and stop it however we exit.
-    display = VirtualDisplay() if HEADLESS == "virtual" else None
+    # left an Xvfb behind. Own the display here and stop it however we exit; the
+    # record lets the launcher stop it if this process is killed instead.
+    display = None
     try:
-        if display:
-            xvfb.stop_recorded(profile_dir)  # left over if the last runner was killed
+        if HEADLESS == "virtual":
+            await asyncio.to_thread(xvfb.sweep_stale)
+            display = VirtualDisplay()
             launch_config["headless"] = False
             launch_config["virtual_display"] = display.get()
-            xvfb.record(profile_dir, display.proc.pid)
+            xvfb.record(display.proc.pid, launch_config["virtual_display"])
         async with AsyncCamoufox(**launch_config) as context:
             if not context.pages:
                 await context.new_page()
@@ -218,7 +220,7 @@ async def run_browser(
     finally:
         if display:
             display.kill()
-            xvfb.clear(profile_dir)
+            xvfb.clear()
 
 
 async def _async_main() -> int:

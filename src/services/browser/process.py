@@ -1,12 +1,9 @@
-import contextlib
 import os
 import pathlib
-import signal
 import subprocess
 import sys
 from collections.abc import Callable
 
-from ...core.config import DATA_DIR
 from ...core.logging import get_logger
 from ...models.profile import Profile
 from . import display
@@ -43,10 +40,6 @@ def spawn_browser(profile: Profile) -> subprocess.Popen:
         encoding="utf-8",
         errors="replace",
         bufsize=1,
-        # Own process group on POSIX, so stopping a profile can take down what
-        # the runner started (Xvfb, the Playwright driver, Firefox) even when
-        # the runner itself has to be killed.
-        start_new_session=os.name == "posix",
     )
 
 
@@ -66,20 +59,13 @@ def terminate(proc: subprocess.Popen, name: str, timeout: int = 5) -> None:
     except Exception as e:
         logger.exception("Error terminating browser %s: %s", name, e)
     finally:
-        cleanup(proc, name)
+        cleanup(proc)
 
 
-def cleanup(proc: subprocess.Popen, name: str) -> None:
-    """Stop what an exited runner left behind: its process group and its Xvfb.
-
-    Xvfb runs in its own session, so the process group does not cover it; the
-    runner records its PID in the profile directory instead.
-    """
-    if os.name != "posix" or proc.poll() is None:
-        return
-    with contextlib.suppress(ProcessLookupError, PermissionError):
-        os.killpg(proc.pid, signal.SIGKILL)
-    display.stop_recorded(os.path.join(os.getcwd(), DATA_DIR, name))
+def cleanup(proc: subprocess.Popen) -> None:
+    """Stop the Xvfb of a runner that exited without stopping it (killed, crashed)."""
+    if proc.poll() is not None:
+        display.stop_for_runner(proc.pid)
 
 
 def wait_for_exit(
@@ -94,5 +80,5 @@ def wait_for_exit(
         logger.exception("Wait error for profile %s: %s", name, e)
     finally:
         # A runner that died on its own (crash, OOM kill) never ran its cleanup.
-        cleanup(proc, name)
+        cleanup(proc)
         notify_stopped()

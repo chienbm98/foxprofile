@@ -1,62 +1,176 @@
-"""Track the Xvfb a profile's runner started, so it can be stopped from outside.
+"""Stop the Xvfb of a runner that could not stop it itself.
 
-Camoufox starts Xvfb in its own session (start_new_session), so killing the
-runner's process group does not reach it. The runner records the PID next to
-the profile's data; whoever sees the runner exit stops that Xvfb if it is
-still running.
+In virtual mode the runner starts Xvfb and stops it when it exits. A runner
+that is killed or crashes never gets there, and killing the runner does not
+reach Xvfb: Camoufox starts it in its own session. So the runner records which
+Xvfb it started, and whoever sees the runner gone stops it.
+
+A record is keyed by the runner's PID and pins both processes by their start
+time, so a relaunch of the same profile, or a PID the kernel has handed to
+another process (another profile's Xvfb included), is never touched. Records
+live in a private per-user directory under the system temp dir, which, like
+the processes they describe, does not outlive a reboot.
+
+Virtual mode is Linux-only, and so is this (it reads /proc); elsewhere every
+function is a no-op.
 """
 
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import pathlib
 import signal
+import stat
+import tempfile
 import time
+from typing import Any
 
-PID_FILE = "xvfb.pid"
-
-
-def pid_path(profile_dir: str) -> pathlib.Path:
-    return pathlib.Path(profile_dir) / PID_FILE
+_PROC = pathlib.Path("/proc")
 
 
-def record(profile_dir: str, pid: int) -> None:
-    path = pid_path(profile_dir)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(str(pid), encoding="utf-8")
-
-
-def clear(profile_dir: str) -> None:
-    with contextlib.suppress(OSError):
-        pid_path(profile_dir).unlink()
-
-
-def _is_xvfb(pid: int) -> bool:
-    # The PID may have been reused since it was recorded; only ever stop an Xvfb.
+def _run_dir() -> pathlib.Path | None:
+    """The private record directory, or None where records are not supported."""
+    if os.name != "posix" or not _PROC.is_dir():
+        return None
+    path = pathlib.Path(tempfile.gettempdir()) / f"foxprofile-{os.getuid()}"
     try:
-        return pathlib.Path(f"/proc/{pid}/comm").read_text().strip() == "Xvfb"
+        path.mkdir(mode=0o700, exist_ok=True)
+        st = path.lstat()
+    except OSError:
+        return None
+    # The temp dir is shared: only trust a directory that is really ours.
+    if (
+        not stat.S_ISDIR(st.st_mode)
+        or st.st_uid != os.getuid()
+        or st.st_mode & (stat.S_IRWXG | stat.S_IRWXO)
+    ):
+        return None
+    return path
+
+
+def _proc_stat(pid: int) -> tuple[str, int] | None:
+    """(state, start time in clock ticks after boot) of a process, if it exists."""
+    try:
+        data = (_PROC / str(pid) / "stat").read_text()
+        # comm (field 2) is in parentheses and may contain spaces or ")".
+        fields = data[data.rindex(")") + 2 :].split()
+        return fields[0], int(fields[19])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _running(pid: int, start: int) -> bool:
+    """Whether the process recorded as (pid, start) still runs (a zombie does not)."""
+    info = _proc_stat(pid)
+    return info is not None and info[1] == start and info[0] != "Z"
+
+
+def _is_recorded_xvfb(pid: int, start: int) -> bool:
+    if not _running(pid, start):
+        return False
+    try:
+        return (_PROC / str(pid) / "comm").read_text().strip() == "Xvfb"
     except OSError:
         return False
 
 
-def stop_recorded(profile_dir: str, grace: float = 2.0) -> bool:
-    """Stop the Xvfb recorded for this profile, if it is still running."""
-    path = pid_path(profile_dir)
+def record(xvfb_pid: int, display: str) -> None:
+    """Record the Xvfb this runner started, before anything can kill the runner."""
+    run_dir = _run_dir()
+    runner = _proc_stat(os.getpid())
+    xvfb = _proc_stat(xvfb_pid)
+    if run_dir is None or runner is None or xvfb is None:
+        return
+    data = {
+        "runner": [os.getpid(), runner[1]],
+        "xvfb": [xvfb_pid, xvfb[1]],
+        "display": int(display.lstrip(":")),
+    }
+    tmp = run_dir / f".{os.getpid()}.tmp"
+    with contextlib.suppress(OSError):
+        tmp.write_text(json.dumps(data), encoding="utf-8")
+        os.replace(tmp, run_dir / f"{os.getpid()}.json")
+
+
+def clear() -> None:
+    """Drop this runner's record once it has stopped its Xvfb itself."""
+    run_dir = _run_dir()
+    if run_dir is not None:
+        with contextlib.suppress(OSError):
+            (run_dir / f"{os.getpid()}.json").unlink()
+
+
+def _load(path: pathlib.Path) -> dict[str, Any] | None:
     try:
-        pid = int(path.read_text(encoding="utf-8").strip())
-    except (OSError, ValueError):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        runner_pid, runner_start = (int(v) for v in data["runner"])
+        xvfb_pid, xvfb_start = (int(v) for v in data["xvfb"])
+        return {
+            "runner": (runner_pid, runner_start),
+            "xvfb": (xvfb_pid, xvfb_start),
+            "display": int(data["display"]),
+        }
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
+
+
+def _stop(rec: dict[str, Any], grace: float) -> bool:
+    pid, start = rec["xvfb"]
+    if not _is_recorded_xvfb(pid, start):
         return False
-    stopped = False
-    if os.name == "posix" and _is_xvfb(pid):
-        # SIGTERM first: Xvfb then removes its own /tmp/.X<n>-lock and socket.
-        with contextlib.suppress(ProcessLookupError, PermissionError):
-            os.kill(pid, signal.SIGTERM)
-            deadline = time.monotonic() + grace
-            while _is_xvfb(pid) and time.monotonic() < deadline:
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        # SIGTERM first: Xvfb then removes its own lock file and socket.
+        os.kill(pid, signal.SIGTERM)
+        deadline = time.monotonic() + grace
+        while _running(pid, start) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        if _running(pid, start):
+            os.kill(pid, signal.SIGKILL)
+            deadline = time.monotonic() + 1
+            while _running(pid, start) and time.monotonic() < deadline:
                 time.sleep(0.05)
-            if _is_xvfb(pid):
-                os.kill(pid, signal.SIGKILL)
-            stopped = True
-    clear(profile_dir)
+            if not _running(pid, start):
+                # A killed Xvfb leaves these; stranded ones push every later
+                # display number up.
+                for leftover in (
+                    f"/tmp/.X{rec['display']}-lock",
+                    f"/tmp/.X11-unix/X{rec['display']}",
+                ):
+                    with contextlib.suppress(OSError):
+                        os.remove(leftover)
+    return True
+
+
+def stop_for_runner(runner_pid: int, grace: float = 2.0) -> bool:
+    """Stop the Xvfb recorded by a runner that has exited. True if one was stopped."""
+    run_dir = _run_dir()
+    if run_dir is None:
+        return False
+    path = run_dir / f"{runner_pid}.json"
+    rec = _load(path)
+    if rec is None or _running(*rec["runner"]):
+        # No record (the runner cleaned up), or the PID is already a new runner.
+        return False
+    stopped = _stop(rec, grace)
+    with contextlib.suppress(OSError):
+        path.unlink()
+    return stopped
+
+
+def sweep_stale(grace: float = 2.0) -> int:
+    """Stop the Xvfbs of runners that are gone (e.g. killed with the whole app)."""
+    run_dir = _run_dir()
+    if run_dir is None:
+        return 0
+    stopped = 0
+    for path in run_dir.glob("*.json"):
+        rec = _load(path)
+        if rec is not None and _running(*rec["runner"]):
+            continue
+        if rec is not None and _stop(rec, grace):
+            stopped += 1
+        with contextlib.suppress(OSError):
+            path.unlink()
     return stopped
