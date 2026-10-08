@@ -45,6 +45,7 @@ FoxProfile là ứng dụng desktop quản lý profile cho [Camoufox](https://gi
 ## Tính năng
 
 - **Vân tay cố định cho từng profile.** Lần mở đầu tiên sinh ra một thiết bị (màn hình, GPU, số nhân CPU, font, nhiễu canvas/audio) và lưu lại; các lần sau mở lại đúng thiết bị đó. Có thể chủ động đổi sang thiết bị mới.
+- **Giữ phiên làm việc.** Lịch sử, cookie và đăng nhập nằm trong thư mục của profile; các tab đang mở được mở lại ở lần khởi động sau.
 - **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, có nút kiểm tra proxy.
 - **Múi giờ và ngôn ngữ** tự khớp theo IP hoặc đặt cố định cho từng profile. Nút **Kiểm tra IP** đối chiếu IP ra với Cloudflare, ipinfo, ip-api và cảnh báo khi lệch quốc gia/múi giờ hoặc IP bị gắn datacenter.
 - **Xuất/nhập cookie** dạng JSON Cookie-Editor / EditThisCookie (GoLogin, GPM, Multilogin, extension Cookie-Editor) và `cookies.txt` Netscape (yt-dlp, curl, wget).
@@ -180,6 +181,7 @@ Mọi cấu hình đều không bắt buộc. Muốn đổi thì sao chép `.env
 | `FOXPROFILE_PROXY_TIMEOUT` | `10` | Thời gian chờ khi kiểm tra proxy (giây) |
 | `FOXPROFILE_LAUNCH_TIMEOUT` | `90` | Thời gian API chờ trình duyệt mở xong (giây) |
 | `FOXPROFILE_HEADLESS` | `false` (`true` ở chế độ server) | Chạy trình duyệt ẩn: `true`, `false` hoặc `virtual` (Linux + Xvfb) |
+| `FOXPROFILE_RESTORE_TABS` | `true` | Mở lại các tab của lần chạy trước |
 | `FOXPROFILE_API_TOKEN` | *(trống)* | Token cho API, web panel và MCP. Bắt buộc khi API nghe ngoài `127.0.0.1` |
 | `FOXPROFILE_API_HOST` | `127.0.0.1` | Địa chỉ API |
 | `FOXPROFILE_API_PORT` | `8000` | Cổng API |
@@ -194,6 +196,7 @@ Mọi cấu hình đều không bắt buộc. Muốn đổi thì sao chép `.env
 profiles.json                                  danh sách profile (tên, proxy, hệ điều hành)
 camoufox_data/<tên-profile>/                   dữ liệu trình duyệt: cookie, lịch sử, localStorage
 camoufox_data/<tên-profile>/fingerprint.json   vân tay thiết bị của profile
+camoufox_data/<tên-profile>/tabs.json          các tab sẽ được mở lại
 logs/foxprofile_YYYYMMDD.log                   log theo ngày
 ```
 

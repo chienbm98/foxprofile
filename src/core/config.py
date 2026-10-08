@@ -40,6 +40,9 @@ def _headless(value: str) -> bool | str:
 # Browsers open hidden when true; server mode turns this on by default.
 HEADLESS = _headless(_env("HEADLESS", "false"))
 
+# Reopen the tabs a profile had open when it was last stopped.
+RESTORE_TABS = _env("RESTORE_TABS", "true").strip().lower() in ("1", "true", "yes")
+
 # Shared secret for the REST API, the web panel and the MCP server. Required
 # whenever the API listens on anything other than the loopback interface.
 API_TOKEN = _env("API_TOKEN", "")

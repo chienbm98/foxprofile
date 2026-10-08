@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 import signal
 import sys
@@ -10,12 +11,16 @@ sys.path.insert(
 
 from camoufox.async_api import AsyncCamoufox
 
-from src.core.config import DATA_DIR, HEADLESS
-from src.services.browser import control
+from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
+from src.services.browser import control, session
 from src.services.browser.fingerprint import load_or_create
 from src.utils.proxy_parser import parse_proxy
 
 _shutdown = asyncio.Event()
+
+# How often the open tabs are snapshotted. The browser is stopped by killing
+# this process, so whatever was saved last is what the next launch reopens.
+TAB_SNAPSHOT_SECONDS = 2.0
 
 
 def _configure_stdio() -> None:
@@ -48,6 +53,48 @@ def _setup_signals(loop: asyncio.AbstractEventLoop) -> None:
             loop.add_signal_handler(sig, _shutdown.set)
     except NotImplementedError:
         pass
+
+
+def _open_urls(context: object) -> list[str]:
+    return [p.url for p in context.pages if not p.is_closed()]
+
+
+async def restore_tabs(context: object, urls: list[str]) -> int:
+    """Reopen saved tabs: the first in the existing blank tab, the rest in new ones.
+
+    Waits only for navigation to commit, so a slow site does not hold up the
+    launch; a tab that fails to load stays open on whatever it reached.
+    """
+    if not urls:
+        return 0
+    first = context.pages[0] if context.pages else await context.new_page()
+    pages = [first] + [await context.new_page() for _ in urls[1:]]
+
+    async def go(page: object, url: str) -> None:
+        try:
+            await page.goto(url, wait_until="commit", timeout=15_000)
+        except Exception as e:
+            _safe_print(f"Could not restore tab {url}: {_compact_error(e, 120)}")
+
+    await asyncio.gather(*(go(p, u) for p, u in zip(pages, urls, strict=True)))
+    await pages[0].bring_to_front()
+    return len(urls)
+
+
+async def snapshot_tabs(context: object, profile_dir: str, stop: asyncio.Event) -> None:
+    """Save the open tabs whenever they change, until `stop` is set."""
+    last: list[str] = []
+    while not stop.is_set():
+        # asyncio.TimeoutError, not the builtin: they only became one in 3.11.
+        with contextlib.suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(stop.wait(), timeout=TAB_SNAPSHOT_SECONDS)
+        if stop.is_set():
+            # The last tab closing ends the session; keep the previous snapshot
+            # instead of saving the now-empty window.
+            return
+        urls = session.restorable(_open_urls(context))
+        if urls and urls != last and session.save(profile_dir, urls):
+            last = urls
 
 
 def geo_overrides(timezone: str, locale: str) -> dict:
@@ -96,6 +143,10 @@ async def run_browser(
         async with AsyncCamoufox(**launch_config) as context:
             if not context.pages:
                 await context.new_page()
+            if RESTORE_TABS:
+                restored = await restore_tabs(context, session.load(profile_dir))
+                if restored:
+                    _safe_print(f"Restored {restored} tab(s)")
 
             close_event = asyncio.Event()
 
@@ -118,6 +169,11 @@ async def run_browser(
             _safe_print(f"CONTROL:{port}:{token}")
             _safe_print("BROWSER_STARTED")
 
+            snapshot_task = (
+                asyncio.create_task(snapshot_tabs(context, profile_dir, close_event))
+                if RESTORE_TABS
+                else None
+            )
             close_task = asyncio.create_task(close_event.wait())
             shutdown_task = asyncio.create_task(_shutdown.wait())
 
@@ -128,6 +184,11 @@ async def run_browser(
 
             if close_task in done:
                 _safe_print("BROWSER_CLOSED")
+            elif RESTORE_TABS:
+                # Graceful shutdown (signal): the tabs are still open, save them.
+                session.save(profile_dir, _open_urls(context))
+            if snapshot_task:
+                snapshot_task.cancel()
             await control_runner.cleanup()
 
             for task in pending:

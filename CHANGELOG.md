@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Thêm
+- Mở lại các tab đang mở khi profile được dừng (lưu vào `camoufox_data/<profile>/tabs.json` mỗi 2 giây khi tab thay đổi, chỉ `http`/`https`, tối đa 30 tab). Tắt bằng `FOXPROFILE_RESTORE_TABS=false`.
+
 ## [2.2.0] - 2026-10-08
 
 ### Thêm

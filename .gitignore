@@ -183,3 +183,4 @@ logs/
 # Tooling artefacts
 uv.lock
 e2e-output/
+.omc/
