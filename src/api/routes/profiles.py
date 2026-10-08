@@ -11,7 +11,13 @@ from ...core.config import DATA_DIR
 from ...core.logging import get_logger
 from ...services.browser import cookies, fingerprint
 from ...services.browser.launcher import ProfileBusyError
-from ...utils.validation import validate_profile_name, validate_proxy_format
+from ...services.proxy.geo_check import check_geo
+from ...utils.validation import (
+    validate_locale,
+    validate_profile_name,
+    validate_proxy_format,
+    validate_timezone,
+)
 from ..dependencies import get_browser_launcher, get_event_bus, get_profile_manager
 from ..helpers import build_profile_response, require_profile
 from ..schemas.common import ErrorResponse, SuccessResponse
@@ -29,6 +35,7 @@ from ..schemas.profiles import (
     ProfileResponse,
     ProfileUpdate,
 )
+from ..schemas.proxy import GeoCheckResponse
 
 if TYPE_CHECKING:
     from ...core.events import EventBus
@@ -47,6 +54,13 @@ def _require_os(os_type: str) -> None:
             status_code=400,
             detail=f"os_type must be one of: {', '.join(_OS_TYPES)}",
         )
+
+
+def _require_geo(timezone: str | None, locale: str | None) -> None:
+    for validate, value in ((validate_timezone, timezone), (validate_locale, locale)):
+        valid, msg = validate(value or "")
+        if not valid:
+            raise HTTPException(status_code=400, detail=msg)
 
 
 @router.get("", response_model=ProfileListResponse)
@@ -74,13 +88,16 @@ def create_profile(
     if not valid:
         raise HTTPException(status_code=400, detail=msg)
     _require_os(body.os_type)
+    _require_geo(body.timezone, body.locale)
 
     if body.proxy:
         valid, msg = validate_proxy_format(body.proxy)
         if not valid:
             raise HTTPException(status_code=400, detail=msg)
 
-    if not pm.add_profile(body.name, body.proxy or "", body.os_type):
+    if not pm.add_profile(
+        body.name, body.proxy or "", body.os_type, body.timezone or None, body.locale or None
+    ):
         raise HTTPException(status_code=409, detail="Profile already exists")
 
     logger.info("API created profile: %s", body.name)
@@ -121,6 +138,8 @@ def update_profile(
     new_name = supplied.get("name", name)
     new_proxy = supplied.get("proxy", profile.proxy)
     new_os = supplied.get("os_type", profile.os_type)
+    new_timezone = supplied.get("timezone", profile.timezone)
+    new_locale = supplied.get("locale", profile.locale)
 
     if "name" in supplied:
         valid, msg = validate_profile_name(new_name)
@@ -134,13 +153,16 @@ def update_profile(
 
     if "os_type" in supplied:
         _require_os(new_os)
+    _require_geo(supplied.get("timezone"), supplied.get("locale"))
 
     if "proxy" in supplied and new_proxy:
         valid, msg = validate_proxy_format(new_proxy)
         if not valid:
             raise HTTPException(status_code=400, detail=msg)
 
-    if not pm.update_profile(name, new_name, new_proxy or "", new_os):
+    if not pm.update_profile(
+        name, new_name, new_proxy or "", new_os, new_timezone or None, new_locale or None
+    ):
         raise HTTPException(status_code=409, detail="Update failed (name conflict?)")
 
     logger.info("API updated profile: %s -> %s", name, new_name)
@@ -327,3 +349,21 @@ def reset_fingerprint(
     removed = fingerprint.reset(os.path.join(DATA_DIR, name))
     logger.info("API reset fingerprint for %s (existed=%s)", name, removed)
     return SuccessResponse(message=f"Fingerprint reset for '{name}'")
+
+
+@router.get(
+    "/{name}/ip-check",
+    response_model=GeoCheckResponse,
+    responses={404: {"model": ErrorResponse}},
+)
+def check_profile_ip(
+    name: str,
+    pm: IProfileManager = Depends(get_profile_manager),
+) -> GeoCheckResponse:
+    """Where GeoIP sources place the profile's exit IP vs. the timezone/locale it presents.
+
+    Goes out through the profile's proxy to Cloudflare, ipinfo and ip-api (~10s).
+    """
+    require_profile(name, pm)
+    profile = pm.profiles[name]
+    return GeoCheckResponse.from_result(check_geo(profile.proxy, profile.timezone, profile.locale))

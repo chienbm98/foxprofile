@@ -135,9 +135,16 @@ async def create_profile(
     name: str,
     os_type: Literal["windows", "macos", "linux"] = "windows",
     proxy: str | None = None,
+    timezone: str | None = None,
+    locale: str | None = None,
 ) -> dict:
-    """Create a profile. proxy format: [scheme://][user:pass@]host:port (http, https, socks4, socks5)."""
-    return await _arequest("POST", "/profiles", {"name": name, "os_type": os_type, "proxy": proxy})
+    """Create a profile. proxy format: [scheme://][user:pass@]host:port (http, https, socks4, socks5).
+    timezone (IANA, e.g. Asia/Ho_Chi_Minh) and locale (e.g. vi-VN) default to following the proxy's IP."""
+    return await _arequest(
+        "POST",
+        "/profiles",
+        {"name": name, "os_type": os_type, "proxy": proxy, "timezone": timezone, "locale": locale},
+    )
 
 
 @mcp.tool()
@@ -146,9 +153,15 @@ async def update_profile(
     new_name: str | None = None,
     proxy: str | None = None,
     os_type: Literal["windows", "macos", "linux"] | None = None,
+    timezone: str | None = None,
+    locale: str | None = None,
 ) -> dict:
-    """Rename a profile or change its proxy / OS. Changing the OS generates a new fingerprint."""
+    """Rename a profile or change its proxy / OS / timezone / locale.
+    Changing the OS generates a new fingerprint. Pass timezone="" or locale="" to follow the IP again."""
     body = {k: v for k, v in {"name": new_name, "proxy": proxy, "os_type": os_type}.items() if v}
+    body.update(
+        {k: v for k, v in {"timezone": timezone, "locale": locale}.items() if v is not None}
+    )
     return await _arequest("PATCH", f"/profiles/{_quote(name)}", body)
 
 
@@ -201,6 +214,13 @@ async def reset_fingerprint(name: str) -> dict:
 async def check_proxy(proxy: str) -> dict:
     """Test a proxy and report the exit IP."""
     return await _arequest("POST", "/proxy/check", {"proxy": proxy})
+
+
+@mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True))
+async def check_profile_ip(name: str) -> dict:
+    """Check where GeoIP services (Cloudflare, ipinfo, ip-api) place the profile's exit IP and
+    warn when they disagree with the timezone/locale the browser presents, or flag a datacenter IP."""
+    return await _arequest("GET", f"/profiles/{_quote(name)}/ip-check")
 
 
 # --- Page control -----------------------------------------------------------

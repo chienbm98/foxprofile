@@ -13,7 +13,7 @@ FoxProfile là ứng dụng desktop quản lý profile cho [Camoufox](https://gi
 ## Tính năng
 
 - **Vân tay cố định cho từng profile.** Lần mở đầu tiên sinh ra một thiết bị (màn hình, GPU, số nhân CPU, font, nhiễu canvas/audio) và lưu lại; các lần sau mở lại đúng thiết bị đó. Có thể chủ động đổi sang thiết bị mới.
-- **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, có nút kiểm tra proxy. Múi giờ và ngôn ngữ tự khớp theo IP.
+- **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, có nút kiểm tra proxy. Múi giờ và ngôn ngữ tự khớp theo IP, hoặc đặt cố định cho từng profile; nút **Kiểm tra IP** đối chiếu IP ra với Cloudflare, ipinfo, ip-api và cảnh báo khi lệch quốc gia/múi giờ hoặc IP bị gắn datacenter.
 - **Xuất/nhập cookie**
   - JSON theo định dạng Cookie-Editor / EditThisCookie: dùng được với GoLogin, GPM, Multilogin và extension Cookie-Editor.
   - `cookies.txt` (Netscape): dùng được với yt-dlp, curl, wget.
@@ -108,7 +108,7 @@ Sau đó chỉ cần nhắn AI, ví dụ: *"Mở profile tiktok-us-02, vào tikt
 | Nhóm | Tool |
 | --- | --- |
 | Profile | `list_profiles`, `get_profile`, `create_profile`, `update_profile`, `launch_profile`, `stop_profile`, `running_profiles` |
-| Cookie & vân tay | `export_cookies`, `import_cookies`, `get_fingerprint`, `reset_fingerprint`, `check_proxy` |
+| Cookie & vân tay | `export_cookies`, `import_cookies`, `get_fingerprint`, `reset_fingerprint`, `check_proxy`, `check_profile_ip` |
 | Trang | `browser_navigate`, `browser_back`, `browser_snapshot`, `browser_get_text`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate` |
 | Tab | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
 
@@ -170,6 +170,8 @@ Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang ch
 | `POST` | `/browser/{name}/launch` | Mở trình duyệt, chờ đến khi mở xong hoặc lỗi |
 | `POST` | `/browser/{name}/stop` | Đóng trình duyệt |
 | `POST` | `/proxy/check` | Kiểm tra proxy |
+| `GET` | `/profiles/{name}/ip-check` | Kiểm tra IP ra của profile: quốc gia, múi giờ theo Cloudflare/ipinfo/ip-api, cảnh báo lệch |
+| `POST` | `/proxy/geo-check` | Như trên cho tổ hợp `{proxy, timezone, locale}` chưa lưu |
 | `POST` | `/browser/{name}/page/navigate` | Mở URL trong tab đang chọn |
 | `GET` | `/browser/{name}/page/snapshot` | Cây accessibility của trang (để chọn selector) |
 | `POST` | `/browser/{name}/page/click` · `type` · `press` · `wait` | Click, gõ, bấm phím, chờ phần tử (selector Playwright) |

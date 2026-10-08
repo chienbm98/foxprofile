@@ -94,6 +94,11 @@ pre.code { background: #121216; border: 1px solid var(--border); border-radius: 
 .where-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
 .note { color: var(--warn); font-size: 12px; margin-top: 8px; }
 .modal.wide { width: min(720px, 100%); }
+.modal .btns { display: flex; gap: 8px; }
+.modal .geo { font-size: 12.5px; line-height: 1.5; margin-top: 10px; word-break: break-word; }
+.modal .geo .dim { color: var(--dim); }
+.modal .geo .warn { color: var(--warn); }
+.modal .geo .ok { color: var(--ok); }
 .toast { position: fixed; right: 20px; bottom: 20px; background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 10px; max-width: 420px; z-index: 40; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
 .toast.error { border-left-color: var(--err); }
 .login { min-height: 100vh; display: grid; place-items: center; }
@@ -209,6 +214,16 @@ const I18N = {
     mcp_remote_note: "Claude Desktop chỉ chạy server MCP cục bộ, nên cấu hình này dùng cầu nối mcp-remote (cần cài Node.js).",
     mcp_security: "Nội dung trang web không đáng tin: AI được dặn không làm theo chỉ dẫn nằm trên trang. MCP không thể xóa profile.",
     mcp_http_warn: "Bạn đang dùng HTTP không mã hóa: token có thể bị nghe lén trên đường truyền. Nên đặt server sau HTTPS.",
+    timezone: "Múi giờ (để trống = theo IP)", locale: "Ngôn ngữ (để trống = theo IP)", check_ip: "Kiểm tra IP", tz_hint: "vd. Asia/Ho_Chi_Minh", locale_hint: "vd. vi-VN",
+    geo_exit: "IP ra {ip} · {country}", geo_tz: "Múi giờ: {v} ({m})", geo_locale: "Ngôn ngữ: {v} ({m})",
+    geo_auto: "tự động", geo_pinned: "đặt tay", geo_random: "ngẫu nhiên mỗi lần mở", geo_ok: "Không phát hiện điểm lệch",
+    geo_failed: "Không lấy được IP ra: {e}", geo_use: "Dùng {v}",
+    geo_warn_country_mismatch: "{source} xác định IP ở {got}, trình duyệt đang dùng {expected}",
+    geo_warn_timezone_mismatch: "{source} báo múi giờ {got}, trình duyệt đang dùng {expected}",
+    geo_warn_hosting: "{source} gắn IP này là datacenter/hosting: dễ bị bắt captcha hoặc chặn",
+    geo_warn_ip_differs: "Proxy dual-stack: múi giờ tính theo {exit_ip} nhưng trang web thấy {seen_ip}",
+    geo_warn_locale_country: "Ngôn ngữ {locale} không thuộc quốc gia của IP ({country})",
+    geo_warn_locale_random: "Ngôn ngữ tự động được chọn lại ngẫu nhiên mỗi lần mở ({suggested} chỉ ~{share}% số lần); nên đặt cố định",
     go: "Đi", new_tab: "Tab mới", type: "Gõ", type_hint: "Gõ vào ô đang chọn (bấm lên ảnh để chọn ô)", working: "Đang xử lý...",
   },
   en: {
@@ -236,6 +251,16 @@ const I18N = {
     mcp_remote_note: "Claude Desktop only starts local MCP servers, so this config bridges through mcp-remote (requires Node.js).",
     mcp_security: "Page content is untrusted: the AI is told never to follow instructions found on web pages. Profiles cannot be deleted through MCP.",
     mcp_http_warn: "You are on plain HTTP: the token can be sniffed in transit. Put the server behind HTTPS.",
+    timezone: "Timezone (blank = follow the IP)", locale: "Language (blank = follow the IP)", check_ip: "Check IP", tz_hint: "e.g. Asia/Ho_Chi_Minh", locale_hint: "e.g. vi-VN",
+    geo_exit: "Exit IP {ip} · {country}", geo_tz: "Timezone: {v} ({m})", geo_locale: "Language: {v} ({m})",
+    geo_auto: "automatic", geo_pinned: "pinned", geo_random: "random on every launch", geo_ok: "No mismatch found",
+    geo_failed: "Could not get the exit IP: {e}", geo_use: "Use {v}",
+    geo_warn_country_mismatch: "{source} places the IP in {got}; the browser uses {expected}",
+    geo_warn_timezone_mismatch: "{source} reports timezone {got}; the browser uses {expected}",
+    geo_warn_hosting: "{source} flags this IP as datacenter/hosting: expect captchas and blocks",
+    geo_warn_ip_differs: "Dual-stack proxy: the timezone follows {exit_ip} but sites see {seen_ip}",
+    geo_warn_locale_country: "Language {locale} does not belong to the IP's country ({country})",
+    geo_warn_locale_random: "Automatic language is re-drawn on every launch ({suggested} only ~{share}% of the time); pin it",
     go: "Go", new_tab: "New tab", type: "Type", type_hint: "Type into the focused field (click the screen to focus one)", working: "Working...",
   },
 };
@@ -341,7 +366,7 @@ function render() {
 function card(p) {
   const on = running.has(p.name);
   const fp = fingerprints[p.name];
-  const meta = [maskProxy(p.proxy), fp && fp.exists ? `${fp.platform} ${fp.screen}` : ""].filter(Boolean).join("  ·  ");
+  const meta = [maskProxy(p.proxy), fp && fp.exists ? `${fp.platform} ${fp.screen}` : "", p.timezone, p.locale].filter(Boolean).join("  ·  ");
   const status = on ? h("span", { class: "status-on" }, h("span", { class: "dot on" }), t("status_running"))
     : h("span", {}, h("span", { class: "dot" + (p.proxy ? " on" : "") }), p.proxy ? t("proxy") : t("direct"));
   const isBusy = busy.has(p.name);
@@ -391,7 +416,18 @@ function openEditor(p) {
     const name = h("input", { id: "f-name", value: p ? p.name : "", required: true, maxlength: 64 });
     const os = h("select", { id: "f-os" }, ["windows", "macos", "linux"].map((o) => h("option", { value: o, selected: p && p.os_type === o }, o)));
     const proxy = h("input", { id: "f-proxy", value: p && p.proxy ? p.proxy : "", placeholder: "socks5://user:pass@host:port" });
+    const tz = h("input", { id: "f-tz", value: p && p.timezone ? p.timezone : "", placeholder: t("tz_hint") });
+    const loc = h("input", { id: "f-locale", value: p && p.locale ? p.locale : "", placeholder: t("locale_hint") });
     const err = h("div", { class: "err" });
+    const geo = h("div", { class: "geo" });
+    const checkIp = h("button", { type: "button", class: "btn-outline", style: "margin-top:8px", onclick: async () => {
+      checkIp.disabled = true; geo.replaceChildren(h("div", { class: "muted" }, t("checking")));
+      try {
+        const r = await api("POST", "/proxy/geo-check", { proxy: proxy.value.trim() || null, timezone: tz.value.trim() || null, locale: loc.value.trim() || null });
+        geo.replaceChildren(...geoLines(r, (v) => { loc.value = v; }));
+      } catch (e) { geo.replaceChildren(h("div", { class: "warn" }, e.message)); }
+      checkIp.disabled = false;
+    } }, t("check_ip"));
     const check = h("button", { type: "button", class: "btn-outline", style: "margin-top:8px", onclick: async () => {
       if (!proxy.value.trim()) return;
       check.disabled = true; err.style.color = "var(--sub)"; err.textContent = t("checking");
@@ -404,7 +440,8 @@ function openEditor(p) {
     return h("form", { class: "modal", onsubmit: async (e) => {
       e.preventDefault();
       err.style.color = ""; err.textContent = "";
-      const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null };
+      const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null,
+        timezone: tz.value.trim(), locale: loc.value.trim() };
       try {
         if (p) { await api("PATCH", `/profiles/${enc(p.name)}`, body); delete fingerprints[p.name]; toast(t("saved")); }
         else { await api("POST", "/profiles", body); toast(t("created", { name: body.name })); }
@@ -414,11 +451,36 @@ function openEditor(p) {
       h("h3", {}, p ? t("edit_title") : t("create")),
       h("label", { for: "f-name" }, t("name")), name,
       h("label", { for: "f-os" }, t("os")), os,
-      h("label", { for: "f-proxy" }, t("proxy_label")), proxy, check, err,
+      h("label", { for: "f-proxy" }, t("proxy_label")), proxy, h("div", { class: "btns" }, check, checkIp),
+      h("label", { for: "f-tz" }, t("timezone")), tz,
+      h("label", { for: "f-locale" }, t("locale")), loc, geo, err,
       h("div", { class: "row" },
         h("button", { type: "button", class: "btn-outline", onclick: close }, t("cancel")),
         h("button", { class: "btn-accent" }, p ? t("save") : t("create"))));
   });
+}
+
+function geoLines(r, useLocale) {
+  if (!r.exit_ip) return [h("div", { class: "warn" }, t("geo_failed", { e: r.error || "?" }))];
+  const mode = (pinned) => (pinned ? t("geo_pinned") : t("geo_auto"));
+  const out = [
+    h("div", {}, t("geo_exit", { ip: r.exit_ip, country: r.country || "?" })),
+    h("div", { class: "muted" }, t("geo_tz", { v: r.timezone || "?", m: mode(r.timezone_pinned) })),
+    h("div", { class: "muted" }, t("geo_locale", { v: r.locale || "~" + (r.suggested_locale || "?"), m: r.locale_pinned ? t("geo_pinned") : t("geo_random") })),
+    ...r.sources.map((s) => h("div", { class: "dim" }, s.error ? `${s.source}: ${s.error}`
+      : `${s.source}: ${s.ip || "?"} · ${s.country || "?"} ${s.city || ""} · ${s.timezone || "-"}`)),
+  ];
+  if (r.error) out.push(h("div", { class: "warn" }, r.error));
+  r.warnings.forEach((w) => {
+    const key = "geo_warn_" + w.code;
+    out.push(h("div", { class: "warn" }, "⚠ " + (I18N[lang][key] ? t(key, w.params) : w.message)));
+  });
+  if (!r.warnings.length && !r.error) out.push(h("div", { class: "ok" }, "✓ " + t("geo_ok")));
+  if (r.suggested_locale && !r.locale_pinned) {
+    out.push(h("button", { type: "button", class: "btn-outline", style: "margin-top:6px",
+      onclick: () => useLocale(r.suggested_locale) }, t("geo_use", { v: r.suggested_locale })));
+  }
+  return out;
 }
 
 async function removeProfile(p) {

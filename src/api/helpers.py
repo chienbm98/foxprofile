@@ -32,6 +32,8 @@ def build_profile_response(
         name=profile.name,
         proxy=profile.proxy,
         os_type=profile.os_type,
+        timezone=profile.timezone,
+        locale=profile.locale,
         data_dir=data_dir,
         is_running=bl.is_running(name),
     )

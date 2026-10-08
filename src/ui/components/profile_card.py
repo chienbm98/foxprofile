@@ -194,6 +194,6 @@ def _build_left_section(
 
 def _details_line(profile: Profile, device: str) -> str:
     """'· socks5://1.2.3.4:1080 · Win32 2560x1440' with credentials hidden."""
-    parts = [mask_proxy(profile.proxy), device]
+    parts = [mask_proxy(profile.proxy), device, profile.timezone or "", profile.locale or ""]
     text = "  \u00b7  ".join(part for part in parts if part)
     return f"\u00b7  {text}" if text else ""

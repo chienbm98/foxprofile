@@ -22,7 +22,15 @@ def spawn_browser(profile: Profile) -> subprocess.Popen:
         os.pathsep + existing_pythonpath if existing_pythonpath else ""
     )
     return subprocess.Popen(
-        [sys.executable, script, profile.name, str(profile.proxy), profile.os_type],
+        [
+            sys.executable,
+            script,
+            profile.name,
+            str(profile.proxy),
+            profile.os_type,
+            profile.timezone or "",
+            profile.locale or "",
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=pathlib.Path.cwd(),
