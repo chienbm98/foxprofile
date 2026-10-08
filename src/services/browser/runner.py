@@ -10,6 +10,7 @@ sys.path.insert(
 )
 
 from camoufox.async_api import AsyncCamoufox
+from camoufox.virtdisplay import VirtualDisplay
 
 from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
 from src.services.browser import control, session
@@ -139,7 +140,14 @@ async def run_browser(
 
     _safe_print(f"Starting browser for {profile_name}...")
 
+    # Camoufox's own headless="virtual" starts Xvfb before it builds the launch
+    # options and stops it only when the browser closes, so every failed launch
+    # left an Xvfb behind. Own the display here and stop it however we exit.
+    display = VirtualDisplay() if HEADLESS == "virtual" else None
     try:
+        if display:
+            launch_config["headless"] = False
+            launch_config["virtual_display"] = display.get()
         async with AsyncCamoufox(**launch_config) as context:
             if not context.pages:
                 await context.new_page()
@@ -204,6 +212,9 @@ async def run_browser(
     except Exception as e:
         _safe_print(f"LAUNCH_FAILED: {type(e).__name__}: {_compact_error(e, 220)}")
         return 1
+    finally:
+        if display:
+            display.kill()
 
 
 async def _async_main() -> int:

@@ -1,5 +1,7 @@
+import contextlib
 import os
 import pathlib
+import signal
 import subprocess
 import sys
 from collections.abc import Callable
@@ -39,6 +41,10 @@ def spawn_browser(profile: Profile) -> subprocess.Popen:
         encoding="utf-8",
         errors="replace",
         bufsize=1,
+        # Own process group on POSIX, so stopping a profile can take down what
+        # the runner started (Xvfb, the Playwright driver, Firefox) even when
+        # the runner itself has to be killed.
+        start_new_session=os.name == "posix",
     )
 
 
@@ -57,6 +63,16 @@ def terminate(proc: subprocess.Popen, name: str, timeout: int = 5) -> None:
             logger.warning("Browser %s force killed after timeout", name)
     except Exception as e:
         logger.exception("Error terminating browser %s: %s", name, e)
+    finally:
+        _kill_group(proc)
+
+
+def _kill_group(proc: subprocess.Popen) -> None:
+    """Kill anything left in the runner's process group once it has exited."""
+    if os.name != "posix" or proc.poll() is None:
+        return
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(proc.pid, signal.SIGKILL)
 
 
 def wait_for_exit(
@@ -70,4 +86,6 @@ def wait_for_exit(
     except Exception as e:
         logger.exception("Wait error for profile %s: %s", name, e)
     finally:
+        # A runner that died on its own (crash, OOM kill) never ran its cleanup.
+        _kill_group(proc)
         notify_stopped()
