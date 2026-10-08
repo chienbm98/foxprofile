@@ -20,13 +20,23 @@ def test_invalid_profile_names(name):
 
 @pytest.mark.parametrize(
     "proxy",
-    ["", "1.2.3.4:8080", "http://h.com:80", "socks5://u:p@1.2.3.4:1080", "https://proxy.vn:443"],
+    [
+        "",
+        "1.2.3.4:8080",
+        "http://h.com:80",
+        "socks5://u:p@1.2.3.4:1080",
+        "https://proxy.vn:443",
+        "1.2.3.4:5062:user:secret",
+        "socks5://1.2.3.4:1080:user:secret",
+    ],
 )
 def test_valid_proxies(proxy):
     assert validate_proxy_format(proxy)[0]
 
 
-@pytest.mark.parametrize("proxy", ["nohost", "ftp://h:21", "h:0", "h:70000", "u:p@h"])
+@pytest.mark.parametrize(
+    "proxy", ["nohost", "ftp://h:21", "h:0", "h:70000", "u:p@h", "1.2.3.4:5062:user:", "h:x:u:p"]
+)
 def test_invalid_proxies(proxy):
     assert not validate_proxy_format(proxy)[0]
 
@@ -37,6 +47,15 @@ def test_parse_proxy_with_auth():
         "username": "user",
         "password": "pass",
     }
+
+
+def test_parse_proxy_host_port_user_pass():
+    assert parse_proxy("1.2.3.4:5062:user:secret") == {
+        "server": "http://1.2.3.4:5062",
+        "username": "user",
+        "password": "secret",
+    }
+    assert parse_proxy("socks5://1.2.3.4:1080:user:secret")["server"] == "socks5://1.2.3.4:1080"
 
 
 def test_parse_proxy_defaults_to_http():
