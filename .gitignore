@@ -175,14 +175,10 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 
-# Camoufox Data
-camoufox_data
-profiles.jsonnul
-
-# Local runtime data (cookies, profiles, logs)
+# Local runtime data (cookies, fingerprints, profiles, logs)
+camoufox_data/
 profiles.json
 logs/
-.omc/
 
 # Tooling artefacts
 uv.lock

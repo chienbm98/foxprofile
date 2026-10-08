@@ -64,7 +64,7 @@ src/
   services/
     browser/    khởi chạy Camoufox, vân tay, cookie, điều khiển trang (control.py)
     profile/    lưu, xuất/nhập profile
-    proxy/      kiểm tra proxy
+    proxy/      kiểm tra proxy, Kiểm tra IP (đối chiếu GeoIP)
   ui/           giao diện Flet: components, dialogs, actions
   utils/        kiểm tra tên, phân tích proxy
 tests/          pytest
