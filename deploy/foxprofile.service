@@ -1,0 +1,23 @@
+[Unit]
+Description=FoxProfile (Camoufox profile manager)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=foxprofile
+Group=foxprofile
+WorkingDirectory=/opt/foxprofile/app
+ExecStart=/opt/foxprofile/app/.venv/bin/python -m src.server
+Restart=on-failure
+RestartSec=5
+# Hardening: the service can only write its own directory.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/foxprofile
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target
