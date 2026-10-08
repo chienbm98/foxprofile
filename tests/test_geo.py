@@ -72,27 +72,29 @@ def _codes(warnings):
 
 def test_compare_flags_disagreeing_sources():
     sources = [
-        SourceResult("cloudflare", ip="2a02:c207::1", country="FR"),
-        SourceResult("ipinfo", ip="1.2.3.4", country="DE", timezone="Europe/Berlin"),
-        SourceResult("ip-api", ip="1.2.3.4", country="FR", timezone="Europe/Paris", hosting=True),
+        SourceResult("cloudflare", ip="2001:db8::1", country="FR"),
+        SourceResult("ipinfo", ip="203.0.113.4", country="DE", timezone="Europe/Berlin"),
+        SourceResult(
+            "ip-api", ip="203.0.113.4", country="FR", timezone="Europe/Paris", hosting=True
+        ),
         SourceResult("broken", error="timeout"),
     ]
-    warnings = compare("1.2.3.4", "FR", "Europe/Paris", None, False, sources)
+    warnings = compare("203.0.113.4", "FR", "Europe/Paris", None, False, sources)
     assert _codes(warnings) == ["ip_differs", "country_mismatch", "timezone_mismatch", "hosting"]
     assert warnings[1].params == {"source": "ipinfo", "got": "DE", "expected": "FR"}
 
 
 def test_compare_ignores_same_family_ip_changes_and_checks_pinned_locale():
-    sources = [SourceResult("cloudflare", ip="1.2.3.5", country="FR")]
-    assert compare("1.2.3.4", "FR", "Europe/Paris", "fr-FR", True, sources) == []
-    assert _codes(compare("1.2.3.4", "FR", "Europe/Paris", "en-US", True, sources)) == [
+    sources = [SourceResult("cloudflare", ip="203.0.113.5", country="FR")]
+    assert compare("203.0.113.4", "FR", "Europe/Paris", "fr-FR", True, sources) == []
+    assert _codes(compare("203.0.113.4", "FR", "Europe/Paris", "en-US", True, sources)) == [
         "locale_country"
     ]
 
 
 @pytest.fixture
 def fake_lookups(monkeypatch):
-    monkeypatch.setattr(geo_check, "_exit_ip", lambda proxy: "1.53.0.1")
+    monkeypatch.setattr(geo_check, "_exit_ip", lambda proxy: "198.51.100.7")
     monkeypatch.setattr(
         geo_check, "_camoufox_geo", lambda ip: ("VN", "Asia/Bangkok", "vi-VN", 0.98)
     )
@@ -101,7 +103,7 @@ def fake_lookups(monkeypatch):
         "_SOURCES",
         {
             "ipinfo": lambda proxies: SourceResult(
-                "ipinfo", ip="1.53.0.1", country="VN", timezone="Asia/Ho_Chi_Minh"
+                "ipinfo", ip="198.51.100.7", country="VN", timezone="Asia/Ho_Chi_Minh"
             ),
             "ip-api": lambda proxies: (_ for _ in ()).throw(OSError("unreachable")),
         },
@@ -111,7 +113,7 @@ def fake_lookups(monkeypatch):
 def test_check_geo_automatic(fake_lookups):
     r = check_geo(None)
     assert (r.exit_ip, r.country, r.timezone, r.timezone_pinned) == (
-        "1.53.0.1",
+        "198.51.100.7",
         "VN",
         "Asia/Bangkok",
         False,
@@ -199,8 +201,8 @@ def test_short_error_reports_root_cause_without_credentials():
 
 
 def test_compare_skips_numeric_regions_and_cloudflare_pseudo_countries():
-    sources = [SourceResult("cloudflare", ip="1.2.3.4", country="XX")]
-    assert compare("1.2.3.4", "MX", "America/Mexico_City", "es-419", True, sources) == []
+    sources = [SourceResult("cloudflare", ip="203.0.113.4", country="XX")]
+    assert compare("203.0.113.4", "MX", "America/Mexico_City", "es-419", True, sources) == []
 
 
 def test_check_geo_gives_up_on_a_hanging_exit_lookup(monkeypatch, fake_lookups):
@@ -209,7 +211,7 @@ def test_check_geo_gives_up_on_a_hanging_exit_lookup(monkeypatch, fake_lookups):
 
     release = threading.Event()
     monkeypatch.setattr(geo_check, "_DEADLINE", 0.2)
-    monkeypatch.setattr(geo_check, "_exit_ip", lambda proxy: release.wait(5) or "1.1.1.1")
+    monkeypatch.setattr(geo_check, "_exit_ip", lambda proxy: release.wait(5) or "192.0.2.1")
     started = time.monotonic()
     r = check_geo(None)
     release.set()

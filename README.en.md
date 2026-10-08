@@ -44,6 +44,16 @@ python -m src.main
 
 On Windows you can also run `run_foxprofile.bat`. The API listens on `http://127.0.0.1:8000`; docs are at `/docs`. Set `FOXPROFILE_LANG=en` for the English UI.
 
+## Timezone, language and Check IP
+
+By default, every launch looks up the exit IP (through the profile's proxy) and sets the timezone, language, geolocation and WebRTC IP from it. Worth knowing:
+
+- **The automatic language is drawn at random on every launch**, weighted by how many people speak each language in the IP's country. A French IP gives `fr-FR` roughly 60% of the time and `en-FR`, `es-FR`… otherwise. An account whose language changes between sessions looks suspicious, so pin the language per profile.
+- **GeoIP databases disagree.** Cloudflare may place an IP in one country and Google in another, and Camoufox may pick a same-offset timezone with a different name (a Vietnamese IP gets `Asia/Bangkok` rather than `Asia/Ho_Chi_Minh`).
+- **Datacenter IPs get captchas** whatever the browser looks like. For Cloudflare-protected sites a residential or mobile proxy matters more than any other setting.
+
+The profile dialog has **Timezone** (IANA name, e.g. `Asia/Ho_Chi_Minh`) and **Language** (e.g. `vi-VN`) fields; blank means follow the IP. **Check IP** resolves the exit IP through the proxy, compares it with Cloudflare, ipinfo and ip-api, and warns about country or timezone mismatches, datacenter IPs, proxies that leave over different IPv4/IPv6 addresses, and a language left on random.
+
 ## Server mode and web panel (VPS)
 
 No desktop window: API + web panel only, browsers run hidden.

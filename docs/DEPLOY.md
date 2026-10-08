@@ -1,6 +1,6 @@
 # Triển khai FoxProfile lên VPS (Ubuntu 24.04)
 
-Quy trình này đã được dùng để triển khai thật trên một VPS Ubuntu 24.04 đang chạy sẵn nginx cho site khác, mà không ảnh hưởng tới site đó.
+Chạy FoxProfile ở chế độ server (API, web panel, MCP) phía sau nginx có HTTPS, dưới một user hệ thống riêng. Cổng 8000 chỉ nghe trên `127.0.0.1`; mọi truy cập từ ngoài đi qua nginx và cần API token.
 
 ## 1. Gói hệ thống và user riêng
 
@@ -72,4 +72,4 @@ Chạy `git` bằng root trên thư mục của user `foxprofile` sẽ bị từ
 
 ## Lưu ý về IP của VPS
 
-Trên VPS datacenter (ví dụ Contabo), Cloudflare thường hiện checkbox Turnstile thay vì cho qua, dù vân tay sạch. Xem [notes/geoip-investigation.md](notes/geoip-investigation.md). Mỗi profile nên dùng proxy residential hoặc 4G.
+IP của VPS thuộc dải datacenter. Cloudflare và nhiều trang khác nhận ra điều này, nên dù vân tay sạch và múi giờ khớp IP, Turnstile thường vẫn hiện checkbox thay vì tự qua. Profile chạy trên VPS nên dùng proxy residential hoặc 4G; nút **Kiểm tra IP** trong hộp thoại profile sẽ cảnh báo khi IP bị gắn nhãn datacenter/hosting.
