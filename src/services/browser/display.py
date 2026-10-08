@@ -8,8 +8,8 @@ Xvfb it started, and whoever sees the runner gone stops it.
 A record is keyed by the runner's PID and pins both processes by their start
 time, so a relaunch of the same profile, or a PID the kernel has handed to
 another process (another profile's Xvfb included), is never touched. Records
-live in a private per-user directory under the system temp dir, which, like
-the processes they describe, does not outlive a reboot.
+live in a private per-user directory under the system temp dir; one left from
+before a reboot is inert, as its start times no longer match anything.
 
 Virtual mode is Linux-only, and so is this (it reads /proc); elsewhere every
 function is a no-op.
@@ -27,7 +27,12 @@ import tempfile
 import time
 from typing import Any
 
+from ...core.logging import get_logger
+
+logger = get_logger("browser.display")
+
 _PROC = pathlib.Path("/proc")
+_warned_dir = False
 
 
 def _run_dir() -> pathlib.Path | None:
@@ -46,6 +51,14 @@ def _run_dir() -> pathlib.Path | None:
         or st.st_uid != os.getuid()
         or st.st_mode & (stat.S_IRWXG | stat.S_IRWXO)
     ):
+        global _warned_dir
+        if not _warned_dir:
+            _warned_dir = True
+            logger.warning(
+                "Not using %s for Xvfb records (not a private directory owned by this "
+                "user); a killed profile's Xvfb will not be stopped",
+                path,
+            )
         return None
     return path
 
@@ -89,9 +102,11 @@ def record(xvfb_pid: int, display: str) -> None:
         "display": int(display.lstrip(":")),
     }
     tmp = run_dir / f".{os.getpid()}.tmp"
-    with contextlib.suppress(OSError):
+    try:
         tmp.write_text(json.dumps(data), encoding="utf-8")
         os.replace(tmp, run_dir / f"{os.getpid()}.json")
+    except OSError as e:
+        logger.warning("Could not record Xvfb %s: %s", xvfb_pid, e)
 
 
 def clear() -> None:
@@ -132,15 +147,26 @@ def _stop(rec: dict[str, Any], grace: float) -> bool:
             while _running(pid, start) and time.monotonic() < deadline:
                 time.sleep(0.05)
             if not _running(pid, start):
-                # A killed Xvfb leaves these; stranded ones push every later
-                # display number up.
-                for leftover in (
-                    f"/tmp/.X{rec['display']}-lock",
-                    f"/tmp/.X11-unix/X{rec['display']}",
-                ):
-                    with contextlib.suppress(OSError):
-                        os.remove(leftover)
+                _remove_display_files(rec["display"], pid)
     return True
+
+
+def _remove_display_files(display: int, pid: int) -> None:
+    """Remove the lock and socket a killed Xvfb left, if they are still its own.
+
+    Stranded ones push every later display number up. But once the Xvfb is
+    dead a new one may already have taken the number, so only touch them while
+    the lock still names the killed PID.
+    """
+    lock = pathlib.Path(f"/tmp/.X{display}-lock")
+    try:
+        if int(lock.read_text().strip()) != pid:
+            return
+    except (OSError, ValueError):
+        return
+    for leftover in (lock, pathlib.Path(f"/tmp/.X11-unix/X{display}")):
+        with contextlib.suppress(OSError):
+            leftover.unlink()
 
 
 def stop_for_runner(runner_pid: int, grace: float = 2.0) -> bool:
@@ -173,4 +199,9 @@ def sweep_stale(grace: float = 2.0) -> int:
             stopped += 1
         with contextlib.suppress(OSError):
             path.unlink()
+    # Temp files of runners killed between writing and renaming their record.
+    for tmp in run_dir.glob(".*.tmp"):
+        with contextlib.suppress(ValueError, OSError):
+            if not (_PROC / str(int(tmp.name[1:-4]))).exists():
+                tmp.unlink()
     return stopped

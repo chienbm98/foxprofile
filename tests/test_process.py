@@ -208,19 +208,31 @@ def test_stop_for_runner_stops_the_recorded_xvfb(run_dir, procs):
     assert not path.exists()
 
 
-@linux_only
-def test_stubborn_xvfb_is_killed_and_its_display_files_removed(run_dir, procs):
+def _stubborn_kill(run_dir, procs, lock_pid_of):
     xvfb = _spawn("stubborn")
     procs.append(xvfb)
     runner_pid = _dead_pid()
     display_no = 90000 + os.getpid() % 9000
-    leftovers = [pathlib.Path(f"/tmp/.X{display_no}-lock")]
-    leftovers[0].write_text("x")
-    _write_record(run_dir, runner_pid, 1, xvfb.pid, _start(xvfb.pid), display_no)
+    lock = pathlib.Path(f"/tmp/.X{display_no}-lock")
+    lock.write_text(f"{lock_pid_of(xvfb):10d}\n")
+    try:
+        _write_record(run_dir, runner_pid, 1, xvfb.pid, _start(xvfb.pid), display_no)
+        assert display.stop_for_runner(runner_pid, grace=0.2) is True
+        assert _gone(xvfb)
+        return lock.exists()
+    finally:
+        lock.unlink(missing_ok=True)
 
-    assert display.stop_for_runner(runner_pid, grace=0.2) is True
-    assert _gone(xvfb)
-    assert not leftovers[0].exists()
+
+@linux_only
+def test_stubborn_xvfb_is_killed_and_its_display_files_removed(run_dir, procs):
+    assert _stubborn_kill(run_dir, procs, lambda xvfb: xvfb.pid) is False
+
+
+@linux_only
+def test_display_files_another_xvfb_took_over_are_kept(run_dir, procs):
+    # The number was reused by a new Xvfb between our kill and the cleanup.
+    assert _stubborn_kill(run_dir, procs, lambda xvfb: os.getpid()) is True
 
 
 @linux_only
@@ -273,11 +285,16 @@ def test_sweep_stops_only_xvfbs_of_dead_runners(run_dir, procs):
     _write_record(run_dir, _dead_pid(), 1, orphan.pid, _start(orphan.pid))
     _write_record(run_dir, live_runner.pid, _start(live_runner.pid), kept.pid, _start(kept.pid))
     (run_dir / "777.json").write_text("{broken", encoding="utf-8")
+    (run_dir / f".{_dead_pid()}.tmp").write_text("{", encoding="utf-8")
+    (run_dir / f".{live_runner.pid}.tmp").write_text("{", encoding="utf-8")
 
     assert display.sweep_stale() == 1
     assert _gone(orphan)
     assert kept.poll() is None
-    assert sorted(p.name for p in run_dir.glob("*.json")) == [f"{live_runner.pid}.json"]
+    assert sorted(p.name for p in run_dir.iterdir()) == [
+        f".{live_runner.pid}.tmp",
+        f"{live_runner.pid}.json",
+    ]
 
 
 @linux_only
