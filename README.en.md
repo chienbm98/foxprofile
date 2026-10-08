@@ -186,7 +186,7 @@ Everything is optional. To override defaults, copy `.env.example` to `.env`.
 
 ### Proxy format
 
-`host:port`, `http://host:port`, `https://...`, `socks4://...`, `socks5://...`, optionally with `user:pass@`. Blank means a direct connection.
+`host:port`, `http://host:port`, `https://...`, `socks4://...`, `socks5://...`, optionally with `user:pass@`. The provider format `host:port:user:pass` works too. Blank means a direct connection.
 
 ### Data layout
 

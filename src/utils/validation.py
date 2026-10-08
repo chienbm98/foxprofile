@@ -4,6 +4,7 @@ import zoneinfo
 from collections.abc import Callable
 
 from ..core.strings import get_string
+from .proxy_parser import normalize_proxy
 
 _INVALID_CHARS = '<>:"/\\|?*'
 _RESERVED_NAMES = {
@@ -54,7 +55,7 @@ def validate_proxy_format(proxy_str: str) -> tuple[bool, str]:
     if not proxy_str:
         return True, ""
 
-    match = _PROXY_PATTERN.match(proxy_str)
+    match = _PROXY_PATTERN.match(normalize_proxy(proxy_str))
     if not match:
         return False, get_string("validation_invalid_proxy")
 

@@ -186,7 +186,7 @@ Mọi cấu hình đều không bắt buộc. Muốn đổi thì sao chép `.env
 
 ### Định dạng proxy
 
-`host:port`, `http://host:port`, `https://...`, `socks4://...`, `socks5://...`, có thể kèm `user:pass@`. Để trống nghĩa là kết nối trực tiếp.
+`host:port`, `http://host:port`, `https://...`, `socks4://...`, `socks5://...`, có thể kèm `user:pass@`. Dạng `host:port:user:pass` mà nhà cung cấp proxy hay đưa cũng dùng được. Để trống nghĩa là kết nối trực tiếp.
 
 ### Dữ liệu được lưu ở đâu
 
