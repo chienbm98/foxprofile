@@ -4,5 +4,5 @@ python-dotenv>=1.0.0
 tzdata>=2024.1; sys_platform == "win32"
 aiohttp>=3.9.0
 fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
+uvicorn[standard]>=0.54.0
 mcp>=1.2,<2
