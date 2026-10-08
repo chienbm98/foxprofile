@@ -13,7 +13,7 @@ FoxProfile là ứng dụng desktop quản lý profile cho [Camoufox](https://gi
 ## Tính năng
 
 - **Vân tay cố định cho từng profile.** Lần mở đầu tiên sinh ra một thiết bị (màn hình, GPU, số nhân CPU, font, nhiễu canvas/audio) và lưu lại; các lần sau mở lại đúng thiết bị đó. Có thể chủ động đổi sang thiết bị mới.
-- **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, có nút kiểm tra proxy. Múi giờ và ngôn ngữ tự khớp theo IP.
+- **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, có nút kiểm tra proxy. Múi giờ và ngôn ngữ tự khớp theo IP, hoặc đặt cố định cho từng profile; nút **Kiểm tra IP** đối chiếu IP ra với Cloudflare, ipinfo, ip-api và cảnh báo khi lệch quốc gia/múi giờ hoặc IP bị gắn datacenter.
 - **Xuất/nhập cookie**
   - JSON theo định dạng Cookie-Editor / EditThisCookie: dùng được với GoLogin, GPM, Multilogin và extension Cookie-Editor.
   - `cookies.txt` (Netscape): dùng được với yt-dlp, curl, wget.
@@ -54,6 +54,16 @@ python -m src.main
 Trên Windows có thể bấm đúp `run_foxprofile.bat`.
 
 Ứng dụng mở cửa sổ quản lý và đồng thời chạy API tại `http://127.0.0.1:8000`. Tài liệu API: `http://127.0.0.1:8000/docs`.
+
+## Múi giờ, ngôn ngữ và Kiểm tra IP
+
+Mặc định, mỗi lần mở profile Camoufox tra IP đi ra (qua proxy của profile) và đặt múi giờ, ngôn ngữ, toạ độ và IP WebRTC theo IP đó. Có ba điều nên biết:
+
+- **Ngôn ngữ tự động được chọn ngẫu nhiên ở mỗi lần mở**, theo tỷ lệ người nói từng ngôn ngữ ở quốc gia của IP. Ví dụ IP Pháp cho `fr-FR` khoảng 60% số lần, còn lại là `en-FR`, `es-FR`… Một tài khoản đổi ngôn ngữ giữa các phiên là điều đáng ngờ, nên hãy đặt cố định ngôn ngữ cho profile.
+- **Các cơ sở dữ liệu GeoIP không phải lúc nào cũng thống nhất.** Cùng một IP có thể được Cloudflare xếp vào nước này, Google vào nước khác; Camoufox cũng có thể chọn một múi giờ cùng giờ nhưng khác tên (ví dụ IP Việt Nam ra `Asia/Bangkok` thay vì `Asia/Ho_Chi_Minh`).
+- **IP datacenter dễ bị bắt captcha** bất kể cấu hình trình duyệt. Với các trang dùng Cloudflare, proxy residential hoặc 4G quan trọng hơn mọi tinh chỉnh khác.
+
+Trong hộp thoại tạo/sửa profile có hai ô **Múi giờ** (tên IANA, ví dụ `Asia/Ho_Chi_Minh`) và **Ngôn ngữ** (dạng `vi-VN`); để trống là tự động theo IP. Nút **Kiểm tra IP** lấy IP đi ra qua proxy, đối chiếu với Cloudflare, ipinfo và ip-api, rồi cảnh báo khi lệch quốc gia hoặc múi giờ, khi IP bị gắn datacenter, khi proxy ra Internet bằng IPv4 và IPv6 khác nhau, và khi ngôn ngữ đang để ngẫu nhiên.
 
 ## Chế độ server và web panel (chạy trên VPS)
 
@@ -108,7 +118,7 @@ Sau đó chỉ cần nhắn AI, ví dụ: *"Mở profile tiktok-us-02, vào tikt
 | Nhóm | Tool |
 | --- | --- |
 | Profile | `list_profiles`, `get_profile`, `create_profile`, `update_profile`, `launch_profile`, `stop_profile`, `running_profiles` |
-| Cookie & vân tay | `export_cookies`, `import_cookies`, `get_fingerprint`, `reset_fingerprint`, `check_proxy` |
+| Cookie & vân tay | `export_cookies`, `import_cookies`, `get_fingerprint`, `reset_fingerprint`, `check_proxy`, `check_profile_ip` |
 | Trang | `browser_navigate`, `browser_back`, `browser_snapshot`, `browser_get_text`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate` |
 | Tab | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
 
@@ -170,6 +180,8 @@ Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang ch
 | `POST` | `/browser/{name}/launch` | Mở trình duyệt, chờ đến khi mở xong hoặc lỗi |
 | `POST` | `/browser/{name}/stop` | Đóng trình duyệt |
 | `POST` | `/proxy/check` | Kiểm tra proxy |
+| `GET` | `/profiles/{name}/ip-check` | Kiểm tra IP ra của profile: quốc gia, múi giờ theo Cloudflare/ipinfo/ip-api, cảnh báo lệch |
+| `POST` | `/proxy/geo-check` | Như trên cho tổ hợp `{proxy, timezone, locale}` chưa lưu |
 | `POST` | `/browser/{name}/page/navigate` | Mở URL trong tab đang chọn |
 | `GET` | `/browser/{name}/page/snapshot` | Cây accessibility của trang (để chọn selector) |
 | `POST` | `/browser/{name}/page/click` · `type` · `press` · `wait` | Click, gõ, bấm phím, chờ phần tử (selector Playwright) |

@@ -23,3 +23,7 @@ known-first-party = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# Standalone scripts that drive a running FoxProfile; one must edit sys.path first.
+"tests/e2e/control_e2e.py" = ["E402"]

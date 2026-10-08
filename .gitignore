@@ -183,3 +183,7 @@ profiles.jsonnul
 profiles.json
 logs/
 .omc/
+
+# Tooling artefacts
+uv.lock
+e2e-output/

@@ -1,4 +1,7 @@
+import functools
 import re
+import zoneinfo
+from collections.abc import Callable
 
 from ..core.strings import get_string
 
@@ -17,6 +20,8 @@ _PROXY_PATTERN = re.compile(
     r"(?P<host>[a-zA-Z0-9.-]+|\d{1,3}(?:\.\d{1,3}){3})"
     r":(?P<port>\d{1,5})$",
 )
+# language[-Script]-REGION, e.g. vi-VN, zh-Hant-TW, es-419
+_LOCALE_PATTERN = re.compile(r"^[a-z]{2,3}(?:-[A-Z][a-z]{3})?-(?:[A-Z]{2}|\d{3})$")
 
 
 def validate_profile_name(name: str) -> tuple[bool, str]:
@@ -58,3 +63,41 @@ def validate_proxy_format(proxy_str: str) -> tuple[bool, str]:
         return False, get_string("validation_invalid_port", port=port)
 
     return True, ""
+
+
+def validate_timezone(value: str) -> tuple[bool, str]:
+    """An IANA timezone such as Asia/Ho_Chi_Minh; empty means automatic."""
+    if not value:
+        return True, ""
+    if value not in _timezones():
+        return False, get_string("validation_invalid_timezone", value=value)
+    return True, ""
+
+
+def validate_locale(value: str) -> tuple[bool, str]:
+    """A language-region locale such as vi-VN; empty means automatic."""
+    if not value:
+        return True, ""
+    if not _LOCALE_PATTERN.match(value):
+        return False, get_string("validation_invalid_locale", value=value)
+    try:
+        from camoufox.locales import normalize_locale
+
+        normalize_locale(value)
+    except ImportError:
+        pass
+    except Exception:
+        return False, get_string("validation_invalid_locale", value=value)
+    return True, ""
+
+
+def valid_or_none(value: object, validate: Callable[[str], tuple[bool, str]]) -> str | None:
+    """A stored timezone/locale if it is still usable, else None (= automatic)."""
+    if not isinstance(value, str) or not value or not validate(value)[0]:
+        return None
+    return value
+
+
+@functools.cache
+def _timezones() -> frozenset[str]:
+    return frozenset(zoneinfo.available_timezones())

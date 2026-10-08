@@ -8,7 +8,14 @@ from ..models.profile import Profile
 class IProfileManager(Protocol):
     profiles: dict[str, Profile]
 
-    def add_profile(self, name: str, proxy: str, os_type: str) -> bool: ...
+    def add_profile(
+        self,
+        name: str,
+        proxy: str,
+        os_type: str,
+        timezone: str | None = None,
+        locale: str | None = None,
+    ) -> bool: ...
 
     def update_profile(
         self,
@@ -16,6 +23,8 @@ class IProfileManager(Protocol):
         new_name: str,
         new_proxy: str,
         new_os: str,
+        new_timezone: str | None = None,
+        new_locale: str | None = None,
     ) -> bool: ...
 
     def delete_profile(self, name: str) -> bool: ...

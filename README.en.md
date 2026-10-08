@@ -13,7 +13,7 @@ FoxProfile is a desktop manager for [Camoufox](https://github.com/daijro/camoufo
 ## Features
 
 - Persistent per-profile fingerprint, with a one-click "new fingerprint" reset.
-- Per-profile proxy (HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth) and a proxy checker. Timezone and locale follow the IP.
+- Per-profile proxy (HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth) and a proxy checker. Timezone and locale follow the IP or can be pinned per profile; **Check IP** compares the exit IP across Cloudflare, ipinfo and ip-api and warns about country/timezone mismatches and datacenter IPs.
 - Cookie export/import: Cookie-Editor / EditThisCookie JSON (GoLogin, GPM, Multilogin, Cookie-Editor extension) and Netscape `cookies.txt` (yt-dlp, curl, wget).
 - Profile export/import as ZIP, with or without browser data; the fingerprint always travels with the profile.
 - Bulk launch, stop and delete.
@@ -43,6 +43,16 @@ python -m src.main
 ```
 
 On Windows you can also run `run_foxprofile.bat`. The API listens on `http://127.0.0.1:8000`; docs are at `/docs`. Set `FOXPROFILE_LANG=en` for the English UI.
+
+## Timezone, language and Check IP
+
+By default, every launch looks up the exit IP (through the profile's proxy) and sets the timezone, language, geolocation and WebRTC IP from it. Worth knowing:
+
+- **The automatic language is drawn at random on every launch**, weighted by how many people speak each language in the IP's country. A French IP gives `fr-FR` roughly 60% of the time and `en-FR`, `es-FR`… otherwise. An account whose language changes between sessions looks suspicious, so pin the language per profile.
+- **GeoIP databases disagree.** Cloudflare may place an IP in one country and Google in another, and Camoufox may pick a same-offset timezone with a different name (a Vietnamese IP gets `Asia/Bangkok` rather than `Asia/Ho_Chi_Minh`).
+- **Datacenter IPs get captchas** whatever the browser looks like. For Cloudflare-protected sites a residential or mobile proxy matters more than any other setting.
+
+The profile dialog has **Timezone** (IANA name, e.g. `Asia/Ho_Chi_Minh`) and **Language** (e.g. `vi-VN`) fields; blank means follow the IP. **Check IP** resolves the exit IP through the proxy, compares it with Cloudflare, ipinfo and ip-api, and warns about country or timezone mismatches, datacenter IPs, proxies that leave over different IPv4/IPv6 addresses, and a language left on random.
 
 ## Server mode and web panel (VPS)
 
@@ -76,7 +86,7 @@ claude mcp add --transport http foxprofile https://your-vps/mcp --header "Author
 
 Claude Desktop only launches local MCP servers: use `foxprofile_mcp.py` on the same machine, or the `npx mcp-remote` bridge from another one. The Connect AI dialog generates both.
 
-Tools: profile management (`list_profiles`, `create_profile`, `launch_profile`, `stop_profile`...), cookies and fingerprints, page control (`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate`) and tabs. There is deliberately no delete tool, and only `http`, `https` and `about:blank` can be opened.
+Tools: profile management (`list_profiles`, `create_profile`, `launch_profile`, `stop_profile`...), cookies and fingerprints, `check_profile_ip`, page control (`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate`) and tabs. There is deliberately no delete tool, and only `http`, `https` and `about:blank` can be opened.
 
 ## Cookies and fingerprints
 
@@ -107,6 +117,8 @@ Prefix `/api/v1`.
 | `POST` | `/browser/{name}/launch` | Launch; waits for ready (`200`) or failure (`502`). `?wait=false` returns `202` immediately |
 | `POST` | `/browser/{name}/stop` | Stop |
 | `POST` | `/proxy/check` | Check a proxy |
+| `GET` | `/profiles/{name}/ip-check` | Where Cloudflare/ipinfo/ip-api place the profile's exit IP, with mismatch warnings |
+| `POST` | `/proxy/geo-check` | Same for an unsaved `{proxy, timezone, locale}` |
 | `POST`/`GET` | `/browser/{name}/page/...` | Page control: `navigate`, `back`, `snapshot`, `text`, `click`, `click-at`, `type`, `keyboard`, `press`, `wait`, `screenshot`, `evaluate`, `tabs` |
 
 With `FOXPROFILE_API_TOKEN` set, every request except `/health` and `/info` needs `Authorization: Bearer <token>`.

@@ -50,7 +50,28 @@ def _setup_signals(loop: asyncio.AbstractEventLoop) -> None:
         pass
 
 
-async def run_browser(profile_name: str, proxy_str: str, os_type: str) -> int:
+def geo_overrides(timezone: str, locale: str) -> dict:
+    """Launch options that pin the timezone / locale instead of following the IP.
+
+    Camoufox's geoip only fills in the timezone and locale when they are unset
+    (setdefault for the config key, and `locale=` is applied after geoip), so the
+    pinned values win while geolocation and the WebRTC IP still follow the proxy.
+    """
+    options: dict = {}
+    if timezone:
+        options["config"] = {"timezone": timezone}
+    if locale:
+        options["locale"] = locale
+    return options
+
+
+async def run_browser(
+    profile_name: str,
+    proxy_str: str,
+    os_type: str,
+    timezone: str = "",
+    locale: str = "",
+) -> int:
     profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
 
     launch_config = {
@@ -62,6 +83,7 @@ async def run_browser(profile_name: str, proxy_str: str, os_type: str) -> int:
         "block_images": False,
         "user_data_dir": profile_dir,
         "persistent_context": True,
+        **geo_overrides(timezone, locale),
     }
 
     proxy_config = parse_proxy(proxy_str)
@@ -126,14 +148,14 @@ async def run_browser(profile_name: str, proxy_str: str, os_type: str) -> int:
 async def _async_main() -> int:
     loop = asyncio.get_running_loop()
     _setup_signals(loop)
-    return await run_browser(sys.argv[1], sys.argv[2], sys.argv[3])
+    return await run_browser(*sys.argv[1:6])
 
 
 if __name__ == "__main__":
     _configure_stdio()
 
     if len(sys.argv) < 4:
-        _safe_print("Usage: python run_browser.py <name> <proxy> <os>")
+        _safe_print("Usage: python runner.py <name> <proxy> <os> [timezone] [locale]")
         sys.exit(1)
 
     exit_code = 1

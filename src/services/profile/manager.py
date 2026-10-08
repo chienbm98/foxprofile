@@ -6,7 +6,12 @@ import shutil
 from ...core.config import DATA_DIR, PROFILES_FILE
 from ...core.logging import get_logger
 from ...models.profile import Profile
-from ...utils.validation import validate_profile_name
+from ...utils.validation import (
+    valid_or_none,
+    validate_locale,
+    validate_profile_name,
+    validate_timezone,
+)
 from .transfer import export_to_zip, import_from_zip
 
 logger = get_logger("profile.manager")
@@ -37,6 +42,8 @@ class ProfileManager:
                                 "os_type",
                                 p_data.get("config", {}).get("os", "windows"),
                             ),
+                            "timezone": valid_or_none(p_data.get("timezone"), validate_timezone),
+                            "locale": valid_or_none(p_data.get("locale"), validate_locale),
                         }
                         self.profiles[name] = Profile(**clean_data)
                 logger.info("Loaded %d profiles", len(self.profiles))
@@ -55,13 +62,22 @@ class ProfileManager:
         except Exception as e:
             logger.exception("Error saving profiles: %s", e)
 
-    def add_profile(self, name: str, proxy: str, os_type: str) -> bool:
+    def add_profile(
+        self,
+        name: str,
+        proxy: str,
+        os_type: str,
+        timezone: str | None = None,
+        locale: str | None = None,
+    ) -> bool:
         if name in self.profiles:
             return False
         self.profiles[name] = Profile(
             name=name,
             proxy=proxy or None,
             os_type=os_type,
+            timezone=timezone or None,
+            locale=locale or None,
         )
         self.save_profiles()
         pathlib.Path(self._data_path(name)).mkdir(exist_ok=True, parents=True)
@@ -74,7 +90,10 @@ class ProfileManager:
         new_name: str,
         new_proxy: str,
         new_os: str,
+        new_timezone: str | None = None,
+        new_locale: str | None = None,
     ) -> bool:
+        """Replace every field; a None/empty timezone or locale means automatic."""
         if original_name not in self.profiles:
             return False
 
@@ -85,6 +104,8 @@ class ProfileManager:
         profile.name = new_name
         profile.proxy = new_proxy or None
         profile.os_type = new_os
+        profile.timezone = new_timezone or None
+        profile.locale = new_locale or None
 
         if new_name != original_name:
             del self.profiles[original_name]

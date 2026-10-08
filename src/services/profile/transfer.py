@@ -7,7 +7,12 @@ from datetime import datetime
 from ...core.config import FINGERPRINT_FILE
 from ...core.logging import get_logger
 from ...models.profile import Profile
-from ...utils.validation import validate_profile_name
+from ...utils.validation import (
+    valid_or_none,
+    validate_locale,
+    validate_profile_name,
+    validate_timezone,
+)
 
 logger = get_logger("profile.transfer")
 
@@ -77,6 +82,8 @@ def import_from_zip(
                 name=name,
                 proxy=profile_data.get("proxy"),
                 os_type=profile_data.get("os_type", "windows"),
+                timezone=valid_or_none(profile_data.get("timezone"), validate_timezone),
+                locale=valid_or_none(profile_data.get("locale"), validate_locale),
             )
 
             data_files = [f for f in zipf.namelist() if f.startswith("data/")]

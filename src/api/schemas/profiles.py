@@ -1,10 +1,16 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ProfileCreate(BaseModel):
     name: str
     proxy: str | None = None
     os_type: str = "windows"
+    timezone: str | None = Field(
+        None, description="IANA timezone, e.g. Asia/Ho_Chi_Minh. Unset = follow the IP"
+    )
+    locale: str | None = Field(
+        None, description="language-REGION, e.g. vi-VN. Unset = follow the IP"
+    )
 
 
 class ProfileUpdate(BaseModel):
@@ -13,12 +19,16 @@ class ProfileUpdate(BaseModel):
     name: str | None = None
     proxy: str | None = None
     os_type: str | None = None
+    timezone: str | None = Field(None, description='"" switches back to automatic')
+    locale: str | None = Field(None, description='"" switches back to automatic')
 
 
 class ProfileResponse(BaseModel):
     name: str
     proxy: str | None
     os_type: str
+    timezone: str | None = None
+    locale: str | None = None
     data_dir: str
     is_running: bool
 

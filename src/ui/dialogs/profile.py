@@ -6,7 +6,13 @@ import flet as ft
 from ...core.strings import get_string
 from ...interfaces.protocols import IProxyService
 from ...models.profile import Profile
-from ...utils.validation import validate_profile_name, validate_proxy_format
+from ...services.proxy.geo_check import GeoCheckResult, check_geo
+from ...utils.validation import (
+    validate_locale,
+    validate_profile_name,
+    validate_proxy_format,
+    validate_timezone,
+)
 from ..theme.colors import COLORS
 from ..theme.page import build_os_dropdown
 from ..theme.styles import ACCENT_STYLE, DLG_FIELD_KWARGS, OUTLINE_STYLE
@@ -15,7 +21,7 @@ from ..theme.styles import ACCENT_STYLE, DLG_FIELD_KWARGS, OUTLINE_STYLE
 def open_profile_dialog(
     page: ft.Page,
     proxy_service: IProxyService,
-    on_save: Callable[[str, str, str], str | None],
+    on_save: Callable[[str, str, str, str, str], str | None],
     profile: Profile | None = None,
 ) -> None:
     is_edit = profile is not None
@@ -43,6 +49,22 @@ def open_profile_dialog(
     os_dropdown = build_os_dropdown(
         profile.os_type if profile is not None else "windows",
     )
+    timezone_field = ft.TextField(
+        label=get_string("timezone_optional"),
+        value=(profile.timezone or "") if profile is not None else "",
+        hint_text=get_string("timezone_hint"),
+        expand=3,
+        **DLG_FIELD_KWARGS,
+    )
+    locale_field = ft.TextField(
+        label=get_string("locale_optional"),
+        value=(profile.locale or "") if profile is not None else "",
+        hint_text=get_string("locale_hint"),
+        expand=2,
+        **DLG_FIELD_KWARGS,
+    )
+    geo_error = ft.Text("", size=12, color=COLORS["error"], visible=False)
+    geo_result = ft.Column(spacing=4, visible=False)
     name_error = ft.Text("", size=12, color=COLORS["error"], visible=False)
     proxy_error = ft.Text("", size=12, color=COLORS["error"], visible=False)
     check_btn = ft.OutlinedButton(
@@ -50,6 +72,16 @@ def open_profile_dialog(
         icon=ft.Icons.WIFI_FIND,
         height=38,
         style=OUTLINE_STYLE,
+    )
+
+    ip_btn = ft.OutlinedButton(
+        get_string("check_ip"),
+        icon=ft.Icons.PUBLIC,
+        height=38,
+        style=OUTLINE_STYLE,
+    )
+    ip_btn.on_click = lambda _: _do_ip_check(
+        page, proxy_field, timezone_field, locale_field, geo_result, ip_btn
     )
 
     check_btn.on_click = lambda _: _do_proxy_check(
@@ -64,7 +96,9 @@ def open_profile_dialog(
         name = (name_field.value or "").strip()
         proxy = (proxy_field.value or "").strip()
         os_type = os_dropdown.value or "windows"
-        name_error.visible = proxy_error.visible = False
+        timezone = (timezone_field.value or "").strip()
+        locale = (locale_field.value or "").strip()
+        name_error.visible = proxy_error.visible = geo_error.visible = False
 
         valid_name, name_err = validate_profile_name(name)
         if not valid_name:
@@ -80,7 +114,15 @@ def open_profile_dialog(
             page.update()
             return
 
-        error = on_save(name, proxy, os_type)
+        for validate, value in ((validate_timezone, timezone), (validate_locale, locale)):
+            valid, geo_err = validate(value)
+            if not valid:
+                geo_error.value = geo_err
+                geo_error.visible = True
+                page.update()
+                return
+
+        error = on_save(name, proxy, os_type, timezone, locale)
         if error:
             name_error.value = error
             name_error.visible = True
@@ -102,6 +144,7 @@ def open_profile_dialog(
             content=ft.Column(
                 tight=True,
                 spacing=10,
+                scroll=ft.ScrollMode.AUTO,
                 controls=[
                     ft.Text(subtitle, size=13, color=COLORS["text_sub"]),
                     ft.Container(height=14),
@@ -110,9 +153,13 @@ def open_profile_dialog(
                     ft.Container(height=6),
                     proxy_field,
                     proxy_error,
-                    check_btn,
+                    ft.Row(spacing=8, controls=[check_btn, ip_btn]),
                     ft.Container(height=6),
                     os_dropdown,
+                    ft.Container(height=6),
+                    ft.Row(spacing=8, controls=[timezone_field, locale_field]),
+                    geo_error,
+                    geo_result,
                     ft.Container(height=14),
                 ],
             ),
@@ -164,3 +211,115 @@ def _do_proxy_check(
         page.update()
 
     threading.Thread(target=do_check, daemon=True).start()
+
+
+def _do_ip_check(
+    page: ft.Page,
+    proxy_field: ft.TextField,
+    timezone_field: ft.TextField,
+    locale_field: ft.TextField,
+    geo_result: ft.Column,
+    ip_btn: ft.OutlinedButton,
+) -> None:
+    proxy = (proxy_field.value or "").strip()
+    timezone = (timezone_field.value or "").strip()
+    locale = (locale_field.value or "").strip()
+    for validate, value in (
+        (validate_proxy_format, proxy),
+        (validate_timezone, timezone),
+        (validate_locale, locale),
+    ):
+        valid, err = validate(value)
+        if not valid:
+            geo_result.controls = [ft.Text(err, size=12, color=COLORS["error"])]
+            geo_result.visible = True
+            page.update()
+            return
+
+    ip_btn.content = ft.Text(get_string("ip_checking"))
+    ip_btn.disabled = True
+    geo_result.visible = False
+    page.update()
+
+    def use_locale(value: str) -> None:
+        locale_field.value = value
+        page.update()
+
+    def do_check() -> None:
+        try:
+            result = check_geo(proxy or None, timezone or None, locale or None)
+            geo_result.controls = _geo_lines(result, use_locale)
+        except Exception as e:
+            geo_result.controls = [
+                ft.Text(get_string("geo_check_failed", error=e), size=12, color=COLORS["error"])
+            ]
+        ip_btn.content = ft.Text(get_string("check_ip"))
+        ip_btn.disabled = False
+        geo_result.visible = True
+        page.update()
+
+    threading.Thread(target=do_check, daemon=True).start()
+
+
+def _geo_lines(result: GeoCheckResult, use_locale: Callable[[str], None]) -> list[ft.Control]:
+    def line(text: str, color: str = COLORS["text_sub"]) -> ft.Text:
+        return ft.Text(text, size=12, color=color, selectable=True)
+
+    if result.exit_ip is None:
+        return [line(get_string("geo_check_failed", error=result.error), COLORS["error"])]
+
+    mode = {True: get_string("geo_pinned"), False: get_string("geo_auto")}
+    lines: list[ft.Control] = [
+        line(
+            get_string("geo_exit", ip=result.exit_ip, country=result.country or "?"),
+            COLORS["text_main"],
+        ),
+        line(
+            get_string(
+                "geo_timezone", value=result.timezone or "?", mode=mode[result.timezone_pinned]
+            )
+        ),
+        line(
+            get_string(
+                "geo_locale",
+                value=result.locale or f"~{result.suggested_locale or '?'}",
+                mode=mode[True] if result.locale_pinned else get_string("geo_locale_random"),
+            )
+        ),
+    ]
+    for s in result.sources:
+        if s.error:
+            lines.append(
+                line(
+                    get_string("geo_source_error", source=s.source, error=s.error),
+                    COLORS["text_dim"],
+                )
+            )
+        else:
+            lines.append(
+                line(
+                    get_string(
+                        "geo_source",
+                        source=s.source,
+                        ip=s.ip or "?",
+                        country=s.country or "?",
+                        city=s.city or "",
+                        timezone=s.timezone or "-",
+                    ),
+                    COLORS["text_dim"],
+                )
+            )
+    if result.error:
+        lines.append(line(result.error, COLORS["error"]))
+    for w in result.warnings:
+        lines.append(line(f"\u26a0 {w.message}", COLORS["warning"]))
+    if not result.warnings and not result.error:
+        lines.append(line(f"\u2713 {get_string('geo_all_good')}", COLORS["success"]))
+    if result.suggested_locale and not result.locale_pinned:
+        lines.append(
+            ft.TextButton(
+                get_string("geo_use_suggested", value=result.suggested_locale),
+                on_click=lambda _, v=result.suggested_locale: use_locale(v),
+            )
+        )
+    return lines

@@ -36,10 +36,12 @@ def edit_profile(
         return
     original = profile.name
 
-    def on_save(new_name: str, new_proxy: str, new_os: str) -> str | None:
+    def on_save(
+        new_name: str, new_proxy: str, new_os: str, timezone: str, locale: str
+    ) -> str | None:
         if new_name != original and bl.is_running(original):
             return get_string("stop_before_rename")
-        if pm.update_profile(original, new_name, new_proxy, new_os):
+        if pm.update_profile(original, new_name, new_proxy, new_os, timezone, locale):
             log(get_string("updated_profile", old=original, new=new_name))
             refresh()
             return None
@@ -55,8 +57,8 @@ def add_profile(
     log: Callable[[str], None],
     refresh: Callable[[], None],
 ) -> None:
-    def on_save(name: str, proxy: str, os_type: str) -> str | None:
-        if pm.add_profile(name, proxy, os_type):
+    def on_save(name: str, proxy: str, os_type: str, timezone: str, locale: str) -> str | None:
+        if pm.add_profile(name, proxy, os_type, timezone, locale):
             log(get_string("created_profile", name=name))
             refresh()
             return None
