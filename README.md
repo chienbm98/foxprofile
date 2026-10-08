@@ -218,8 +218,8 @@ Antidetect browser là công cụ hợp pháp, thường dùng để bảo vệ 
 
 ## Giấy phép
 
-[MIT](LICENSE). Copyright (c) 2026 chienbm98; Copyright (c) 2025-2026 Vladislav Zenkevich.
+[MIT](LICENSE). Copyright (c) 2026 chienbm98.
 
 ## Ghi công
 
-FoxProfile phát triển tiếp từ **CamouMgr** của Vladislav Zenkevich (giấy phép MIT) và dựa trên trình duyệt [Camoufox](https://github.com/daijro/camoufox) của daijro.
+FoxProfile được xây dựng trên trình duyệt [Camoufox](https://github.com/daijro/camoufox) của daijro.

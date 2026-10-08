@@ -140,8 +140,8 @@ Anti-detect browsers are legitimate tools for privacy, web testing and agencies 
 
 ## License
 
-[MIT](LICENSE). Copyright (c) 2026 chienbm98; Copyright (c) 2025-2026 Vladislav Zenkevich.
+[MIT](LICENSE). Copyright (c) 2026 chienbm98.
 
 ## Acknowledgements
 
-FoxProfile grew out of **CamouMgr** by Vladislav Zenkevich (MIT) and is built on the [Camoufox](https://github.com/daijro/camoufox) browser by daijro.
+FoxProfile is built on the [Camoufox](https://github.com/daijro/camoufox) browser by daijro.
