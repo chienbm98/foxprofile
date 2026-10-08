@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from contextlib import AbstractContextManager
-from typing import Protocol
+from typing import Any, Protocol
 
 from ..models.profile import Profile
 
@@ -55,6 +55,14 @@ class IBrowserLauncher(Protocol):
     def is_running(self, profile_name: str) -> bool: ...
 
     def exclusive(self, profile_name: str) -> AbstractContextManager[None]: ...
+
+    def control(
+        self,
+        profile_name: str,
+        action: str,
+        params: dict[str, Any] | None = None,
+        timeout: float = 60,
+    ) -> Any: ...
 
     def wait_for_launch(
         self,

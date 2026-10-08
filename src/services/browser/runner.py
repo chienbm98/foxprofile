@@ -10,7 +10,8 @@ sys.path.insert(
 
 from camoufox.async_api import AsyncCamoufox
 
-from src.core.config import DATA_DIR
+from src.core.config import DATA_DIR, HEADLESS
+from src.services.browser import control
 from src.services.browser.fingerprint import load_or_create
 from src.utils.proxy_parser import parse_proxy
 
@@ -53,7 +54,7 @@ async def run_browser(profile_name: str, proxy_str: str, os_type: str) -> int:
     profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
 
     launch_config = {
-        "headless": False,
+        "headless": HEADLESS,
         "os": os_type,
         "fingerprint": load_or_create(profile_dir, os_type),
         "humanize": True,
@@ -71,13 +72,29 @@ async def run_browser(profile_name: str, proxy_str: str, os_type: str) -> int:
 
     try:
         async with AsyncCamoufox(**launch_config) as context:
-            _safe_print("BROWSER_STARTED")
-
-            page = context.pages[0] if context.pages else await context.new_page()
+            if not context.pages:
+                await context.new_page()
 
             close_event = asyncio.Event()
+
+            def on_page_close(_page: object) -> None:
+                # The session ends when the last tab closes, not the first one.
+                if not [p for p in context.pages if not p.is_closed()]:
+                    close_event.set()
+
+            def watch(page: object) -> None:
+                page.on("close", on_page_close)
+
+            for page in context.pages:
+                watch(page)
+            context.on("page", watch)
             context.on("close", lambda: close_event.set())
-            page.on("close", lambda: close_event.set())
+
+            control_runner, port, token = await control.serve(context)
+            # CONTROL must precede BROWSER_STARTED: the launcher reports the
+            # profile ready on BROWSER_STARTED and callers may control it at once.
+            _safe_print(f"CONTROL:{port}:{token}")
+            _safe_print("BROWSER_STARTED")
 
             close_task = asyncio.create_task(close_event.wait())
             shutdown_task = asyncio.create_task(_shutdown.wait())
@@ -89,6 +106,7 @@ async def run_browser(profile_name: str, proxy_str: str, os_type: str) -> int:
 
             if close_task in done:
                 _safe_print("BROWSER_CLOSED")
+            await control_runner.cleanup()
 
             for task in pending:
                 task.cancel()

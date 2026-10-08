@@ -55,11 +55,14 @@ Cảm ơn bạn đã muốn đóng góp! Mọi đóng góp đều được chào
 
 ```text
 src/
-  api/          REST API (FastAPI): routes, schemas
+  api/          REST API (FastAPI): routes, schemas, token auth
+  mcp_server/   MCP server (client of the REST API)
+  web/          web panel (one HTML file, no build step)
+  server.py     server mode entry point (API + panel, no desktop UI)
   core/         cấu hình, log, chuỗi đa ngôn ngữ
   models/       dataclass Profile
   services/
-    browser/    khởi chạy Camoufox, vân tay, cookie
+    browser/    khởi chạy Camoufox, vân tay, cookie, điều khiển trang (control.py)
     profile/    lưu, xuất/nhập profile
     proxy/      kiểm tra proxy
   ui/           giao diện Flet: components, dialogs, actions

@@ -20,7 +20,9 @@ FoxProfile là ứng dụng desktop quản lý profile cho [Camoufox](https://gi
 - **Xuất/nhập cả profile** ra file ZIP để chuyển sang máy khác, có hoặc không kèm dữ liệu trình duyệt. Vân tay luôn đi kèm.
 - **Thao tác hàng loạt**: chọn nhiều profile để mở, dừng hoặc xóa cùng lúc.
 - **Tìm kiếm** profile theo tên hoặc proxy. Thẻ profile hiện proxy (đã ẩn mật khẩu) và thiết bị đang giả lập.
-- **REST API cục bộ** để điều khiển bằng script hoặc AI agent, có trang tài liệu Swagger.
+- **MCP server**: Claude, Cursor... tự mở profile, lướt web, click, gõ, chụp màn hình.
+- **Chế độ server + web panel**: chạy trên VPS, quản lý và xem màn hình từ xa qua trình duyệt, có token bảo vệ.
+- **REST API** để điều khiển bằng script, có trang tài liệu Swagger.
 - Giao diện **tiếng Việt** (mặc định) và tiếng Anh.
 
 ## Cài đặt
@@ -53,6 +55,70 @@ Trên Windows có thể bấm đúp `run_foxprofile.bat`.
 
 Ứng dụng mở cửa sổ quản lý và đồng thời chạy API tại `http://127.0.0.1:8000`. Tài liệu API: `http://127.0.0.1:8000/docs`.
 
+## Chế độ server và web panel (chạy trên VPS)
+
+Không cần cửa sổ desktop: chỉ chạy API và web panel, trình duyệt chạy ẩn.
+
+```bash
+python -m src.server                     # http://127.0.0.1:8000
+python -m src.server --host 0.0.0.0      # mở ra mạng: BẮT BUỘC đặt token
+```
+
+Mở `http://<địa-chỉ>:8000/` để vào **web panel**: tạo, sửa, mở/dừng profile, xuất/nhập cookie và **xem màn hình từ xa**. Bạn có thể bấm thẳng lên ảnh màn hình và gõ phím để tự đăng nhập hay giải captcha, kể cả khi trình duyệt đang chạy ẩn trên server.
+
+![Web panel](docs/images/panel.png)
+
+![Xem màn hình từ xa](docs/images/panel-viewer.png)
+
+**Bảo mật:** khi nghe ngoài `127.0.0.1`, server **từ chối khởi động** nếu chưa đặt `FOXPROFILE_API_TOKEN` (tối thiểu 24 ký tự). Web panel, REST API và MCP đều dùng chung token này.
+
+```bash
+# Tạo token ngẫu nhiên
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Khi đưa lên VPS, nên đặt server sau reverse proxy có HTTPS (Caddy, Nginx) để token không bị gửi đi dưới dạng chữ thường. Trên Linux không có màn hình, đặt `FOXPROFILE_HEADLESS=virtual` (cần cài `xvfb`) để trình duyệt chạy trên màn hình ảo, khó bị phát hiện hơn chế độ headless thường.
+
+## MCP: cho AI điều khiển trình duyệt
+
+FoxProfile có sẵn MCP server, để Claude Code, Claude Desktop, Cursor... tự quản lý profile và thao tác trên trang: mở URL, đọc trang, click, gõ, chụp màn hình. FoxProfile (bản desktop hoặc `python -m src.server`) phải đang chạy.
+
+**Claude Code:**
+
+```bash
+claude mcp add foxprofile -- python /đường/dẫn/foxprofile/foxprofile_mcp.py
+# Nếu server có token:
+claude mcp add foxprofile -e FOXPROFILE_API_TOKEN=<token> -- python /đường/dẫn/foxprofile/foxprofile_mcp.py
+```
+
+**Claude Desktop / Cursor** (`claude_desktop_config.json`, `.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "foxprofile": {
+      "command": "python",
+      "args": ["/đường/dẫn/foxprofile/foxprofile_mcp.py"],
+      "env": {
+        "FOXPROFILE_URL": "http://127.0.0.1:8000",
+        "FOXPROFILE_API_TOKEN": ""
+      }
+    }
+  }
+}
+```
+
+Dùng `python` trong `.venv` của dự án (ví dụ `.venv\Scripts\python.exe` trên Windows). Sau đó chỉ cần nhắn AI, ví dụ: *"Mở profile tiktok-us-02, vào tiktok.com và chụp màn hình cho tôi"*.
+
+| Nhóm | Tool |
+| --- | --- |
+| Profile | `list_profiles`, `get_profile`, `create_profile`, `update_profile`, `launch_profile`, `stop_profile`, `running_profiles` |
+| Cookie & vân tay | `export_cookies`, `import_cookies`, `get_fingerprint`, `reset_fingerprint`, `check_proxy` |
+| Trang | `browser_navigate`, `browser_back`, `browser_snapshot`, `browser_get_text`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate` |
+| Tab | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
+
+MCP **không** có tool xóa profile, để AI không thể vô tình xóa cookie của tài khoản. Trang chỉ mở được `http`, `https` và `about:`; `file://` bị chặn để AI không đọc được file trên máy.
+
 ## Cookie và vân tay
 
 ![Cookie & vân tay](docs/images/cookies.png)
@@ -75,6 +141,8 @@ Mọi cấu hình đều không bắt buộc. Muốn đổi thì sao chép `.env
 | `FOXPROFILE_LOG_LEVEL` | `INFO` | Mức log |
 | `FOXPROFILE_PROXY_TIMEOUT` | `10` | Thời gian chờ khi kiểm tra proxy (giây) |
 | `FOXPROFILE_LAUNCH_TIMEOUT` | `90` | Thời gian API chờ trình duyệt mở xong (giây) |
+| `FOXPROFILE_HEADLESS` | `false` (`true` ở chế độ server) | Chạy trình duyệt ẩn: `true`, `false` hoặc `virtual` (Linux + Xvfb) |
+| `FOXPROFILE_API_TOKEN` | *(trống)* | Token cho API, web panel và MCP. Bắt buộc khi API nghe ngoài `127.0.0.1` |
 | `FOXPROFILE_API_HOST` | `127.0.0.1` | Địa chỉ API |
 | `FOXPROFILE_API_PORT` | `8000` | Cổng API |
 
@@ -107,6 +175,13 @@ Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang ch
 | `POST` | `/browser/{name}/launch` | Mở trình duyệt, chờ đến khi mở xong hoặc lỗi |
 | `POST` | `/browser/{name}/stop` | Đóng trình duyệt |
 | `POST` | `/proxy/check` | Kiểm tra proxy |
+| `POST` | `/browser/{name}/page/navigate` | Mở URL trong tab đang chọn |
+| `GET` | `/browser/{name}/page/snapshot` | Cây accessibility của trang (để chọn selector) |
+| `POST` | `/browser/{name}/page/click` · `type` · `press` · `wait` | Click, gõ, bấm phím, chờ phần tử (selector Playwright) |
+| `POST` | `/browser/{name}/page/click-at` · `keyboard` | Click theo tọa độ, gõ vào ô đang chọn |
+| `GET` | `/browser/{name}/page/screenshot` | Ảnh PNG của tab (`?format=json` để nhận base64) |
+| `POST` | `/browser/{name}/page/evaluate` | Chạy JavaScript |
+| `GET` / `POST` / `DELETE` | `/browser/{name}/page/tabs` | Quản lý tab |
 
 Ví dụ:
 
@@ -124,7 +199,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/browser/tiktok-us-02/launch
 curl "http://127.0.0.1:8000/api/v1/profiles/tiktok-us-02/cookies?format=netscape" -o cookies.txt
 ```
 
-> ⚠️ API **không có xác thực**. Chỉ để nó nghe trên `127.0.0.1`. Nếu đổi sang `0.0.0.0`, bất kỳ ai trong mạng cũng điều khiển được mọi profile và lấy được toàn bộ cookie.
+Khi có `FOXPROFILE_API_TOKEN`, mọi request (trừ `/health` và `/info`) phải gửi header `Authorization: Bearer <token>`.
 
 ## Định dạng proxy
 

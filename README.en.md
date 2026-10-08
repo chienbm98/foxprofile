@@ -18,7 +18,9 @@ FoxProfile is a desktop manager for [Camoufox](https://github.com/daijro/camoufo
 - Profile export/import as ZIP, with or without browser data; the fingerprint always travels with the profile.
 - Bulk launch, stop and delete.
 - Search profiles by name or proxy; cards show the proxy (credentials hidden) and the emulated device.
-- Local REST API with Swagger docs.
+- MCP server so AI agents (Claude, Cursor...) can launch profiles and browse, click, type and take screenshots.
+- Server mode with a token-protected web panel and remote screen view, for VPS deployments.
+- REST API with Swagger docs.
 
 ## Install
 
@@ -42,6 +44,44 @@ python -m src.main
 
 On Windows you can also run `run_foxprofile.bat`. The API listens on `http://127.0.0.1:8000`; docs are at `/docs`. Set `FOXPROFILE_LANG=en` for the English UI.
 
+## Server mode and web panel (VPS)
+
+No desktop window: API + web panel only, browsers run hidden.
+
+```bash
+python -m src.server                     # http://127.0.0.1:8000
+python -m src.server --host 0.0.0.0      # exposed: FOXPROFILE_API_TOKEN is required
+```
+
+Open `http://<host>:8000/` for the **web panel**: create, edit, launch and stop profiles, move cookies, and **view a profile's screen remotely**. Click on the screenshot and type to log in or solve a captcha even when the browser runs hidden on a server.
+
+![Web panel](docs/images/panel.png)
+
+When listening on anything but `127.0.0.1`, the server **refuses to start** without `FOXPROFILE_API_TOKEN` (24+ characters). The panel, the REST API and MCP share that token. Put the server behind an HTTPS reverse proxy (Caddy, Nginx) on a VPS. On a display-less Linux box, `FOXPROFILE_HEADLESS=virtual` (needs `xvfb`) runs browsers on a virtual display, which is harder to detect than plain headless.
+
+## MCP: let AI agents drive the browser
+
+FoxProfile ships an MCP server so Claude Code, Claude Desktop, Cursor and others can manage profiles and act on pages (navigate, read, click, type, screenshot). FoxProfile (desktop or `python -m src.server`) must be running.
+
+```bash
+# Claude Code
+claude mcp add foxprofile -e FOXPROFILE_API_TOKEN=<token> -- python /path/to/foxprofile/foxprofile_mcp.py
+```
+
+```json
+{
+  "mcpServers": {
+    "foxprofile": {
+      "command": "python",
+      "args": ["/path/to/foxprofile/foxprofile_mcp.py"],
+      "env": { "FOXPROFILE_URL": "http://127.0.0.1:8000", "FOXPROFILE_API_TOKEN": "" }
+    }
+  }
+}
+```
+
+Use the project's `.venv` Python. Tools: profile management (`list_profiles`, `create_profile`, `launch_profile`, `stop_profile`...), cookies and fingerprints, page control (`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate`) and tabs. There is deliberately no delete tool, and only `http`, `https` and `about:` URLs can be opened.
+
 ## Cookies and fingerprints
 
 Click the 🍪 icon on a profile card. The profile's browser must be stopped: FoxProfile opens the profile headless to read and write cookies.
@@ -51,7 +91,7 @@ Click the 🍪 icon on a profile card. The profile's browser must be stopped: Fo
 
 ## Configuration
 
-Copy `.env.example` to `.env` to override defaults. Variables use the `FOXPROFILE_` prefix (`LANG`, `PROFILES_FILE`, `DATA_DIR`, `LOG_DIR`, `LOG_LEVEL`, `PROXY_TIMEOUT`, `LAUNCH_TIMEOUT`, `API_HOST`, `API_PORT`).
+Copy `.env.example` to `.env` to override defaults. Variables use the `FOXPROFILE_` prefix (`LANG`, `PROFILES_FILE`, `DATA_DIR`, `LOG_DIR`, `LOG_LEVEL`, `PROXY_TIMEOUT`, `LAUNCH_TIMEOUT`, `API_HOST`, `API_PORT`, `HEADLESS`, `API_TOKEN`).
 
 ## REST API
 
@@ -71,8 +111,9 @@ Prefix `/api/v1`.
 | `POST` | `/browser/{name}/launch` | Launch; waits for ready (`200`) or failure (`502`). `?wait=false` returns `202` immediately |
 | `POST` | `/browser/{name}/stop` | Stop |
 | `POST` | `/proxy/check` | Check a proxy |
+| `POST`/`GET` | `/browser/{name}/page/...` | Page control: `navigate`, `back`, `snapshot`, `text`, `click`, `click-at`, `type`, `keyboard`, `press`, `wait`, `screenshot`, `evaluate`, `tabs` |
 
-> ⚠️ The API has **no authentication**. Keep it bound to `127.0.0.1`; anyone who can reach it can control every profile and read every cookie.
+With `FOXPROFILE_API_TOKEN` set, every request except `/health` and `/info` needs `Authorization: Bearer <token>`.
 
 ## Data layout
 

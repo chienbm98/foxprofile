@@ -27,3 +27,19 @@ API_PORT = int(_env("API_PORT", "8000"))
 LAUNCH_WAIT_TIMEOUT = int(_env("LAUNCH_TIMEOUT", "90"))
 
 FINGERPRINT_FILE = "fingerprint.json"
+
+
+def _headless(value: str) -> bool | str:
+    """'true'/'false', or 'virtual' (Linux: hidden Xvfb display, more stealthy)."""
+    value = value.strip().lower()
+    if value == "virtual":
+        return "virtual"
+    return value in ("1", "true", "yes")
+
+
+# Browsers open hidden when true; server mode turns this on by default.
+HEADLESS = _headless(_env("HEADLESS", "false"))
+
+# Shared secret for the REST API, the web panel and the MCP server. Required
+# whenever the API listens on anything other than the loopback interface.
+API_TOKEN = _env("API_TOKEN", "")

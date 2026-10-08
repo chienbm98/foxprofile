@@ -19,9 +19,12 @@ FoxProfile lưu cookie đăng nhập và proxy của nhiều tài khoản, nên 
 - Đọc hoặc ghi file ngoài thư mục dữ liệu (path traversal qua tên profile hay file ZIP nhập vào)
 - Lộ cookie, proxy hoặc mật khẩu proxy ra log hay ra ngoài máy
 - Khiến REST API nghe ngoài `127.0.0.1` khi người dùng không chủ động cấu hình
+- Vượt qua token của API / web panel, hoặc truy cập kênh điều khiển trình duyệt (`control.py`) mà không có token
+- Cho AI agent qua MCP mở được URL `file://` hay đọc file trên máy
 
 ## Lưu ý cho người dùng
 
-- REST API **không có xác thực**. Giữ `FOXPROFILE_API_HOST=127.0.0.1`.
+- Khi đưa lên mạng, luôn đặt `FOXPROFILE_API_TOKEN` (ít nhất 24 ký tự ngẫu nhiên) và dùng HTTPS.
+- Nội dung trang web là dữ liệu không tin cậy: trang có thể chứa chỉ dẫn nhằm lừa AI agent.
 - Thư mục `camoufox_data/` chứa cookie đăng nhập. Không chia sẻ và không commit.
 - Chỉ nhập profile ZIP hay file cookie từ nguồn bạn tin tưởng.

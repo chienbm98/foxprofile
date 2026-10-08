@@ -1,12 +1,17 @@
 import atexit
 import contextlib
+import json
 import subprocess
 import threading
+import urllib.error
+import urllib.request
 from collections.abc import Callable, Iterator
+from typing import Any
 
 from ...core.logging import get_logger
 from ...core.strings import get_string
 from ...models.profile import Profile
+from .control import TOKEN_HEADER
 from .process import spawn_browser, terminate, wait_for_exit
 
 logger = get_logger("browser.launcher")
@@ -42,6 +47,14 @@ class ProfileBusyError(Exception):
     """The profile's browser is running or another operation holds its data dir."""
 
 
+class BrowserControlError(Exception):
+    """A page action failed or the profile has no controllable browser."""
+
+    def __init__(self, message: str, status: int = 400) -> None:
+        super().__init__(message)
+        self.status = status
+
+
 class BrowserLauncher:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -49,6 +62,7 @@ class BrowserLauncher:
         self._stop_notifiers: dict[str, threading.Event] = {}
         self._launch_results: dict[str, _LaunchResult] = {}
         self._busy: set[str] = set()
+        self._controls: dict[str, tuple[int, str]] = {}
         atexit.register(self.shutdown_all)
 
     @contextlib.contextmanager
@@ -123,6 +137,7 @@ class BrowserLauncher:
                 stop_event.set()
                 result.settle(False, "Browser exited before it was ready")
                 with self._lock:
+                    self._controls.pop(profile.name, None)
                     self._active_sessions.pop(profile.name, None)
                     self._stop_notifiers.pop(profile.name, None)
                 log_callback(get_string("session_ended", name=profile.name))
@@ -159,11 +174,44 @@ class BrowserLauncher:
                 return False
             proc = self._active_sessions.pop(profile_name)
             notifier = self._stop_notifiers.pop(profile_name, None)
+            self._controls.pop(profile_name, None)
         if notifier:
             notifier.set()
         terminate(proc, profile_name, timeout)
         logger.info("Stopped browser for profile: %s", profile_name)
         return True
+
+    def control(
+        self,
+        profile_name: str,
+        action: str,
+        params: dict[str, Any] | None = None,
+        timeout: float = 60,
+    ) -> Any:
+        """Run a page action in a running profile's browser and return its result."""
+        with self._lock:
+            endpoint = self._controls.get(profile_name)
+        if not self.is_running(profile_name):
+            raise BrowserControlError("Browser is not running", status=409)
+        if endpoint is None:
+            # Process is up but has not announced its control channel yet.
+            raise BrowserControlError("Browser is still starting", status=503)
+        port, token = endpoint
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{port}/action",
+            data=json.dumps({"action": action, "params": params or {}}).encode(),
+            headers={"Content-Type": "application/json", TOKEN_HEADER: token},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                body = json.loads(response.read())
+        except urllib.error.HTTPError as e:
+            body = json.loads(e.read() or b"{}")
+            raise BrowserControlError(body.get("error", f"HTTP {e.code}"), status=e.code) from e
+        except (urllib.error.URLError, TimeoutError) as e:
+            raise BrowserControlError(f"Browser did not respond: {e}", status=504) from e
+        return body["result"]
 
     def running_profile_names(self) -> set[str]:
         with self._lock:
@@ -202,6 +250,12 @@ class BrowserLauncher:
             for line in iter(proc.stdout.readline, ""):
                 msg = line.strip()
                 if not msg:
+                    continue
+                if msg.startswith("CONTROL:"):
+                    # Holds the control token: never log this line.
+                    _, port, token = msg.split(":", 2)
+                    with self._lock:
+                        self._controls[name] = (int(port), token)
                     continue
                 if msg == "BROWSER_STARTED":
                     result.settle(True)
