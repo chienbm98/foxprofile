@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+import contextlib
 import pathlib
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, FastAPI
 from fastapi.responses import FileResponse
 
-from ..core.config import API_TOKEN, HEADLESS
+from ..core.config import API_PORT, API_TOKEN, HEADLESS
 from ..core.logging import get_logger
+from . import mcp_http
 from .auth import require_token
 from .guard import LocalOnlyGuard
-from .routes import browser_router, page_router, profiles_router, proxy_router
+from .routes import (
+    browser_router,
+    mcp_setup_router,
+    page_router,
+    profiles_router,
+    proxy_router,
+)
 from .schemas.common import SuccessResponse
 
 if TYPE_CHECKING:
@@ -23,9 +32,24 @@ VERSION = "2.1.0"
 _PANEL = pathlib.Path(__file__).resolve().parents[1] / "web" / "index.html"
 
 
-def create_app(container: Container) -> FastAPI:
-    """Build and return the FastAPI application."""
+def create_app(container: Container, self_url: str | None = None) -> FastAPI:
+    """Build the FastAPI application.
+
+    `self_url` is where this process's own API is reachable over loopback; the
+    MCP endpoint's tools call back into it.
+    """
+    mcp_route, mcp_lifespan = mcp_http.build(
+        self_url or f"http://127.0.0.1:{API_PORT}",
+        API_TOKEN,
+    )
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        async with mcp_lifespan:
+            yield
+
     app = FastAPI(
+        lifespan=lifespan,
         title="FoxProfile API",
         description=(
             "REST API for FoxProfile (Camoufox profile manager). When "
@@ -43,6 +67,8 @@ def create_app(container: Container) -> FastAPI:
     app.include_router(browser_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(page_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(proxy_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(mcp_setup_router, prefix=API_PREFIX, dependencies=protected)
+    app.router.routes.append(mcp_route)
 
     @app.get(f"{API_PREFIX}/health", response_model=SuccessResponse, tags=["health"])
     def health_check() -> SuccessResponse:
@@ -56,6 +82,7 @@ def create_app(container: Container) -> FastAPI:
             "version": VERSION,
             "auth_required": bool(API_TOKEN),
             "headless": HEADLESS,
+            "mcp_path": mcp_http.MCP_PATH,
         }
 
     @app.get("/", include_in_schema=False)

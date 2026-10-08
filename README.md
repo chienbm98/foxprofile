@@ -81,34 +81,29 @@ Khi đưa lên VPS, nên đặt server sau reverse proxy có HTTPS (Caddy, Nginx
 
 ## MCP: cho AI điều khiển trình duyệt
 
-FoxProfile có sẵn MCP server, để Claude Code, Claude Desktop, Cursor... tự quản lý profile và thao tác trên trang: mở URL, đọc trang, click, gõ, chụp màn hình. FoxProfile (bản desktop hoặc `python -m src.server`) phải đang chạy.
+FoxProfile có sẵn MCP server, để Claude Code, Claude Desktop, Cursor, VS Code... tự quản lý profile và thao tác trên trang: mở URL, đọc trang, click, gõ, chụp màn hình.
 
-**Claude Code:**
+**Cách nhanh nhất:** bấm **🤖 Kết nối AI (MCP)** trên app desktop hoặc web panel. Hộp thoại sinh sẵn cấu hình cho từng ứng dụng AI, đúng địa chỉ và token của bạn, chỉ cần bấm Sao chép rồi dán.
+
+![Kết nối AI (MCP)](docs/images/mcp-guide.png)
+
+MCP được phục vụ qua HTTP tại `/mcp`, ngay trên cổng của FoxProfile, nên dùng được cả khi FoxProfile chạy trên VPS:
 
 ```bash
-claude mcp add foxprofile -- python /đường/dẫn/foxprofile/foxprofile_mcp.py
-# Nếu server có token:
-claude mcp add foxprofile -e FOXPROFILE_API_TOKEN=<token> -- python /đường/dẫn/foxprofile/foxprofile_mcp.py
+# Claude Code
+claude mcp add --transport http foxprofile http://127.0.0.1:8000/mcp
+# Server có token:
+claude mcp add --transport http foxprofile https://vps.cua-ban.com/mcp --header "Authorization: Bearer <token>"
 ```
-
-**Claude Desktop / Cursor** (`claude_desktop_config.json`, `.cursor/mcp.json`):
 
 ```json
-{
-  "mcpServers": {
-    "foxprofile": {
-      "command": "python",
-      "args": ["/đường/dẫn/foxprofile/foxprofile_mcp.py"],
-      "env": {
-        "FOXPROFILE_URL": "http://127.0.0.1:8000",
-        "FOXPROFILE_API_TOKEN": ""
-      }
-    }
-  }
-}
+// Cursor: ~/.cursor/mcp.json
+{ "mcpServers": { "foxprofile": { "url": "http://127.0.0.1:8000/mcp" } } }
 ```
 
-Dùng `python` trong `.venv` của dự án (ví dụ `.venv\Scripts\python.exe` trên Windows). Sau đó chỉ cần nhắn AI, ví dụ: *"Mở profile tiktok-us-02, vào tiktok.com và chụp màn hình cho tôi"*.
+Claude Desktop chỉ chạy được server MCP cục bộ: dùng `foxprofile_mcp.py` (cùng máy) hoặc cầu nối `npx mcp-remote` (máy khác). Hộp thoại "Kết nối AI" sinh sẵn cả hai.
+
+Sau đó chỉ cần nhắn AI, ví dụ: *"Mở profile tiktok-us-02, vào tiktok.com và chụp màn hình cho tôi"*.
 
 | Nhóm | Tool |
 | --- | --- |
@@ -117,7 +112,7 @@ Dùng `python` trong `.venv` của dự án (ví dụ `.venv\Scripts\python.exe`
 | Trang | `browser_navigate`, `browser_back`, `browser_snapshot`, `browser_get_text`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate` |
 | Tab | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
 
-MCP **không** có tool xóa profile, để AI không thể vô tình xóa cookie của tài khoản. Trang chỉ mở được `http`, `https` và `about:`; `file://` bị chặn để AI không đọc được file trên máy.
+MCP **không** có tool xóa profile, để AI không thể vô tình xóa cookie của tài khoản. Trang chỉ mở được `http`, `https` và `about:blank`; `file://` và `about:config` bị chặn.
 
 ## Cookie và vân tay
 

@@ -55,8 +55,8 @@ Cảm ơn bạn đã muốn đóng góp! Mọi đóng góp đều được chào
 
 ```text
 src/
-  api/          REST API (FastAPI): routes, schemas, token auth
-  mcp_server/   MCP server (client of the REST API)
+  api/          REST API (FastAPI): routes, schemas, token auth, /mcp over HTTP
+  mcp_server/   MCP tools (client of the REST API; stdio entry: foxprofile_mcp.py)
   web/          web panel (one HTML file, no build step)
   server.py     server mode entry point (API + panel, no desktop UI)
   core/         cấu hình, log, chuỗi đa ngôn ngữ

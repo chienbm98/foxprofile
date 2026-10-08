@@ -85,6 +85,15 @@ main { padding: 32px 36px; min-width: 0; }
 .screen-wrap img { max-width: 100%; border: 1px solid var(--border); border-radius: 8px; cursor: crosshair; background: #fff; }
 .viewer-type { display: flex; gap: 8px; padding: 12px 16px; background: var(--panel); border-top: 1px solid var(--line); }
 
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+.chips button { border: 1px solid var(--border); color: var(--sub); padding: 7px 12px; }
+.chips button.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+pre.code { background: #121216; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin: 6px 0 0;
+  white-space: pre-wrap; word-break: break-all; font: 12px/1.5 ui-monospace, Consolas, monospace; color: var(--text); max-height: 280px; overflow: auto; }
+.step { font-weight: 700; margin-top: 16px; }
+.where-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
+.note { color: var(--warn); font-size: 12px; margin-top: 8px; }
+.modal.wide { width: min(720px, 100%); }
 .toast { position: fixed; right: 20px; bottom: 20px; background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 10px; max-width: 420px; z-index: 40; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
 .toast.error { border-left-color: var(--err); }
 .login { min-height: 100vh; display: grid; place-items: center; }
@@ -135,6 +144,7 @@ main { padding: 32px 36px; min-width: 0; }
     <div class="stat"><span data-t="running"></span>: <b id="stat-running">0</b></div>
     <div class="grow"></div>
     <div class="lang"><button class="btn-outline" data-lang="vi">Tiếng Việt</button><button class="btn-outline" data-lang="en">English</button></div>
+    <button class="btn-outline" id="mcp-btn">🤖 <span data-t="mcp_button"></span></button>
     <a class="stat" href="/docs" target="_blank" rel="noopener" data-t="api_docs"></a>
     <button class="btn-outline hidden" id="logout-btn" data-t="logout"></button>
   </aside>
@@ -190,6 +200,15 @@ const I18N = {
     confirm_reset: "Đổi vân tay của “{name}”? Trang web sẽ thấy đây là một máy khác.", close: "Đóng",
     launching: "Đang mở {name}...", started: "Đã mở {name}", stopped: "Đã dừng {name}", created: "Đã tạo {name}", saved: "Đã lưu",
     deleted: "Đã xóa {name}", exported: "Đã xuất {n} cookie", imported: "Đã nhập {n} cookie", fp_reset: "Đã đổi vân tay",
+    mcp_button: "Kết nối AI (MCP)", mcp_title: "Kết nối AI agent (MCP)",
+    mcp_intro: "Cho Claude, Cursor hay VS Code tự quản lý profile và lướt web giúp bạn: mở trang, đọc nội dung, click, gõ và chụp màn hình.",
+    mcp_endpoint: "Địa chỉ MCP", mcp_pick: "1. Chọn ứng dụng AI bạn dùng", mcp_paste: "2. Dán vào: {where}",
+    mcp_copy: "Sao chép", mcp_copied: "Đã sao chép", mcp_insert_token: "Chèn token đang đăng nhập vào cấu hình",
+    mcp_restart: "3. Khởi động lại ứng dụng AI, giữ FoxProfile đang chạy, rồi thử nhắn:",
+    mcp_example: "Mở profile {name}, vào google.com tìm “thời tiết Hà Nội” và chụp màn hình cho tôi.",
+    mcp_remote_note: "Claude Desktop chỉ chạy server MCP cục bộ, nên cấu hình này dùng cầu nối mcp-remote (cần cài Node.js).",
+    mcp_security: "Nội dung trang web không đáng tin: AI được dặn không làm theo chỉ dẫn nằm trên trang. MCP không thể xóa profile.",
+    mcp_http_warn: "Bạn đang dùng HTTP không mã hóa: token có thể bị nghe lén trên đường truyền. Nên đặt server sau HTTPS.",
     go: "Đi", new_tab: "Tab mới", type: "Gõ", type_hint: "Gõ vào ô đang chọn (bấm lên ảnh để chọn ô)", working: "Đang xử lý...",
   },
   en: {
@@ -208,6 +227,15 @@ const I18N = {
     confirm_reset: "Reset the fingerprint of “{name}”? Sites will see a different machine.", close: "Close",
     launching: "Launching {name}...", started: "Started {name}", stopped: "Stopped {name}", created: "Created {name}", saved: "Saved",
     deleted: "Deleted {name}", exported: "Exported {n} cookies", imported: "Imported {n} cookies", fp_reset: "Fingerprint reset",
+    mcp_button: "Connect AI (MCP)", mcp_title: "Connect an AI agent (MCP)",
+    mcp_intro: "Let Claude, Cursor or VS Code manage profiles and browse for you: open pages, read them, click, type and take screenshots.",
+    mcp_endpoint: "MCP endpoint", mcp_pick: "1. Pick your AI app", mcp_paste: "2. Paste into: {where}",
+    mcp_copy: "Copy", mcp_copied: "Copied", mcp_insert_token: "Insert the token you are logged in with",
+    mcp_restart: "3. Restart the AI app, keep FoxProfile running, then try:",
+    mcp_example: "Open profile {name}, search google.com for “weather in Hanoi” and send me a screenshot.",
+    mcp_remote_note: "Claude Desktop only starts local MCP servers, so this config bridges through mcp-remote (requires Node.js).",
+    mcp_security: "Page content is untrusted: the AI is told never to follow instructions found on web pages. Profiles cannot be deleted through MCP.",
+    mcp_http_warn: "You are on plain HTTP: the token can be sniffed in transit. Put the server behind HTTPS.",
     go: "Go", new_tab: "New tab", type: "Type", type_hint: "Type into the focused field (click the screen to focus one)", working: "Working...",
   },
 };
@@ -447,6 +475,64 @@ function openCookies(p) {
   });
 }
 
+// --- MCP setup guide -----------------------------------------------------------
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  // navigator.clipboard needs a secure context; plain-HTTP panels fall back here.
+  const area = h("textarea", { style: "position:fixed;opacity:0" });
+  area.value = text; document.body.append(area); area.select();
+  let ok = false; try { ok = document.execCommand("copy"); } catch {}
+  area.remove(); return ok;
+}
+
+async function openMcpGuide() {
+  let setup;
+  try { setup = await api("GET", `/mcp/setup?base_url=${enc(location.origin)}`); }
+  catch (e) { return toast(e.message, true); }
+  const state = { client: "claude-code", insertToken: false };
+  const sample = (profiles[0] && profiles[0].name) || "shop-facebook-01";
+  modal((close) => {
+    const chips = h("div", { class: "chips" });
+    const where = h("b");
+    const code = h("pre", { class: "code" });
+    const note = h("div", { class: "note" });
+    const status = h("div", { class: "muted" });
+    const tokenBox = h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--sub)" },
+      h("input", { type: "checkbox", style: "width:auto", onchange: (e) => { state.insertToken = e.target.checked; draw(); } }),
+      t("mcp_insert_token"));
+    const example = t("mcp_example", { name: sample });
+    const fill = (text) => (state.insertToken && token ? text.split(setup.token_placeholder).join(token) : text);
+    function draw() {
+      const cfg = setup.configs.find((c) => c.id === state.client);
+      chips.replaceChildren(...setup.configs.map((c) => h("button", { class: c.id === state.client ? "active" : "",
+        onclick: () => { state.client = c.id; draw(); } }, c.name)));
+      where.textContent = t("mcp_paste", { where: cfg.where });
+      code.textContent = fill(cfg.code);
+      note.textContent = cfg.id === "claude-desktop" ? t("mcp_remote_note") : "";
+      status.textContent = "";
+    }
+    const copyBtn = async (text) => { status.textContent = (await copyText(text)) ? "✓ " + t("mcp_copied") : ""; };
+    draw();
+    return h("div", { class: "modal wide" },
+      h("h3", {}, "🤖 " + t("mcp_title")),
+      h("div", { class: "muted" }, t("mcp_intro")),
+      h("div", { class: "muted", style: "margin-top:8px" }, t("mcp_endpoint") + ": ", h("code", {}, setup.mcp_url)),
+      location.protocol === "http:" && !["127.0.0.1", "localhost", "[::1]"].includes(location.hostname)
+        ? h("div", { class: "note" }, t("mcp_http_warn")) : null,
+      h("div", { class: "step" }, t("mcp_pick")), chips,
+      h("div", { class: "where-row" }, where,
+        h("button", { class: "btn-accent", onclick: () => copyBtn(code.textContent) }, t("mcp_copy"))),
+      code, note,
+      setup.auth_required ? tokenBox : null,
+      h("div", { class: "step" }, t("mcp_restart")),
+      h("div", { class: "where-row" }, h("i", {}, example),
+        h("button", { class: "btn-outline", onclick: () => copyBtn(example) }, t("mcp_copy"))),
+      h("div", { class: "muted", style: "margin-top:14px;font-size:12px" }, t("mcp_security")),
+      status,
+      h("div", { class: "row" }, h("button", { class: "btn-outline", onclick: close }, t("close"))));
+  });
+}
+
 // --- Remote viewer -----------------------------------------------------------
 let viewing = null, viewTimer = null, shotUrl = null, shotInFlight = false;
 function page(path) { return `/browser/${enc(viewing)}/page/${path}`; }
@@ -530,6 +616,7 @@ $("login-form").onsubmit = async (e) => {
 };
 $("logout-btn").onclick = () => { token = ""; store.set("foxprofile.token", null); showLogin(); };
 $("new-btn").onclick = () => openEditor(null);
+$("mcp-btn").onclick = openMcpGuide;
 $("search").oninput = render;
 document.querySelectorAll("[data-lang]").forEach((b) => { b.onclick = () => { lang = b.dataset.lang; store.set("foxprofile.lang", lang); applyI18n(); render(); }; });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("modal-root").replaceChildren(); } });

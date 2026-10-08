@@ -22,6 +22,7 @@ def build_sidebar(
     on_import: Callable,
     on_export: Callable,
     on_toggle_log: Callable,
+    on_mcp: Callable,
     on_fullscreen_log: Callable,
 ) -> ft.Container:
     log_toggle_btn.on_click = on_toggle_log
@@ -87,6 +88,15 @@ def build_sidebar(
                             on_click=on_export,
                         ),
                     ],
+                ),
+                ft.Container(height=10),
+                ft.OutlinedButton(
+                    get_string("mcp_button"),
+                    icon=ft.Icons.SMART_TOY_OUTLINED,
+                    width=242,
+                    height=40,
+                    style=OUTLINE_STYLE,
+                    on_click=on_mcp,
                 ),
                 ft.Divider(height=24, color=COLORS["border"]),
                 stats_text,

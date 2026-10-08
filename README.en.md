@@ -61,26 +61,22 @@ When listening on anything but `127.0.0.1`, the server **refuses to start** with
 
 ## MCP: let AI agents drive the browser
 
-FoxProfile ships an MCP server so Claude Code, Claude Desktop, Cursor and others can manage profiles and act on pages (navigate, read, click, type, screenshot). FoxProfile (desktop or `python -m src.server`) must be running.
+FoxProfile ships an MCP server so Claude Code, Claude Desktop, Cursor, VS Code and others can manage profiles and act on pages (navigate, read, click, type, screenshot).
+
+**Quickest:** click **🤖 Connect AI (MCP)** in the desktop app or the web panel. It generates ready-to-paste configs for each AI app with your address and token; copy and paste.
+
+![Connect AI (MCP)](docs/images/mcp-guide.png)
+
+MCP is served over HTTP at `/mcp` on FoxProfile's own port, so it also works when FoxProfile runs on a VPS:
 
 ```bash
-# Claude Code
-claude mcp add foxprofile -e FOXPROFILE_API_TOKEN=<token> -- python /path/to/foxprofile/foxprofile_mcp.py
+claude mcp add --transport http foxprofile http://127.0.0.1:8000/mcp
+claude mcp add --transport http foxprofile https://your-vps/mcp --header "Authorization: Bearer <token>"
 ```
 
-```json
-{
-  "mcpServers": {
-    "foxprofile": {
-      "command": "python",
-      "args": ["/path/to/foxprofile/foxprofile_mcp.py"],
-      "env": { "FOXPROFILE_URL": "http://127.0.0.1:8000", "FOXPROFILE_API_TOKEN": "" }
-    }
-  }
-}
-```
+Claude Desktop only launches local MCP servers: use `foxprofile_mcp.py` on the same machine, or the `npx mcp-remote` bridge from another one. The Connect AI dialog generates both.
 
-Use the project's `.venv` Python. Tools: profile management (`list_profiles`, `create_profile`, `launch_profile`, `stop_profile`...), cookies and fingerprints, page control (`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate`) and tabs. There is deliberately no delete tool, and only `http`, `https` and `about:` URLs can be opened.
+Tools: profile management (`list_profiles`, `create_profile`, `launch_profile`, `stop_profile`...), cookies and fingerprints, page control (`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate`) and tabs. There is deliberately no delete tool, and only `http`, `https` and `about:blank` can be opened.
 
 ## Cookies and fingerprints
 

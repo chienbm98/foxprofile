@@ -17,6 +17,7 @@ from .components import (
     build_ui_refs,
     rebuild_bulk_bar,
 )
+from .dialogs.mcp_guide import open_mcp_guide
 from .handlers import AppHandlers
 from .refs import UIRefs
 from .state import ITEMS_PER_PAGE, AppState
@@ -56,6 +57,8 @@ class App:
         configure_page(page)
         fp = ft.FilePicker()
         page.services.append(fp)
+        self.clipboard = ft.Clipboard()
+        page.services.append(self.clipboard)
         self.refs = build_ui_refs(
             pm=self.pm,
             on_change_page=self._change_page,
@@ -79,6 +82,7 @@ class App:
             on_new_profile=lambda _: self.h.open_add_dialog(),
             on_import=self.h.on_import,
             on_export=lambda _: self.h.on_export_open(),
+            on_mcp=lambda _: open_mcp_guide(self.page, self.clipboard),
             on_toggle_log=lambda _: self.h.toggle_log(),
             on_fullscreen_log=lambda _: self.h.open_log_fullscreen(),
         )

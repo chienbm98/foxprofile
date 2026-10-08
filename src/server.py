@@ -43,7 +43,7 @@ def main() -> None:
     check_bind_safety(host, API_TOKEN)
 
     container = Container()
-    app = create_app(container)
+    app = create_app(container, self_url=f"http://127.0.0.1:{port}")
     logger = get_logger("server")
     logger.info("FoxProfile server on http://%s:%s (panel at /)", host, port)
     print(f"FoxProfile panel: http://{host}:{port}/   API docs: http://{host}:{port}/docs")
