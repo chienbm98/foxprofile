@@ -3,10 +3,11 @@ import os
 import subprocess
 import sys
 import time
+import types
 
 import pytest
 
-from src.services.browser import process, runner
+from src.services.browser import display, process, runner
 
 
 class FakeDisplay:
@@ -14,6 +15,7 @@ class FakeDisplay:
 
     def __init__(self):
         self.killed = 0
+        self.proc = types.SimpleNamespace(pid=4242)
         FakeDisplay.instances.append(self)
 
     def get(self):
@@ -46,6 +48,8 @@ def test_virtual_display_is_stopped_when_the_launch_fails(monkeypatch, tmp_path,
     assert seen["headless"] is False
     assert seen["virtual_display"] == ":99"
     assert [d.killed for d in FakeDisplay.instances] == [1]
+    # The runner stopped its own Xvfb, so nothing is left for the launcher to stop.
+    assert not display.pid_path(str(tmp_path / "camoufox_data" / "p")).exists()
 
 
 def test_no_virtual_display_outside_virtual_mode(monkeypatch, tmp_path):
@@ -99,11 +103,31 @@ def test_terminate_kills_what_the_runner_left_in_its_group():
     assert not _alive(helper_pid)
 
 
-def test_kill_group_ignores_a_running_process():
+def test_cleanup_leaves_a_running_runner_alone(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    display.record(str(tmp_path / "camoufox_data" / "p"), 1234)
     try:
-        process._kill_group(proc)
+        process.cleanup(proc, "p")
         assert proc.poll() is None
+        assert display.pid_path(str(tmp_path / "camoufox_data" / "p")).exists()
     finally:
         proc.kill()
         proc.wait()
+
+
+def test_stop_recorded_never_kills_a_process_that_is_not_xvfb(tmp_path):
+    # A recorded PID that now belongs to something else (PID reuse) is left alone.
+    proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        display.record(str(tmp_path), proc.pid)
+        assert display.stop_recorded(str(tmp_path)) is False
+        assert proc.poll() is None
+        assert not display.pid_path(str(tmp_path)).exists()
+    finally:
+        proc.kill()
+        proc.wait()
+
+
+def test_stop_recorded_without_a_record(tmp_path):
+    assert display.stop_recorded(str(tmp_path)) is False

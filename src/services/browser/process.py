@@ -6,8 +6,10 @@ import subprocess
 import sys
 from collections.abc import Callable
 
+from ...core.config import DATA_DIR
 from ...core.logging import get_logger
 from ...models.profile import Profile
+from . import display
 
 logger = get_logger("browser.process")
 
@@ -64,15 +66,20 @@ def terminate(proc: subprocess.Popen, name: str, timeout: int = 5) -> None:
     except Exception as e:
         logger.exception("Error terminating browser %s: %s", name, e)
     finally:
-        _kill_group(proc)
+        cleanup(proc, name)
 
 
-def _kill_group(proc: subprocess.Popen) -> None:
-    """Kill anything left in the runner's process group once it has exited."""
+def cleanup(proc: subprocess.Popen, name: str) -> None:
+    """Stop what an exited runner left behind: its process group and its Xvfb.
+
+    Xvfb runs in its own session, so the process group does not cover it; the
+    runner records its PID in the profile directory instead.
+    """
     if os.name != "posix" or proc.poll() is None:
         return
     with contextlib.suppress(ProcessLookupError, PermissionError):
         os.killpg(proc.pid, signal.SIGKILL)
+    display.stop_recorded(os.path.join(os.getcwd(), DATA_DIR, name))
 
 
 def wait_for_exit(
@@ -87,5 +94,5 @@ def wait_for_exit(
         logger.exception("Wait error for profile %s: %s", name, e)
     finally:
         # A runner that died on its own (crash, OOM kill) never ran its cleanup.
-        _kill_group(proc)
+        cleanup(proc, name)
         notify_stopped()

@@ -14,6 +14,7 @@ from camoufox.virtdisplay import VirtualDisplay
 
 from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
 from src.services.browser import control, session
+from src.services.browser import display as xvfb
 from src.services.browser.fingerprint import load_or_create
 from src.utils.proxy_parser import parse_proxy
 
@@ -146,8 +147,10 @@ async def run_browser(
     display = VirtualDisplay() if HEADLESS == "virtual" else None
     try:
         if display:
+            xvfb.stop_recorded(profile_dir)  # left over if the last runner was killed
             launch_config["headless"] = False
             launch_config["virtual_display"] = display.get()
+            xvfb.record(profile_dir, display.proc.pid)
         async with AsyncCamoufox(**launch_config) as context:
             if not context.pages:
                 await context.new_page()
@@ -215,6 +218,7 @@ async def run_browser(
     finally:
         if display:
             display.kill()
+            xvfb.clear(profile_dir)
 
 
 async def _async_main() -> int:
