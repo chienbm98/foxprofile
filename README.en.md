@@ -2,47 +2,89 @@
   <img src="src/assets/icon.png" width="112" alt="FoxProfile logo" />
   <h1>FoxProfile</h1>
   <p><strong>Free, open-source manager for anti-detect browser profiles</strong></p>
-  <p>Per-profile device fingerprint, cookies and proxy · Vietnamese and English UI · Local REST API</p>
+  <p>Per-profile device fingerprint, cookies and proxy · Vietnamese and English UI · REST API and MCP for automation</p>
+
+  <p>
+    <a href="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml"><img src="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://github.com/chienbm98/foxprofile/releases/latest"><img src="https://img.shields.io/github/v/release/chienbm98/foxprofile" alt="Release" /></a>
+    <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+" />
+    <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Windows | macOS | Linux" />
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/chienbm98/foxprofile" alt="MIT License" /></a>
+  </p>
+
   <p><a href="README.md">Tiếng Việt</a> · English</p>
+  <p>
+    <a href="#quick-start">Quick start</a> ·
+    <a href="#features">Features</a> ·
+    <a href="#rest-api">REST API</a> ·
+    <a href="#mcp-let-ai-agents-drive-the-browser">MCP</a> ·
+    <a href="#contributing">Contributing</a>
+  </p>
 </div>
 
 ![FoxProfile](docs/images/main.png)
 
 FoxProfile is a desktop manager for [Camoufox](https://github.com/daijro/camoufox) profiles, a Firefox build that spoofs device fingerprints at the engine level. It is a self-hosted alternative to paid anti-detect browsers such as GoLogin, GPM or MoreLogin.
 
+## Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Timezone, language and Check IP](#timezone-language-and-check-ip)
+- [Server mode and web panel](#server-mode-and-web-panel)
+- [MCP: let AI agents drive the browser](#mcp-let-ai-agents-drive-the-browser)
+- [Cookies and fingerprints](#cookies-and-fingerprints)
+- [Configuration](#configuration)
+- [REST API](#rest-api)
+- [Development](#development)
+- [Contributing](#contributing)
+- [Responsible use](#responsible-use)
+- [License](#license)
+
 ## Features
 
-- Persistent per-profile fingerprint, with a one-click "new fingerprint" reset.
-- Per-profile proxy (HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth) and a proxy checker. Timezone and locale follow the IP or can be pinned per profile; **Check IP** compares the exit IP across Cloudflare, ipinfo and ip-api and warns about country/timezone mismatches and datacenter IPs.
-- Cookie export/import: Cookie-Editor / EditThisCookie JSON (GoLogin, GPM, Multilogin, Cookie-Editor extension) and Netscape `cookies.txt` (yt-dlp, curl, wget).
-- Profile export/import as ZIP, with or without browser data; the fingerprint always travels with the profile.
-- Bulk launch, stop and delete.
-- Search profiles by name or proxy; cards show the proxy (credentials hidden) and the emulated device.
-- MCP server so AI agents (Claude, Cursor...) can launch profiles and browse, click, type and take screenshots.
-- Server mode with a token-protected web panel and remote screen view, for VPS deployments.
-- REST API with Swagger docs.
+- **Persistent per-profile fingerprint.** The first launch generates a device (screen, GPU, CPU cores, fonts, canvas/audio noise) and stores it; later launches reuse the same device. Reset it on demand.
+- **Per-profile proxy**: HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth, plus a proxy checker.
+- **Timezone and language** follow the exit IP or can be pinned per profile. **Check IP** compares the exit IP across Cloudflare, ipinfo and ip-api and warns about country/timezone mismatches and datacenter IPs.
+- **Cookie export/import** as Cookie-Editor / EditThisCookie JSON (GoLogin, GPM, Multilogin, the Cookie-Editor extension) and Netscape `cookies.txt` (yt-dlp, curl, wget).
+- **Profile export/import** as ZIP, with or without browser data, to move profiles between machines. The fingerprint always travels with the profile.
+- **Bulk actions**: launch, stop or delete many profiles at once.
+- **Search** profiles by name or proxy. Cards show the proxy (credentials hidden) and the emulated device.
+- **MCP server** so AI agents (Claude, Cursor...) can launch profiles, browse, click, type and take screenshots.
+- **Server mode + web panel** for VPS deployments: manage profiles and view their screens remotely, protected by a token.
+- **REST API** with Swagger docs for scripting.
+- **Vietnamese** (default) and English UI.
 
-## Install
+## Requirements
 
-Python 3.10+.
+- Python 3.10+
+- Windows, macOS or Linux (CI tests all three)
+- A few hundred MB of free disk space for Camoufox and the GeoIP database
+
+## Quick start
 
 ```bash
 git clone https://github.com/chienbm98/foxprofile.git
 cd foxprofile
+
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 source .venv/bin/activate       # Linux/macOS
+
 pip install -r requirements.txt
 python -m camoufox fetch
 ```
 
-## Run
+`camoufox fetch` downloads the Camoufox browser (a few hundred MB) from the Camoufox GitHub releases. The first profile launch also downloads a GeoIP database (~50 MB).
+
+Run the app:
 
 ```bash
 python -m src.main
 ```
 
-On Windows you can also run `run_foxprofile.bat`. The API listens on `http://127.0.0.1:8000`; docs are at `/docs`. Set `FOXPROFILE_LANG=en` for the English UI.
+On Windows you can also double-click `run_foxprofile.bat`. The app opens the manager window and serves the API on `http://127.0.0.1:8000`; API docs are at `http://127.0.0.1:8000/docs`. Set `FOXPROFILE_LANG=en` for the English UI.
 
 ## Timezone, language and Check IP
 
@@ -54,9 +96,9 @@ By default, every launch looks up the exit IP (through the profile's proxy) and 
 
 The profile dialog has **Timezone** (IANA name, e.g. `Asia/Ho_Chi_Minh`) and **Language** (e.g. `vi-VN`) fields; blank means follow the IP. **Check IP** resolves the exit IP through the proxy, compares it with Cloudflare, ipinfo and ip-api, and warns about country or timezone mismatches, datacenter IPs, proxies that leave over different IPv4/IPv6 addresses, and a language left on random.
 
-## Server mode and web panel (VPS)
+## Server mode and web panel
 
-No desktop window: API + web panel only, browsers run hidden.
+No desktop window: API + web panel only, browsers run hidden. Suited to a VPS.
 
 ```bash
 python -m src.server                     # http://127.0.0.1:8000
@@ -65,43 +107,102 @@ python -m src.server --host 0.0.0.0      # exposed: FOXPROFILE_API_TOKEN is requ
 
 Open `http://<host>:8000/` for the **web panel**: create, edit, launch and stop profiles, move cookies, and **view a profile's screen remotely**. Click on the screenshot and type to log in or solve a captcha even when the browser runs hidden on a server.
 
-![Web panel](docs/images/panel.png)
+| Web panel | Remote screen view |
+| --- | --- |
+| ![Web panel](docs/images/panel.png) | ![Remote screen view](docs/images/panel-viewer.png) |
 
-When listening on anything but `127.0.0.1`, the server **refuses to start** without `FOXPROFILE_API_TOKEN` (24+ characters). The panel, the REST API and MCP share that token. Put the server behind an HTTPS reverse proxy (Caddy, Nginx) on a VPS. On a display-less Linux box, `FOXPROFILE_HEADLESS=virtual` (needs `xvfb`) runs browsers on a virtual display, which is harder to detect than plain headless.
+**Security:** when listening on anything but `127.0.0.1`, the server **refuses to start** without `FOXPROFILE_API_TOKEN` (24+ characters). The panel, the REST API and MCP share that token.
+
+```bash
+# Generate a random token
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+On a VPS, put the server behind an HTTPS reverse proxy (Caddy, Nginx) so the token is never sent in clear text. On a display-less Linux box, `FOXPROFILE_HEADLESS=virtual` (needs `xvfb`) runs browsers on a virtual display, which is harder to detect than plain headless.
+
+Full deployment guide (Ubuntu, systemd, nginx, HTTPS; in Vietnamese): [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## MCP: let AI agents drive the browser
 
-FoxProfile ships an MCP server so Claude Code, Claude Desktop, Cursor, VS Code and others can manage profiles and act on pages (navigate, read, click, type, screenshot).
+FoxProfile ships an MCP server so Claude Code, Claude Desktop, Cursor, VS Code and others can manage profiles and act on pages: navigate, read, click, type, screenshot.
 
-**Quickest:** click **🤖 Connect AI (MCP)** in the desktop app or the web panel. It generates ready-to-paste configs for each AI app with your address and token; copy and paste.
+**Quickest:** click **🤖 Connect AI (MCP)** in the desktop app or the web panel. It generates ready-to-paste configs for each AI app with your address and token.
 
 ![Connect AI (MCP)](docs/images/mcp-guide.png)
 
 MCP is served over HTTP at `/mcp` on FoxProfile's own port, so it also works when FoxProfile runs on a VPS:
 
 ```bash
+# Claude Code
 claude mcp add --transport http foxprofile http://127.0.0.1:8000/mcp
-claude mcp add --transport http foxprofile https://your-vps/mcp --header "Authorization: Bearer <token>"
+# Server with a token:
+claude mcp add --transport http foxprofile https://your-vps.example.com/mcp --header "Authorization: Bearer <token>"
+```
+
+```jsonc
+// Cursor: ~/.cursor/mcp.json
+{ "mcpServers": { "foxprofile": { "url": "http://127.0.0.1:8000/mcp" } } }
 ```
 
 Claude Desktop only launches local MCP servers: use `foxprofile_mcp.py` on the same machine, or the `npx mcp-remote` bridge from another one. The Connect AI dialog generates both.
 
-Tools: profile management (`list_profiles`, `create_profile`, `launch_profile`, `stop_profile`...), cookies and fingerprints, `check_profile_ip`, page control (`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate`) and tabs. There is deliberately no delete tool, and only `http`, `https` and `about:blank` can be opened.
+Then just ask, e.g. *"Open profile tiktok-us-02, go to tiktok.com and send me a screenshot"*.
+
+| Group | Tools |
+| --- | --- |
+| Profiles | `list_profiles`, `get_profile`, `create_profile`, `update_profile`, `launch_profile`, `stop_profile`, `running_profiles` |
+| Cookies & fingerprints | `export_cookies`, `import_cookies`, `get_fingerprint`, `reset_fingerprint`, `check_proxy`, `check_profile_ip` |
+| Page | `browser_navigate`, `browser_back`, `browser_snapshot`, `browser_get_text`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate` |
+| Tabs | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
+
+There is deliberately **no** delete tool, so an agent cannot wipe an account's cookies by mistake. Only `http`, `https` and `about:blank` can be opened; `file://` and `about:config` are blocked.
 
 ## Cookies and fingerprints
 
-Click the 🍪 icon on a profile card. The profile's browser must be stopped: FoxProfile opens the profile headless to read and write cookies.
+![Cookies & fingerprint](docs/images/cookies.png)
+
+Click the 🍪 icon on a profile card. **The profile's browser must be stopped**: FoxProfile opens the profile headless to read and write cookies.
 
 - Imported session cookies are given a one-year lifetime; otherwise Firefox would discard them when the browser closes.
 - "New fingerprint" deletes the stored fingerprint so the next launch presents a different device. Changing a profile's OS also regenerates it.
 
 ## Configuration
 
-Copy `.env.example` to `.env` to override defaults. Variables use the `FOXPROFILE_` prefix (`LANG`, `PROFILES_FILE`, `DATA_DIR`, `LOG_DIR`, `LOG_LEVEL`, `PROXY_TIMEOUT`, `LAUNCH_TIMEOUT`, `API_HOST`, `API_PORT`, `HEADLESS`, `API_TOKEN`).
+Everything is optional. To override defaults, copy `.env.example` to `.env`.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `FOXPROFILE_LANG` | `vi` | UI language: `vi` or `en` |
+| `FOXPROFILE_PROFILES_FILE` | `profiles.json` | Profile list file |
+| `FOXPROFILE_DATA_DIR` | `camoufox_data` | Data directory, one subdirectory per profile |
+| `FOXPROFILE_LOG_DIR` | `logs` | Log directory |
+| `FOXPROFILE_LOG_LEVEL` | `INFO` | Log level |
+| `FOXPROFILE_PROXY_TIMEOUT` | `10` | Proxy check timeout (seconds) |
+| `FOXPROFILE_LAUNCH_TIMEOUT` | `90` | How long the API waits for a browser to finish launching (seconds) |
+| `FOXPROFILE_HEADLESS` | `false` (`true` in server mode) | Hidden browsers: `true`, `false` or `virtual` (Linux + Xvfb) |
+| `FOXPROFILE_API_TOKEN` | *(empty)* | Token for the API, web panel and MCP. Required when the API listens beyond `127.0.0.1` |
+| `FOXPROFILE_API_HOST` | `127.0.0.1` | API host |
+| `FOXPROFILE_API_PORT` | `8000` | API port |
+
+### Proxy format
+
+`host:port`, `http://host:port`, `https://...`, `socks4://...`, `socks5://...`, optionally with `user:pass@`. Blank means a direct connection.
+
+### Data layout
+
+```text
+profiles.json                                  profile list (name, proxy, OS)
+camoufox_data/<profile>/                       browser data: cookies, history, localStorage
+camoufox_data/<profile>/fingerprint.json       the profile's device fingerprint
+logs/foxprofile_YYYYMMDD.log                   daily log
+```
+
+> [!WARNING]
+> `camoufox_data/` holds the login cookies of every account. Never commit or share it.
 
 ## REST API
 
-Prefix `/api/v1`.
+Prefix `/api/v1`. The full reference is at `/docs` while the app is running.
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -113,26 +214,59 @@ Prefix `/api/v1`.
 | `GET` | `/profiles/{name}/cookies?format=json\|netscape` | Export cookies |
 | `POST` | `/profiles/{name}/cookies` | Import cookies (`{"content": "<JSON or cookies.txt>"}`) |
 | `GET` / `DELETE` | `/profiles/{name}/fingerprint` | Show / reset the fingerprint |
+| `GET` | `/profiles/{name}/ip-check` | Where Cloudflare/ipinfo/ip-api place the profile's exit IP, with mismatch warnings |
 | `GET` | `/browser` | Running profiles |
-| `POST` | `/browser/{name}/launch` | Launch; waits for ready (`200`) or failure (`502`). `?wait=false` returns `202` immediately |
+| `POST` | `/browser/{name}/launch` | Launch and wait until ready or failed |
 | `POST` | `/browser/{name}/stop` | Stop |
 | `POST` | `/proxy/check` | Check a proxy |
-| `GET` | `/profiles/{name}/ip-check` | Where Cloudflare/ipinfo/ip-api place the profile's exit IP, with mismatch warnings |
-| `POST` | `/proxy/geo-check` | Same for an unsaved `{proxy, timezone, locale}` |
-| `POST`/`GET` | `/browser/{name}/page/...` | Page control: `navigate`, `back`, `snapshot`, `text`, `click`, `click-at`, `type`, `keyboard`, `press`, `wait`, `screenshot`, `evaluate`, `tabs` |
+| `POST` | `/proxy/geo-check` | Same as `ip-check` for an unsaved `{proxy, timezone, locale}` |
+| `POST` | `/browser/{name}/page/navigate` | Open a URL in the active tab |
+| `GET` | `/browser/{name}/page/snapshot` | Accessibility tree of the page (for picking selectors) |
+| `POST` | `/browser/{name}/page/click` · `type` · `press` · `wait` | Click, type, press a key, wait for an element (Playwright selectors) |
+| `POST` | `/browser/{name}/page/click-at` · `keyboard` | Click at coordinates, type into the focused element |
+| `GET` | `/browser/{name}/page/screenshot` | PNG of the tab (`?format=json` for base64) |
+| `POST` | `/browser/{name}/page/evaluate` | Run JavaScript |
+| `GET` / `POST` / `DELETE` | `/browser/{name}/page/tabs` | Manage tabs |
 
 With `FOXPROFILE_API_TOKEN` set, every request except `/health` and `/info` needs `Authorization: Bearer <token>`.
 
-## Data layout
+Examples:
 
-```text
-profiles.json                                  profile list
-camoufox_data/<profile>/                       browser data (cookies, history, storage)
-camoufox_data/<profile>/fingerprint.json       the profile's device fingerprint
-logs/foxprofile_YYYYMMDD.log                   daily log
+```bash
+# Create a macOS profile with a proxy
+curl -X POST http://127.0.0.1:8000/api/v1/profiles \
+  -H "Content-Type: application/json" \
+  -d '{"name": "tiktok-us-02", "os_type": "macos", "proxy": "socks5://user:pass@1.2.3.4:1080"}'
+
+# Launch. Returns 200 once running, 502 with the reason on failure.
+# Add ?wait=false to return immediately (202).
+curl -X POST http://127.0.0.1:8000/api/v1/browser/tiktok-us-02/launch
+
+# Export cookies as cookies.txt
+curl "http://127.0.0.1:8000/api/v1/profiles/tiktok-us-02/cookies?format=netscape" -o cookies.txt
 ```
 
-`camoufox_data/` holds the login cookies of every account. Never commit or share it.
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+ruff check src tests
+ruff format --check src tests
+pytest
+```
+
+Project layout, code conventions and the PR process are in [CONTRIBUTING.md](CONTRIBUTING.md) (Vietnamese; issues and PRs in English are welcome). Release notes: [CHANGELOG.md](CHANGELOG.md).
+
+## Contributing
+
+Contributions of all kinds are welcome: bug reports, feature ideas, docs, translations and code.
+
+- Bugs and ideas: open an [issue](https://github.com/chienbm98/foxprofile/issues/new/choose) from a template.
+- Code: read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- Security issues: **do not** open a public issue, see [SECURITY.md](SECURITY.md).
+- Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+If FoxProfile is useful to you, consider giving it a ⭐ on GitHub.
 
 ## Responsible use
 
@@ -140,7 +274,7 @@ Anti-detect browsers are legitimate tools for privacy, web testing and agencies 
 
 ## License
 
-[MIT](LICENSE). Copyright (c) 2026 chienbm98.
+Released under the [MIT License](LICENSE). Copyright (c) 2026 chienbm98.
 
 ## Acknowledgements
 
