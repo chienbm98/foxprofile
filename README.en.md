@@ -45,6 +45,7 @@ FoxProfile is a desktop manager for [Camoufox](https://github.com/daijro/camoufo
 ## Features
 
 - **Persistent per-profile fingerprint.** The first launch generates a device (screen, GPU, CPU cores, fonts, canvas/audio noise) and stores it; later launches reuse the same device. Reset it on demand.
+- **Sessions that stick.** History, cookies and logins live in the profile directory; the tabs that were open are reopened on the next launch.
 - **Per-profile proxy**: HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth, plus a proxy checker.
 - **Timezone and language** follow the exit IP or can be pinned per profile. **Check IP** compares the exit IP across Cloudflare, ipinfo and ip-api and warns about country/timezone mismatches and datacenter IPs.
 - **Cookie export/import** as Cookie-Editor / EditThisCookie JSON (GoLogin, GPM, Multilogin, the Cookie-Editor extension) and Netscape `cookies.txt` (yt-dlp, curl, wget).
@@ -180,6 +181,7 @@ Everything is optional. To override defaults, copy `.env.example` to `.env`.
 | `FOXPROFILE_PROXY_TIMEOUT` | `10` | Proxy check timeout (seconds) |
 | `FOXPROFILE_LAUNCH_TIMEOUT` | `90` | How long the API waits for a browser to finish launching (seconds) |
 | `FOXPROFILE_HEADLESS` | `false` (`true` in server mode) | Hidden browsers: `true`, `false` or `virtual` (Linux + Xvfb) |
+| `FOXPROFILE_RESTORE_TABS` | `true` | Reopen the tabs from the previous run |
 | `FOXPROFILE_API_TOKEN` | *(empty)* | Token for the API, web panel and MCP. Required when the API listens beyond `127.0.0.1` |
 | `FOXPROFILE_API_HOST` | `127.0.0.1` | API host |
 | `FOXPROFILE_API_PORT` | `8000` | API port |
@@ -194,6 +196,7 @@ Everything is optional. To override defaults, copy `.env.example` to `.env`.
 profiles.json                                  profile list (name, proxy, OS)
 camoufox_data/<profile>/                       browser data: cookies, history, localStorage
 camoufox_data/<profile>/fingerprint.json       the profile's device fingerprint
+camoufox_data/<profile>/tabs.json              tabs to reopen on next launch
 logs/foxprofile_YYYYMMDD.log                   daily log
 ```
 
