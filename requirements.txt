@@ -1,4 +1,4 @@
-flet>=0.80.5
+flet>=1.0.3
 camoufox[geoip]>=0.4.11
 python-dotenv>=1.0.0
 tzdata>=2024.1; sys_platform == "win32"
