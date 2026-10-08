@@ -1,3 +1,4 @@
+import asyncio
 import json
 import types
 import zipfile
@@ -236,3 +237,73 @@ def test_spawn_passes_timezone_and_locale(monkeypatch):
     monkeypatch.setattr(process.subprocess, "Popen", lambda args, **kw: seen.setdefault("a", args))
     process.spawn_browser(Profile("p", None, "linux", "Europe/Paris", None))
     assert seen["a"][2:] == ["p", "None", "linux", "Europe/Paris", ""]
+
+
+@pytest.mark.parametrize(
+    ("proxy", "expected"),
+    [
+        ("socks5://u:p@1.2.3.4:1080", "socks5h://u:p@1.2.3.4:1080"),
+        ("SOCKS5://1.2.3.4:1080", "socks5h://1.2.3.4:1080"),
+        ("socks4://1.2.3.4:1080", "socks4a://1.2.3.4:1080"),
+        ("http://u:p@1.2.3.4:8080", "http://u:p@1.2.3.4:8080"),
+        ("1.2.3.4:8080:u:p", "http://u:p@1.2.3.4:8080"),
+        ("", None),
+    ],
+)
+def test_lookups_resolve_dns_through_the_proxy(proxy, expected):
+    assert geo_check.requests_proxy_url(proxy) == expected
+
+
+def test_runner_looks_up_the_exit_ip_with_remote_dns(monkeypatch):
+    from camoufox import ip
+
+    from src.services.browser import runner
+
+    seen = []
+    monkeypatch.setattr(ip, "public_ip", lambda proxy=None: seen.append(proxy) or "5.6.7.8")
+    assert runner.exit_ip("socks5://1.2.3.4:1080") == "5.6.7.8"
+    assert runner.exit_ip("") == "5.6.7.8"
+    assert seen == ["socks5h://1.2.3.4:1080", None]
+
+
+def _fake_launch(monkeypatch, tmp_path, public_ip):
+    from camoufox import ip
+
+    from src.services.browser import runner
+
+    seen = {}
+
+    def camoufox(**config):
+        seen.update(config)
+        raise RuntimeError("stop after the launch options")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(ip, "public_ip", public_ip)
+    monkeypatch.setattr(runner, "AsyncCamoufox", camoufox)
+    monkeypatch.setattr(runner, "load_or_create", lambda *_: {})
+    # A deploy's .env may set HEADLESS=virtual; these tests must not start Xvfb.
+    monkeypatch.setattr(runner, "HEADLESS", False)
+    return runner, seen
+
+
+def test_runner_passes_the_looked_up_exit_ip_as_geoip(monkeypatch, tmp_path):
+    asked = []
+    runner, seen = _fake_launch(
+        monkeypatch, tmp_path, lambda proxy=None: asked.append(proxy) or "5.6.7.8"
+    )
+    # spawn_browser passes str(None) for a profile without a proxy.
+    asyncio.run(runner.run_browser("p", "None", "windows"))
+    asyncio.run(runner.run_browser("p", "socks5://1.2.3.4:1080", "windows"))
+    assert seen["geoip"] == "5.6.7.8"
+    assert asked == [None, "socks5h://1.2.3.4:1080"]
+
+
+def test_dead_proxy_reports_launch_failed(monkeypatch, tmp_path, capsys):
+    from camoufox.exceptions import InvalidIP
+
+    def public_ip(proxy=None):
+        raise InvalidIP("Failed to get IP address")
+
+    runner, _ = _fake_launch(monkeypatch, tmp_path, public_ip)
+    assert asyncio.run(runner.run_browser("p", "socks5://1.2.3.4:1080", "windows")) == 1
+    assert "LAUNCH_FAILED: InvalidIP: Failed to get IP address" in capsys.readouterr().out
