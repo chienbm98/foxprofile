@@ -98,7 +98,7 @@ def _get(url: str, proxies: dict[str, str] | None) -> Any:
 
 
 def _exit_ip(proxy: str | None) -> str:
-    """The exit IP exactly as Camoufox resolves it at launch (IPv4 preferred)."""
+    """The exit IP exactly as the runner resolves it at launch (IPv4 preferred)."""
     from camoufox.ip import public_ip
 
     # public_ip is lru_cached for the whole process; a check must be fresh.

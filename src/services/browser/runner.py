@@ -116,8 +116,9 @@ def geo_overrides(timezone: str, locale: str) -> dict:
 def exit_ip(proxy_str: str) -> str:
     """The exit IP Camoufox's geoip should use, looked up with DNS through the proxy.
 
-    With `geoip=True` Camoufox looks it up itself over plain socks5://, which
-    resolves the lookup hosts with the machine's own resolver at every launch.
+    With `geoip=True` Camoufox looks it up itself, and for a socks5:// or
+    socks4:// proxy that resolves the lookup hosts with the machine's own
+    resolver at every launch.
     """
     from camoufox.ip import public_ip
 
@@ -138,7 +139,6 @@ async def run_browser(
         "os": os_type,
         "fingerprint": load_or_create(profile_dir, os_type),
         "humanize": True,
-        "geoip": exit_ip(proxy_str),
         "block_images": False,
         "user_data_dir": profile_dir,
         "persistent_context": True,
@@ -152,6 +152,9 @@ async def run_browser(
     _safe_print(f"Starting browser for {profile_name}...")
 
     try:
+        # Blocking (up to ~30 s over a slow proxy), so off the event loop; inside
+        # the try so a dead proxy reports LAUNCH_FAILED like any launch error.
+        launch_config["geoip"] = await asyncio.to_thread(exit_ip, proxy_str)
         async with AsyncCamoufox(**launch_config) as context:
             if not context.pages:
                 await context.new_page()
