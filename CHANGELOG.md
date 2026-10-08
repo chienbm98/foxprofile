@@ -4,12 +4,14 @@
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-08
+
 ### Thêm
 - Đặt cố định múi giờ (IANA) và ngôn ngữ (`vi-VN`) cho từng profile; để trống vẫn tự động theo IP.
 - Nút **Kiểm tra IP**: đối chiếu IP đi ra với Cloudflare, ipinfo và ip-api, cảnh báo lệch quốc gia/múi giờ, IP datacenter, proxy dual-stack và ngôn ngữ ngẫu nhiên. Có trên app, web panel, REST API (`GET /profiles/{name}/ip-check`, `POST /proxy/geo-check`) và MCP (`check_profile_ip`).
 - Hướng dẫn triển khai lên server Linux (`docs/DEPLOY.md`, `deploy/`) và các script e2e thủ công (`tests/e2e/`).
 
-## [2.1.0]
+## [2.1.0] - 2026-10-08
 
 ### Thêm
 - MCP server (27 tool) cho AI agent, qua stdio và qua HTTP tại `/mcp`.
@@ -20,8 +22,11 @@
 ### Sửa
 - Server mode đọc đúng `FOXPROFILE_HEADLESS` từ `.env`.
 
-## [2.0.0]
+## [2.0.0] - 2026-10-08
 
 Phát hành đầu tiên của FoxProfile: vân tay cố định theo profile, proxy riêng, xuất/nhập cookie (JSON và Netscape), REST API, giao diện tiếng Việt/tiếng Anh.
 
-[Unreleased]: https://github.com/chienbm98/foxprofile/commits/main
+[Unreleased]: https://github.com/chienbm98/foxprofile/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/chienbm98/foxprofile/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/chienbm98/foxprofile/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/chienbm98/foxprofile/releases/tag/v2.0.0
