@@ -82,6 +82,19 @@ def test_virtual_display_setup_error_reports_launch_failed(monkeypatch, tmp_path
     )
 
 
+def test_dead_proxy_fails_before_any_virtual_display(monkeypatch, tmp_path, capsys):
+    seen = _patch_launch(monkeypatch, tmp_path, "virtual")
+
+    def dead_proxy(*_):
+        raise RuntimeError("Failed to get IP address")
+
+    monkeypatch.setattr(runner, "exit_ip", dead_proxy)
+    assert asyncio.run(runner.run_browser("p", "socks5://1.2.3.4:1080", "windows")) == 1
+    assert "LAUNCH_FAILED: RuntimeError: Failed to get IP address" in capsys.readouterr().out
+    assert FakeDisplay.instances == []
+    assert seen["records"] == []
+
+
 def test_no_virtual_display_outside_virtual_mode(monkeypatch, tmp_path):
     seen = _patch_launch(monkeypatch, tmp_path, True)
     asyncio.run(runner.run_browser("p", "None", "windows"))

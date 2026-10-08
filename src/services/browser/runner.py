@@ -16,6 +16,7 @@ from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
 from src.services.browser import control, session
 from src.services.browser import display as xvfb
 from src.services.browser.fingerprint import load_or_create
+from src.services.proxy.geo_check import requests_proxy_url
 from src.utils.proxy_parser import parse_proxy
 
 _shutdown = asyncio.Event()
@@ -114,6 +115,18 @@ def geo_overrides(timezone: str, locale: str) -> dict:
     return options
 
 
+def exit_ip(proxy_str: str) -> str:
+    """The exit IP Camoufox's geoip should use, looked up with DNS through the proxy.
+
+    With `geoip=True` Camoufox looks it up itself, and for a socks5:// or
+    socks4:// proxy that resolves the lookup hosts with the machine's own
+    resolver at every launch.
+    """
+    from camoufox.ip import public_ip
+
+    return public_ip(requests_proxy_url(proxy_str))
+
+
 async def run_browser(
     profile_name: str,
     proxy_str: str,
@@ -128,7 +141,6 @@ async def run_browser(
         "os": os_type,
         "fingerprint": load_or_create(profile_dir, os_type),
         "humanize": True,
-        "geoip": True,
         "block_images": False,
         "user_data_dir": profile_dir,
         "persistent_context": True,
@@ -147,6 +159,9 @@ async def run_browser(
     # record lets the launcher stop it if this process is killed instead.
     display = None
     try:
+        # Blocking (up to ~30 s over a slow proxy), so off the event loop; inside
+        # the try so a dead proxy reports LAUNCH_FAILED like any launch error.
+        launch_config["geoip"] = await asyncio.to_thread(exit_ip, proxy_str)
         if HEADLESS == "virtual":
             await asyncio.to_thread(xvfb.sweep_stale)
             display = VirtualDisplay()
