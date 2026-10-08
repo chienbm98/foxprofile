@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from ...core.logging import get_logger
 from ...models.profile import Profile
+from . import display
 
 logger = get_logger("browser.process")
 
@@ -57,6 +58,14 @@ def terminate(proc: subprocess.Popen, name: str, timeout: int = 5) -> None:
             logger.warning("Browser %s force killed after timeout", name)
     except Exception as e:
         logger.exception("Error terminating browser %s: %s", name, e)
+    finally:
+        cleanup(proc)
+
+
+def cleanup(proc: subprocess.Popen) -> None:
+    """Stop the Xvfb of a runner that exited without stopping it (killed, crashed)."""
+    if proc.poll() is not None:
+        display.stop_for_runner(proc.pid)
 
 
 def wait_for_exit(
@@ -70,4 +79,6 @@ def wait_for_exit(
     except Exception as e:
         logger.exception("Wait error for profile %s: %s", name, e)
     finally:
+        # A runner that died on its own (crash, OOM kill) never ran its cleanup.
+        cleanup(proc)
         notify_stopped()
