@@ -7,6 +7,9 @@
 ### Thêm
 - Mở lại các tab đang mở khi profile được dừng (lưu vào `camoufox_data/<profile>/tabs.json` mỗi 2 giây khi tab thay đổi, chỉ `http`/`https`, tối đa 30 tab). Tắt bằng `FOXPROFILE_RESTORE_TABS=false`.
 
+### Sửa
+- Chế độ `HEADLESS=virtual` (server Linux) không còn bỏ sót tiến trình Xvfb khi profile mở lỗi (ví dụ proxy không vào được) hoặc khi runner bị kill cứng. Mỗi runner chạy trong process group riêng; PID của Xvfb được ghi vào `camoufox_data/<profile>/xvfb.pid` để launcher dọn nếu runner không tự dọn được.
+
 ## [2.2.0] - 2026-10-08
 
 ### Thêm
