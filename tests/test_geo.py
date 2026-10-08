@@ -281,6 +281,8 @@ def _fake_launch(monkeypatch, tmp_path, public_ip):
     monkeypatch.setattr(ip, "public_ip", public_ip)
     monkeypatch.setattr(runner, "AsyncCamoufox", camoufox)
     monkeypatch.setattr(runner, "load_or_create", lambda *_: {})
+    # A deploy's .env may set HEADLESS=virtual; these tests must not start Xvfb.
+    monkeypatch.setattr(runner, "HEADLESS", False)
     return runner, seen
 
 
