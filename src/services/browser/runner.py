@@ -14,6 +14,7 @@ from camoufox.async_api import AsyncCamoufox
 from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
 from src.services.browser import control, session
 from src.services.browser.fingerprint import load_or_create
+from src.services.proxy.geo_check import requests_proxy_url
 from src.utils.proxy_parser import parse_proxy
 
 _shutdown = asyncio.Event()
@@ -112,6 +113,17 @@ def geo_overrides(timezone: str, locale: str) -> dict:
     return options
 
 
+def exit_ip(proxy_str: str) -> str:
+    """The exit IP Camoufox's geoip should use, looked up with DNS through the proxy.
+
+    With `geoip=True` Camoufox looks it up itself over plain socks5://, which
+    resolves the lookup hosts with the machine's own resolver at every launch.
+    """
+    from camoufox.ip import public_ip
+
+    return public_ip(requests_proxy_url(proxy_str))
+
+
 async def run_browser(
     profile_name: str,
     proxy_str: str,
@@ -126,7 +138,7 @@ async def run_browser(
         "os": os_type,
         "fingerprint": load_or_create(profile_dir, os_type),
         "humanize": True,
-        "geoip": True,
+        "geoip": exit_ip(proxy_str),
         "block_images": False,
         "user_data_dir": profile_dir,
         "persistent_context": True,

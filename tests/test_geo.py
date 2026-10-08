@@ -236,3 +236,30 @@ def test_spawn_passes_timezone_and_locale(monkeypatch):
     monkeypatch.setattr(process.subprocess, "Popen", lambda args, **kw: seen.setdefault("a", args))
     process.spawn_browser(Profile("p", None, "linux", "Europe/Paris", None))
     assert seen["a"][2:] == ["p", "None", "linux", "Europe/Paris", ""]
+
+
+@pytest.mark.parametrize(
+    ("proxy", "expected"),
+    [
+        ("socks5://u:p@1.2.3.4:1080", "socks5h://u:p@1.2.3.4:1080"),
+        ("SOCKS5://1.2.3.4:1080", "socks5h://1.2.3.4:1080"),
+        ("socks4://1.2.3.4:1080", "socks4a://1.2.3.4:1080"),
+        ("http://u:p@1.2.3.4:8080", "http://u:p@1.2.3.4:8080"),
+        ("1.2.3.4:8080:u:p", "http://u:p@1.2.3.4:8080"),
+        ("", None),
+    ],
+)
+def test_lookups_resolve_dns_through_the_proxy(proxy, expected):
+    assert geo_check.requests_proxy_url(proxy) == expected
+
+
+def test_runner_looks_up_the_exit_ip_with_remote_dns(monkeypatch):
+    from camoufox import ip
+
+    from src.services.browser import runner
+
+    seen = []
+    monkeypatch.setattr(ip, "public_ip", lambda proxy=None: seen.append(proxy) or "5.6.7.8")
+    assert runner.exit_ip("socks5://1.2.3.4:1080") == "5.6.7.8"
+    assert runner.exit_ip("") == "5.6.7.8"
+    assert seen == ["socks5h://1.2.3.4:1080", None]

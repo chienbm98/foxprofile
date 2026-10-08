@@ -66,14 +66,27 @@ class GeoCheckResult:
     error: str | None = None
 
 
-def _requests_proxies(proxy: str | None) -> dict[str, str] | None:
+# requests resolves hostnames locally for socks5:// and socks4://, so every
+# lookup would reach the machine's own DNS resolver (its ISP) outside the proxy.
+# The h/a variants make the proxy resolve them, as the browser itself does.
+_REMOTE_DNS_SCHEMES = {"socks5": "socks5h", "socks4": "socks4a"}
+
+
+def requests_proxy_url(proxy: str | None) -> str | None:
+    """The profile's proxy as a requests URL whose DNS lookups go through the proxy."""
     cfg = parse_proxy(proxy or "")
     if not cfg:
         return None
     from camoufox.ip import Proxy
 
     url = Proxy(**cfg).as_string()
-    return {"http": url, "https": url}
+    scheme, sep, rest = url.partition("://")
+    return f"{_REMOTE_DNS_SCHEMES.get(scheme.lower(), scheme)}{sep}{rest}"
+
+
+def _requests_proxies(proxy: str | None) -> dict[str, str] | None:
+    url = requests_proxy_url(proxy)
+    return {"http": url, "https": url} if url else None
 
 
 def _get(url: str, proxies: dict[str, str] | None) -> Any:
@@ -86,13 +99,11 @@ def _get(url: str, proxies: dict[str, str] | None) -> Any:
 
 def _exit_ip(proxy: str | None) -> str:
     """The exit IP exactly as Camoufox resolves it at launch (IPv4 preferred)."""
-    from camoufox.ip import Proxy, public_ip
+    from camoufox.ip import public_ip
 
-    cfg = parse_proxy(proxy or "")
-    proxy_url = Proxy(**cfg).as_string() if cfg else None
     # public_ip is lru_cached for the whole process; a check must be fresh.
     lookup = getattr(public_ip, "__wrapped__", public_ip)
-    return lookup(proxy_url)
+    return lookup(requests_proxy_url(proxy))
 
 
 def _camoufox_geo(ip: str) -> tuple[str, str, str, float]:
