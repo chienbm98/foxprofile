@@ -1,0 +1,38 @@
+[project]
+name = "foxprofile"
+version = "2.2.0"
+description = "Anti-detect browser profile manager for Camoufox"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "chienbm98" }]
+keywords = ["anti-detect", "browser-profiles", "camoufox", "fingerprint", "proxy", "mcp"]
+# Runtime dependencies live in requirements.txt (this is an application, not a library).
+
+[project.urls]
+Homepage = "https://github.com/chienbm98/foxprofile"
+Issues = "https://github.com/chienbm98/foxprofile/issues"
+Changelog = "https://github.com/chienbm98/foxprofile/blob/main/CHANGELOG.md"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [".venv", "camoufox_data", "logs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+ignore = [
+    "B008",  # FastAPI declares dependencies as Depends(...) defaults
+    "E501",  # line length is handled by the formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# Standalone scripts that drive a running FoxProfile; one must edit sys.path first.
+"tests/e2e/control_e2e.py" = ["E402"]

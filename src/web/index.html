@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FoxProfile</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%23D9481A' d='M256 190H200L104 64 82 262 256 456Z'/%3E%3Cpath fill='%23FF6B2C' d='M256 190h56l96-126 22 198-174 194Z'/%3E%3Cpath fill='%23FFF4EC' d='M82 262l114 38 60 156ZM430 262l-114 38-60 156Z'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #0F0F12; --panel: #141418; --card: #1A1A20; --card-hi: #221E1C; --border: #2A2A33; --line: #24242C;
+  --accent: #FF6B2C; --accent-hi: #E85A1C; --accent-soft: #3A2216;
+  --text: #F2F1EE; --sub: #B6B4BC; --dim: #7C7A86;
+  --ok: #22C55E; --err: #EF4444; --warn: #F59E0B;
+  --win: #0078D7; --mac: #A0A0AA; --lin: #C99A06;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; border-radius: 10px; padding: 9px 14px; background: transparent; }
+button:disabled { opacity: .5; cursor: default; }
+.btn-accent { background: var(--accent); color: #fff; font-weight: 600; }
+.btn-accent:hover:not(:disabled) { background: var(--accent-hi); }
+.btn-danger { background: var(--err); color: #fff; font-weight: 600; }
+.btn-outline { border: 1px solid var(--border); color: var(--sub); }
+.btn-outline:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+.btn-icon { padding: 7px 9px; color: var(--sub); border-radius: 9px; }
+.btn-icon:hover { background: var(--card-hi); color: var(--text); }
+input, select { background: #16161B; border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; outline: none; width: 100%; }
+input:focus, select:focus { border-color: var(--accent); }
+label { display: block; color: var(--sub); font-size: 12px; margin: 12px 0 5px; }
+.hidden { display: none !important; }
+
+.layout { display: grid; grid-template-columns: 270px 1fr; min-height: 100vh; }
+aside { background: var(--panel); border-right: 1px solid var(--line); padding: 26px 20px; display: flex; flex-direction: column; gap: 14px; }
+.brand { display: flex; gap: 12px; align-items: center; }
+.brand h1 { margin: 0; font-size: 22px; }
+.brand small { color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
+.stat { color: var(--sub); font-size: 13px; }
+.stat b { color: var(--text); }
+aside .grow { flex: 1; }
+.lang { display: flex; gap: 6px; }
+.lang button { flex: 1; }
+.lang button.active { border-color: var(--accent); color: var(--text); }
+
+main { padding: 32px 36px; min-width: 0; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.head h2 { margin: 0 0 4px; font-size: 24px; }
+.head .muted { color: var(--sub); font-size: 13px; }
+.search { width: 300px; }
+
+.list { display: flex; flex-direction: column; gap: 10px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
+.card.running { border-color: var(--accent); background: var(--card-hi); }
+.badge { width: 46px; height: 46px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; font-size: 12px; color: #fff; flex: none; }
+.badge.windows { background: var(--win); } .badge.macos { background: var(--mac); } .badge.linux { background: var(--lin); }
+.info { flex: 1; min-width: 0; }
+.info .name { font-weight: 700; font-size: 15px; }
+.info .meta { color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; border: 1.5px solid var(--dim); }
+.dot.on { background: var(--ok); border-color: var(--ok); }
+.status-on { color: var(--ok); }
+.actions { display: flex; gap: 4px; align-items: center; flex: none; }
+.actions .main-btn { width: 96px; margin-right: 6px; }
+.empty { color: var(--sub); text-align: center; padding: 70px 0; }
+
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; z-index: 10; padding: 20px; }
+.modal { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 24px; width: min(460px, 100%); max-height: 92vh; overflow: auto; }
+.modal h3 { margin: 0 0 4px; font-size: 19px; }
+.modal .muted { color: var(--sub); font-size: 13px; }
+.modal .row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+.modal .err { color: var(--err); font-size: 13px; min-height: 18px; margin-top: 8px; }
+.cookie-actions { display: grid; gap: 8px; margin-top: 16px; }
+.cookie-actions button { text-align: left; }
+.cookie-actions span { display: block; color: var(--dim); font-size: 12px; }
+
+.viewer { position: fixed; inset: 0; background: var(--bg); z-index: 20; display: flex; flex-direction: column; }
+.viewer-bar { display: flex; gap: 8px; align-items: center; padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.viewer-bar input.url { flex: 1; }
+.viewer-tabs { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; border-bottom: 1px solid var(--line); }
+.viewer-tabs button { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; border: 1px solid var(--border); color: var(--sub); font-size: 12px; padding: 6px 10px; }
+.viewer-tabs button.active { border-color: var(--accent); color: var(--text); }
+.screen-wrap { flex: 1; overflow: auto; display: grid; place-items: start center; padding: 16px; }
+.screen-wrap img { max-width: 100%; border: 1px solid var(--border); border-radius: 8px; cursor: crosshair; background: #fff; }
+.viewer-type { display: flex; gap: 8px; padding: 12px 16px; background: var(--panel); border-top: 1px solid var(--line); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+.chips button { border: 1px solid var(--border); color: var(--sub); padding: 7px 12px; }
+.chips button.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+pre.code { background: #121216; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin: 6px 0 0;
+  white-space: pre-wrap; word-break: break-all; font: 12px/1.5 ui-monospace, Consolas, monospace; color: var(--text); max-height: 280px; overflow: auto; }
+.step { font-weight: 700; margin-top: 16px; }
+.where-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; }
+.note { color: var(--warn); font-size: 12px; margin-top: 8px; }
+.modal.wide { width: min(720px, 100%); }
+.modal .btns { display: flex; gap: 8px; }
+.modal .geo { font-size: 12.5px; line-height: 1.5; margin-top: 10px; word-break: break-word; }
+.modal .geo .dim { color: var(--dim); }
+.modal .geo .warn { color: var(--warn); }
+.modal .geo .ok { color: var(--ok); }
+.toast { position: fixed; right: 20px; bottom: 20px; background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 10px; max-width: 420px; z-index: 40; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.toast.error { border-left-color: var(--err); }
+.login { min-height: 100vh; display: grid; place-items: center; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  aside { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  aside .grow, .stat { display: none; }
+  main { padding: 20px 16px; }
+  .search { width: 100%; }
+  .card { flex-wrap: wrap; }
+  .actions { width: 100%; justify-content: flex-end; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="fox" viewBox="0 0 512 512">
+    <path fill="#D9481A" d="M256 190H200L104 64 82 262 256 456Z"/>
+    <path fill="#FF6B2C" d="M256 190h56l96-126 22 198-174 194Z"/>
+    <path fill="#7A2E10" d="M122 104l64 86-48 24ZM390 104l-64 86 48 24Z"/>
+    <path fill="#FFF4EC" d="M82 262l114 38 60 156ZM430 262l-114 38-60 156Z"/>
+    <path fill="#F3E3D6" d="M196 300l60 30 60-30-60 156Z"/>
+    <path fill="#17171C" d="M172 244l58 20-30 18ZM340 244l-58 20 30 18ZM234 416h44l-22 36Z"/>
+  </symbol>
+</svg>
+
+<div id="login" class="login hidden">
+  <form class="modal" id="login-form">
+    <div class="brand" style="margin-bottom:14px"><svg width="40" height="40"><use href="#fox"/></svg><h1>FoxProfile</h1></div>
+    <p class="muted" data-t="login_hint"></p>
+    <label for="token" data-t="token"></label>
+    <input id="token" type="password" autocomplete="current-password" required>
+    <div class="err" id="login-err"></div>
+    <div class="row"><button class="btn-accent" type="submit" data-t="login"></button></div>
+  </form>
+</div>
+
+<div id="app" class="layout hidden">
+  <aside>
+    <div class="brand">
+      <svg width="42" height="42"><use href="#fox"/></svg>
+      <div><h1>FoxProfile</h1><small data-t="subtitle"></small></div>
+    </div>
+    <button class="btn-accent" id="new-btn">＋ <span data-t="new_profile"></span></button>
+    <div class="stat"><span data-t="total"></span>: <b id="stat-total">0</b></div>
+    <div class="stat"><span data-t="running"></span>: <b id="stat-running">0</b></div>
+    <div class="grow"></div>
+    <div class="lang"><button class="btn-outline" data-lang="vi">Tiếng Việt</button><button class="btn-outline" data-lang="en">English</button></div>
+    <button class="btn-outline" id="mcp-btn">🤖 <span data-t="mcp_button"></span></button>
+    <a class="stat" href="/docs" target="_blank" rel="noopener" data-t="api_docs"></a>
+    <button class="btn-outline hidden" id="logout-btn" data-t="logout"></button>
+  </aside>
+  <main>
+    <div class="head">
+      <div><h2 data-t="your_profiles"></h2><div class="muted" id="subtitle"></div></div>
+      <input class="search" id="search" type="search">
+    </div>
+    <div class="list" id="list"></div>
+  </main>
+</div>
+
+<div id="viewer" class="viewer hidden">
+  <div class="viewer-bar">
+    <button class="btn-outline" id="v-close">✕</button>
+    <b id="v-name"></b>
+    <button class="btn-icon" id="v-back" title="Back">←</button>
+    <button class="btn-icon" id="v-reload" title="Reload">↻</button>
+    <form id="v-nav" style="display:flex;flex:1;gap:8px"><input class="url" id="v-url" placeholder="https://"><button class="btn-accent" data-t="go"></button></form>
+    <button class="btn-outline" id="v-newtab" data-t="new_tab"></button>
+  </div>
+  <div class="viewer-tabs" id="v-tabs"></div>
+  <div class="screen-wrap"><img id="v-screen" alt=""></div>
+  <form class="viewer-type" id="v-type">
+    <input id="v-text" autocomplete="off">
+    <button class="btn-outline" type="submit" data-t="type"></button>
+    <button class="btn-outline" type="button" data-key="Enter">Enter</button>
+    <button class="btn-outline" type="button" data-key="Tab">Tab</button>
+    <button class="btn-outline" type="button" data-key="Escape">Esc</button>
+    <button class="btn-outline" type="button" data-key="Backspace">⌫</button>
+  </form>
+</div>
+
+<div id="modal-root"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+"use strict";
+const I18N = {
+  vi: {
+    subtitle: "QUẢN LÝ PROFILE CAMOUFOX", new_profile: "Tạo profile", total: "Tổng số profile", running: "Đang chạy",
+    api_docs: "Tài liệu API ↗", logout: "Đăng xuất", your_profiles: "Profile của bạn", search: "Tìm theo tên hoặc proxy",
+    subtitle_line: "{n} profile — {r} đang chạy", empty: "Chưa có profile nào. Bấm “Tạo profile” để bắt đầu.",
+    no_match: "Không có profile nào khớp “{q}”", launch: "Mở", stop: "Dừng", view: "Xem màn hình",
+    cookies: "Cookie & vân tay", edit: "Sửa", delete: "Xóa", status_running: "ĐANG CHẠY", proxy: "CÓ PROXY", direct: "TRỰC TIẾP",
+    login_hint: "Server này yêu cầu API token (biến FOXPROFILE_API_TOKEN).", token: "API token", login: "Đăng nhập",
+    bad_token: "Token không đúng", create: "Tạo profile", edit_title: "Sửa profile", name: "Tên profile", os: "Hệ điều hành",
+    proxy_label: "Proxy (không bắt buộc)", check_proxy: "Kiểm tra proxy", cancel: "Hủy", save: "Lưu", checking: "Đang kiểm tra...",
+    confirm_delete: "Xóa profile “{name}”? Cookie và dữ liệu của profile sẽ mất vĩnh viễn.", stop_first: "Hãy dừng trình duyệt trước",
+    cookie_hint: "Trình duyệt của profile phải đang tắt.", export_json: "Xuất JSON", export_json_hint: "Cookie-Editor / GoLogin / GPM",
+    export_txt: "Xuất cookies.txt", export_txt_hint: "Netscape: yt-dlp, curl, wget", import: "Nhập cookie", import_hint: "Từ file JSON hoặc cookies.txt",
+    reset_fp: "Đổi vân tay", reset_fp_hint: "Lần mở sau là một thiết bị khác", device: "Thiết bị: {d}", no_fp: "Chưa có vân tay (tạo ở lần mở đầu)",
+    confirm_reset: "Đổi vân tay của “{name}”? Trang web sẽ thấy đây là một máy khác.", close: "Đóng",
+    launching: "Đang mở {name}...", started: "Đã mở {name}", stopped: "Đã dừng {name}", created: "Đã tạo {name}", saved: "Đã lưu",
+    deleted: "Đã xóa {name}", exported: "Đã xuất {n} cookie", imported: "Đã nhập {n} cookie", fp_reset: "Đã đổi vân tay",
+    mcp_button: "Kết nối AI (MCP)", mcp_title: "Kết nối AI agent (MCP)",
+    mcp_intro: "Cho Claude, Cursor hay VS Code tự quản lý profile và lướt web giúp bạn: mở trang, đọc nội dung, click, gõ và chụp màn hình.",
+    mcp_endpoint: "Địa chỉ MCP", mcp_pick: "1. Chọn ứng dụng AI bạn dùng", mcp_paste: "2. Dán vào: {where}",
+    mcp_copy: "Sao chép", mcp_copied: "Đã sao chép", mcp_insert_token: "Chèn token đang đăng nhập vào cấu hình",
+    mcp_restart: "3. Khởi động lại ứng dụng AI, giữ FoxProfile đang chạy, rồi thử nhắn:",
+    mcp_example: "Mở profile {name}, vào google.com tìm “thời tiết Hà Nội” và chụp màn hình cho tôi.",
+    mcp_remote_note: "Claude Desktop chỉ chạy server MCP cục bộ, nên cấu hình này dùng cầu nối mcp-remote (cần cài Node.js).",
+    mcp_security: "Nội dung trang web không đáng tin: AI được dặn không làm theo chỉ dẫn nằm trên trang. MCP không thể xóa profile.",
+    mcp_http_warn: "Bạn đang dùng HTTP không mã hóa: token có thể bị nghe lén trên đường truyền. Nên đặt server sau HTTPS.",
+    timezone: "Múi giờ (để trống = theo IP)", locale: "Ngôn ngữ (để trống = theo IP)", check_ip: "Kiểm tra IP", tz_hint: "vd. Asia/Ho_Chi_Minh", locale_hint: "vd. vi-VN",
+    geo_exit: "IP ra {ip} · {country}", geo_tz: "Múi giờ: {v} ({m})", geo_locale: "Ngôn ngữ: {v} ({m})",
+    geo_auto: "tự động", geo_pinned: "đặt tay", geo_random: "ngẫu nhiên mỗi lần mở", geo_ok: "Không phát hiện điểm lệch",
+    geo_failed: "Không lấy được IP ra: {e}", geo_use: "Dùng {v}",
+    geo_warn_country_mismatch: "{source} xác định IP ở {got}, trình duyệt đang dùng {expected}",
+    geo_warn_timezone_mismatch: "{source} báo múi giờ {got}, trình duyệt đang dùng {expected}",
+    geo_warn_hosting: "{source} gắn IP này là datacenter/hosting: dễ bị bắt captcha hoặc chặn",
+    geo_warn_ip_differs: "Proxy dual-stack: múi giờ tính theo {exit_ip} nhưng trang web thấy {seen_ip}",
+    geo_warn_locale_country: "Ngôn ngữ {locale} không thuộc quốc gia của IP ({country})",
+    geo_warn_locale_random: "Ngôn ngữ tự động được chọn lại ngẫu nhiên mỗi lần mở ({suggested} chỉ ~{share}% số lần); nên đặt cố định",
+    go: "Đi", new_tab: "Tab mới", type: "Gõ", type_hint: "Gõ vào ô đang chọn (bấm lên ảnh để chọn ô)", working: "Đang xử lý...",
+  },
+  en: {
+    subtitle: "CAMOUFOX PROFILE MANAGER", new_profile: "New profile", total: "Profiles", running: "Running",
+    api_docs: "API docs ↗", logout: "Log out", your_profiles: "Your profiles", search: "Search by name or proxy",
+    subtitle_line: "{n} profiles — {r} running", empty: "No profiles yet. Click “New profile” to start.",
+    no_match: "No profile matches “{q}”", launch: "Launch", stop: "Stop", view: "View screen",
+    cookies: "Cookies & fingerprint", edit: "Edit", delete: "Delete", status_running: "RUNNING", proxy: "PROXY", direct: "DIRECT",
+    login_hint: "This server requires an API token (FOXPROFILE_API_TOKEN).", token: "API token", login: "Log in",
+    bad_token: "Invalid token", create: "Create profile", edit_title: "Edit profile", name: "Profile name", os: "Operating system",
+    proxy_label: "Proxy (optional)", check_proxy: "Check proxy", cancel: "Cancel", save: "Save", checking: "Checking...",
+    confirm_delete: "Delete profile “{name}”? Its cookies and data are removed permanently.", stop_first: "Stop the browser first",
+    cookie_hint: "The profile's browser must be stopped.", export_json: "Export JSON", export_json_hint: "Cookie-Editor / GoLogin / GPM",
+    export_txt: "Export cookies.txt", export_txt_hint: "Netscape: yt-dlp, curl, wget", import: "Import cookies", import_hint: "From a JSON or cookies.txt file",
+    reset_fp: "New fingerprint", reset_fp_hint: "Next launch presents a different device", device: "Device: {d}", no_fp: "No fingerprint yet (created on first launch)",
+    confirm_reset: "Reset the fingerprint of “{name}”? Sites will see a different machine.", close: "Close",
+    launching: "Launching {name}...", started: "Started {name}", stopped: "Stopped {name}", created: "Created {name}", saved: "Saved",
+    deleted: "Deleted {name}", exported: "Exported {n} cookies", imported: "Imported {n} cookies", fp_reset: "Fingerprint reset",
+    mcp_button: "Connect AI (MCP)", mcp_title: "Connect an AI agent (MCP)",
+    mcp_intro: "Let Claude, Cursor or VS Code manage profiles and browse for you: open pages, read them, click, type and take screenshots.",
+    mcp_endpoint: "MCP endpoint", mcp_pick: "1. Pick your AI app", mcp_paste: "2. Paste into: {where}",
+    mcp_copy: "Copy", mcp_copied: "Copied", mcp_insert_token: "Insert the token you are logged in with",
+    mcp_restart: "3. Restart the AI app, keep FoxProfile running, then try:",
+    mcp_example: "Open profile {name}, search google.com for “weather in Hanoi” and send me a screenshot.",
+    mcp_remote_note: "Claude Desktop only starts local MCP servers, so this config bridges through mcp-remote (requires Node.js).",
+    mcp_security: "Page content is untrusted: the AI is told never to follow instructions found on web pages. Profiles cannot be deleted through MCP.",
+    mcp_http_warn: "You are on plain HTTP: the token can be sniffed in transit. Put the server behind HTTPS.",
+    timezone: "Timezone (blank = follow the IP)", locale: "Language (blank = follow the IP)", check_ip: "Check IP", tz_hint: "e.g. Asia/Ho_Chi_Minh", locale_hint: "e.g. vi-VN",
+    geo_exit: "Exit IP {ip} · {country}", geo_tz: "Timezone: {v} ({m})", geo_locale: "Language: {v} ({m})",
+    geo_auto: "automatic", geo_pinned: "pinned", geo_random: "random on every launch", geo_ok: "No mismatch found",
+    geo_failed: "Could not get the exit IP: {e}", geo_use: "Use {v}",
+    geo_warn_country_mismatch: "{source} places the IP in {got}; the browser uses {expected}",
+    geo_warn_timezone_mismatch: "{source} reports timezone {got}; the browser uses {expected}",
+    geo_warn_hosting: "{source} flags this IP as datacenter/hosting: expect captchas and blocks",
+    geo_warn_ip_differs: "Dual-stack proxy: the timezone follows {exit_ip} but sites see {seen_ip}",
+    geo_warn_locale_country: "Language {locale} does not belong to the IP's country ({country})",
+    geo_warn_locale_random: "Automatic language is re-drawn on every launch ({suggested} only ~{share}% of the time); pin it",
+    go: "Go", new_tab: "New tab", type: "Type", type_hint: "Type into the focused field (click the screen to focus one)", working: "Working...",
+  },
+};
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
+};
+let lang = store.get("foxprofile.lang") || "vi";
+let token = store.get("foxprofile.token") || "";
+let profiles = [], running = new Set(), fingerprints = {};
+const busy = new Set();
+const $ = (id) => document.getElementById(id);
+
+function t(key, vars = {}) {
+  const s = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  return s.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? vars[k] : `{${k}}`));
+}
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+  $("search").placeholder = t("search");
+  $("v-text").placeholder = t("type_hint");
+  document.querySelectorAll("[data-lang]").forEach((b) => b.classList.toggle("active", b.dataset.lang === lang));
+}
+function h(tag, props = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v !== undefined && v !== null && v !== false) el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) if (c !== null && c !== undefined) el.append(c);
+  return el;
+}
+let toastTimer;
+function toast(msg, isError = false) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.className = "toast" + (isError ? " error" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), isError ? 7000 : 3500);
+}
+
+class ApiError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
+async function api(method, path, body, { raw = false } = {}) {
+  const headers = {};
+  if (token) headers.Authorization = "Bearer " + token;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch("/api/v1" + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (res.status === 401) { showLogin(); throw new ApiError(401, t("bad_token")); }
+  if (!res.ok) {
+    let msg = res.statusText;
+    try { const j = await res.json(); msg = typeof j.detail === "string" ? j.detail : (j.message || JSON.stringify(j.detail)); } catch {}
+    throw new ApiError(res.status, msg);
+  }
+  if (raw) return res;
+  const ct = res.headers.get("content-type") || "";
+  return ct.includes("json") ? res.json() : res.text();
+}
+const enc = encodeURIComponent;
+
+function maskProxy(p) {
+  if (!p) return "";
+  try { const u = new URL(p.includes("://") ? p : "http://" + p); return `${u.protocol}//${u.hostname}:${u.port}`; } catch { return ""; }
+}
+
+async function refresh() {
+  try {
+    const [list, run] = await Promise.all([api("GET", "/profiles"), api("GET", "/browser")]);
+    profiles = list.profiles;
+    running = new Set(run.running);
+    await Promise.all(profiles.filter((p) => !(p.name in fingerprints)).map(loadFingerprint));
+    render();
+  } catch (e) { if (e.status !== 401) toast(e.message, true); }
+}
+async function loadFingerprint(p) {
+  try { fingerprints[p.name] = await api("GET", `/profiles/${enc(p.name)}/fingerprint`); } catch { fingerprints[p.name] = null; }
+}
+
+let lastRender = "";
+function render() {
+  const q = $("search").value.trim().toLowerCase();
+  const shown = profiles.filter((p) => !q || p.name.toLowerCase().includes(q) || (p.proxy || "").toLowerCase().includes(q));
+  // Rebuilding the list replaces every button; skip it when nothing changed so a
+  // periodic refresh cannot swap the button under the user's cursor mid-click.
+  const key = JSON.stringify([lang, q, shown, [...running].sort(), [...busy].sort(),
+    shown.map((p) => fingerprints[p.name] || null)]);
+  if (key === lastRender) return;
+  lastRender = key;
+  $("stat-total").textContent = profiles.length;
+  $("stat-running").textContent = running.size;
+  $("subtitle").textContent = t("subtitle_line", { n: profiles.length, r: running.size });
+  const list = $("list");
+  list.replaceChildren();
+  if (!shown.length) {
+    list.append(h("div", { class: "empty" }, q ? t("no_match", { q }) : t("empty")));
+    return;
+  }
+  for (const p of shown) list.append(card(p));
+}
+
+function card(p) {
+  const on = running.has(p.name);
+  const fp = fingerprints[p.name];
+  const meta = [maskProxy(p.proxy), fp && fp.exists ? `${fp.platform} ${fp.screen}` : "", p.timezone, p.locale].filter(Boolean).join("  ·  ");
+  const status = on ? h("span", { class: "status-on" }, h("span", { class: "dot on" }), t("status_running"))
+    : h("span", {}, h("span", { class: "dot" + (p.proxy ? " on" : "") }), p.proxy ? t("proxy") : t("direct"));
+  const isBusy = busy.has(p.name);
+  return h("div", { class: "card" + (on ? " running" : "") },
+    h("div", { class: `badge ${p.os_type}` }, { windows: "WIN", macos: "MAC", linux: "LIN" }[p.os_type] || "OS"),
+    h("div", { class: "info" },
+      h("div", { class: "name" }, p.name),
+      h("div", { class: "meta" }, status, meta ? "  ·  " + meta : "")),
+    h("div", { class: "actions" },
+      h("button", { class: (on ? "btn-danger" : "btn-accent") + " main-btn", disabled: isBusy, onclick: () => toggle(p) },
+        isBusy ? "…" : on ? t("stop") : t("launch")),
+      on && !isBusy ? h("button", { class: "btn-icon", title: t("view"), onclick: () => openViewer(p.name) }, "🖥") : null,
+      h("button", { class: "btn-icon", title: t("cookies"), onclick: () => openCookies(p) }, "🍪"),
+      h("button", { class: "btn-icon", title: t("edit"), onclick: () => openEditor(p) }, "✎"),
+      h("button", { class: "btn-icon", title: t("delete"), onclick: () => removeProfile(p) }, "✕")));
+}
+
+async function toggle(p) {
+  busy.add(p.name); render();
+  try {
+    if (running.has(p.name)) {
+      await api("POST", `/browser/${enc(p.name)}/stop`);
+      toast(t("stopped", { name: p.name }));
+    } else {
+      toast(t("launching", { name: p.name }));
+      await api("POST", `/browser/${enc(p.name)}/launch`);
+      delete fingerprints[p.name];
+      toast(t("started", { name: p.name }));
+    }
+  } catch (e) { toast(e.message, true); }
+  busy.delete(p.name);
+  await refresh();
+}
+
+function modal(build) {
+  const root = $("modal-root");
+  const close = () => root.replaceChildren();
+  const bg = h("div", { class: "modal-bg", onclick: (e) => { if (e.target === bg) close(); } });
+  bg.append(build(close));
+  root.replaceChildren(bg);
+  const first = bg.querySelector("input");
+  if (first) first.focus();
+}
+
+function openEditor(p) {
+  modal((close) => {
+    const name = h("input", { id: "f-name", value: p ? p.name : "", required: true, maxlength: 64 });
+    const os = h("select", { id: "f-os" }, ["windows", "macos", "linux"].map((o) => h("option", { value: o, selected: p && p.os_type === o }, o)));
+    const proxy = h("input", { id: "f-proxy", value: p && p.proxy ? p.proxy : "", placeholder: "socks5://user:pass@host:port" });
+    const tz = h("input", { id: "f-tz", value: p && p.timezone ? p.timezone : "", placeholder: t("tz_hint") });
+    const loc = h("input", { id: "f-locale", value: p && p.locale ? p.locale : "", placeholder: t("locale_hint") });
+    const err = h("div", { class: "err" });
+    const geo = h("div", { class: "geo" });
+    const checkIp = h("button", { type: "button", class: "btn-outline", style: "margin-top:8px", onclick: async () => {
+      checkIp.disabled = true; geo.replaceChildren(h("div", { class: "muted" }, t("checking")));
+      try {
+        const r = await api("POST", "/proxy/geo-check", { proxy: proxy.value.trim() || null, timezone: tz.value.trim() || null, locale: loc.value.trim() || null });
+        geo.replaceChildren(...geoLines(r, (v) => { loc.value = v; }));
+      } catch (e) { geo.replaceChildren(h("div", { class: "warn" }, e.message)); }
+      checkIp.disabled = false;
+    } }, t("check_ip"));
+    const check = h("button", { type: "button", class: "btn-outline", style: "margin-top:8px", onclick: async () => {
+      if (!proxy.value.trim()) return;
+      check.disabled = true; err.style.color = "var(--sub)"; err.textContent = t("checking");
+      try {
+        const r = await api("POST", "/proxy/check", { proxy: proxy.value.trim() });
+        err.style.color = r.success ? "var(--ok)" : "var(--err)"; err.textContent = r.message;
+      } catch (e) { err.style.color = "var(--err)"; err.textContent = e.message; }
+      check.disabled = false;
+    } }, t("check_proxy"));
+    return h("form", { class: "modal", onsubmit: async (e) => {
+      e.preventDefault();
+      err.style.color = ""; err.textContent = "";
+      const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null,
+        timezone: tz.value.trim(), locale: loc.value.trim() };
+      try {
+        if (p) { await api("PATCH", `/profiles/${enc(p.name)}`, body); delete fingerprints[p.name]; toast(t("saved")); }
+        else { await api("POST", "/profiles", body); toast(t("created", { name: body.name })); }
+        close(); refresh();
+      } catch (ex) { err.textContent = ex.message; }
+    } },
+      h("h3", {}, p ? t("edit_title") : t("create")),
+      h("label", { for: "f-name" }, t("name")), name,
+      h("label", { for: "f-os" }, t("os")), os,
+      h("label", { for: "f-proxy" }, t("proxy_label")), proxy, h("div", { class: "btns" }, check, checkIp),
+      h("label", { for: "f-tz" }, t("timezone")), tz,
+      h("label", { for: "f-locale" }, t("locale")), loc, geo, err,
+      h("div", { class: "row" },
+        h("button", { type: "button", class: "btn-outline", onclick: close }, t("cancel")),
+        h("button", { class: "btn-accent" }, p ? t("save") : t("create"))));
+  });
+}
+
+function geoLines(r, useLocale) {
+  if (!r.exit_ip) return [h("div", { class: "warn" }, t("geo_failed", { e: r.error || "?" }))];
+  const mode = (pinned) => (pinned ? t("geo_pinned") : t("geo_auto"));
+  const out = [
+    h("div", {}, t("geo_exit", { ip: r.exit_ip, country: r.country || "?" })),
+    h("div", { class: "muted" }, t("geo_tz", { v: r.timezone || "?", m: mode(r.timezone_pinned) })),
+    h("div", { class: "muted" }, t("geo_locale", { v: r.locale || "~" + (r.suggested_locale || "?"), m: r.locale_pinned ? t("geo_pinned") : t("geo_random") })),
+    ...r.sources.map((s) => h("div", { class: "dim" }, s.error ? `${s.source}: ${s.error}`
+      : `${s.source}: ${s.ip || "?"} · ${s.country || "?"} ${s.city || ""} · ${s.timezone || "-"}`)),
+  ];
+  if (r.error) out.push(h("div", { class: "warn" }, r.error));
+  r.warnings.forEach((w) => {
+    const key = "geo_warn_" + w.code;
+    out.push(h("div", { class: "warn" }, "⚠ " + (I18N[lang][key] ? t(key, w.params) : w.message)));
+  });
+  if (!r.warnings.length && !r.error) out.push(h("div", { class: "ok" }, "✓ " + t("geo_ok")));
+  if (r.suggested_locale && !r.locale_pinned) {
+    out.push(h("button", { type: "button", class: "btn-outline", style: "margin-top:6px",
+      onclick: () => useLocale(r.suggested_locale) }, t("geo_use", { v: r.suggested_locale })));
+  }
+  return out;
+}
+
+async function removeProfile(p) {
+  if (running.has(p.name)) return toast(t("stop_first"), true);
+  if (!confirm(t("confirm_delete", { name: p.name }))) return;
+  try { await api("DELETE", `/profiles/${enc(p.name)}`); toast(t("deleted", { name: p.name })); delete fingerprints[p.name]; refresh(); }
+  catch (e) { toast(e.message, true); }
+}
+
+function download(filename, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = h("a", { href: url, download: filename });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function openCookies(p) {
+  if (running.has(p.name)) return toast(t("stop_first"), true);
+  const fp = fingerprints[p.name];
+  modal((close) => {
+    const err = h("div", { class: "err" });
+    const run = async (fn) => {
+      err.style.color = "var(--sub)"; err.textContent = t("working");
+      try { await fn(); err.textContent = ""; } catch (e) { err.style.color = "var(--err)"; err.textContent = e.message; }
+    };
+    const exportAs = (format) => run(async () => {
+      const res = await api("GET", `/profiles/${enc(p.name)}/cookies?format=${format}`, undefined, { raw: true });
+      const text = await res.text();
+      const n = res.headers.get("X-Cookie-Count") || "?";
+      download(`${p.name}_cookies.${format === "json" ? "json" : "txt"}`, text, format === "json" ? "application/json" : "text/plain");
+      toast(t("exported", { n }));
+    });
+    const file = h("input", { type: "file", accept: ".json,.txt", class: "hidden", onchange: () => run(async () => {
+      const content = await file.files[0].text();
+      const r = await api("POST", `/profiles/${enc(p.name)}/cookies`, { content });
+      if (!r.success) throw new Error(r.error);
+      toast(t("imported", { n: r.imported }));
+    }) });
+    return h("div", { class: "modal" },
+      h("h3", {}, t("cookies")),
+      h("div", { class: "muted" }, `${p.name} — ${t("cookie_hint")}`),
+      h("div", { class: "cookie-actions" },
+        h("button", { class: "btn-outline", onclick: () => exportAs("json") }, t("export_json"), h("span", {}, t("export_json_hint"))),
+        h("button", { class: "btn-outline", onclick: () => exportAs("netscape") }, t("export_txt"), h("span", {}, t("export_txt_hint"))),
+        h("button", { class: "btn-outline", onclick: () => file.click() }, t("import"), h("span", {}, t("import_hint"))), file,
+        h("div", { class: "muted", style: "margin-top:10px" }, fp && fp.exists ? t("device", { d: `${fp.platform}, ${fp.screen}, ${fp.hardware_concurrency} CPU` }) : t("no_fp")),
+        h("button", { class: "btn-outline", onclick: () => run(async () => {
+          if (!confirm(t("confirm_reset", { name: p.name }))) return;
+          await api("DELETE", `/profiles/${enc(p.name)}/fingerprint`);
+          delete fingerprints[p.name]; toast(t("fp_reset")); close(); refresh();
+        }) }, t("reset_fp"), h("span", {}, t("reset_fp_hint")))),
+      err,
+      h("div", { class: "row" }, h("button", { class: "btn-outline", onclick: close }, t("close"))));
+  });
+}
+
+// --- MCP setup guide -----------------------------------------------------------
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  // navigator.clipboard needs a secure context; plain-HTTP panels fall back here.
+  const area = h("textarea", { style: "position:fixed;opacity:0" });
+  area.value = text; document.body.append(area); area.select();
+  let ok = false; try { ok = document.execCommand("copy"); } catch {}
+  area.remove(); return ok;
+}
+
+async function openMcpGuide() {
+  let setup;
+  try { setup = await api("GET", `/mcp/setup?base_url=${enc(location.origin)}`); }
+  catch (e) { return toast(e.message, true); }
+  const state = { client: "claude-code", insertToken: false };
+  const sample = (profiles[0] && profiles[0].name) || "shop-facebook-01";
+  modal((close) => {
+    const chips = h("div", { class: "chips" });
+    const where = h("b");
+    const code = h("pre", { class: "code" });
+    const note = h("div", { class: "note" });
+    const status = h("div", { class: "muted" });
+    const tokenBox = h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--sub)" },
+      h("input", { type: "checkbox", style: "width:auto", onchange: (e) => { state.insertToken = e.target.checked; draw(); } }),
+      t("mcp_insert_token"));
+    const example = t("mcp_example", { name: sample });
+    const fill = (text) => (state.insertToken && token ? text.split(setup.token_placeholder).join(token) : text);
+    function draw() {
+      const cfg = setup.configs.find((c) => c.id === state.client);
+      chips.replaceChildren(...setup.configs.map((c) => h("button", { class: c.id === state.client ? "active" : "",
+        onclick: () => { state.client = c.id; draw(); } }, c.name)));
+      where.textContent = t("mcp_paste", { where: cfg.where });
+      code.textContent = fill(cfg.code);
+      note.textContent = cfg.id === "claude-desktop" ? t("mcp_remote_note") : "";
+      status.textContent = "";
+    }
+    const copyBtn = async (text) => { status.textContent = (await copyText(text)) ? "✓ " + t("mcp_copied") : ""; };
+    draw();
+    return h("div", { class: "modal wide" },
+      h("h3", {}, "🤖 " + t("mcp_title")),
+      h("div", { class: "muted" }, t("mcp_intro")),
+      h("div", { class: "muted", style: "margin-top:8px" }, t("mcp_endpoint") + ": ", h("code", {}, setup.mcp_url)),
+      location.protocol === "http:" && !["127.0.0.1", "localhost", "[::1]"].includes(location.hostname)
+        ? h("div", { class: "note" }, t("mcp_http_warn")) : null,
+      h("div", { class: "step" }, t("mcp_pick")), chips,
+      h("div", { class: "where-row" }, where,
+        h("button", { class: "btn-accent", onclick: () => copyBtn(code.textContent) }, t("mcp_copy"))),
+      code, note,
+      setup.auth_required ? tokenBox : null,
+      h("div", { class: "step" }, t("mcp_restart")),
+      h("div", { class: "where-row" }, h("i", {}, example),
+        h("button", { class: "btn-outline", onclick: () => copyBtn(example) }, t("mcp_copy"))),
+      h("div", { class: "muted", style: "margin-top:14px;font-size:12px" }, t("mcp_security")),
+      status,
+      h("div", { class: "row" }, h("button", { class: "btn-outline", onclick: close }, t("close"))));
+  });
+}
+
+// --- Remote viewer -----------------------------------------------------------
+let viewing = null, viewTimer = null, shotUrl = null, shotInFlight = false;
+function page(path) { return `/browser/${enc(viewing)}/page/${path}`; }
+async function openViewer(name) {
+  viewing = name;
+  $("v-name").textContent = name;
+  $("viewer").classList.remove("hidden");
+  await updateScreen(true);
+  viewTimer = setInterval(() => updateScreen(false), 2000);
+}
+function closeViewer() {
+  clearInterval(viewTimer); viewTimer = null; viewing = null;
+  $("viewer").classList.add("hidden");
+  refresh();
+}
+async function updateScreen(withTabs) {
+  if (!viewing || shotInFlight || document.hidden) return;
+  shotInFlight = true;
+  try {
+    const res = await api("GET", page("screenshot"), undefined, { raw: true });
+    const url = URL.createObjectURL(await res.blob());
+    $("v-screen").src = url;
+    if (shotUrl) URL.revokeObjectURL(shotUrl);
+    shotUrl = url;
+    if (withTabs) await updateTabs();
+  } catch (e) {
+    // 503: still starting, the next tick retries. 409: the browser is gone.
+    if (e.status === 409) { toast(t("stopped", { name: viewing }), true); closeViewer(); }
+  } finally { shotInFlight = false; }
+}
+async function updateTabs() {
+  const { tabs } = await api("GET", page("tabs"));
+  const active = tabs.find((x) => x.active);
+  if (active && document.activeElement !== $("v-url")) $("v-url").value = active.url;
+  $("v-tabs").replaceChildren(...tabs.map((x) => h("button", { class: x.active ? "active" : "", title: x.url,
+    onclick: () => act("POST", page(`tabs/${x.index}/select`)) }, x.title || x.url)));
+}
+async function act(method, path, body) {
+  try { await api(method, path, body); } catch (e) { toast(e.message, true); }
+  await updateScreen(true);
+}
+
+$("v-close").onclick = closeViewer;
+$("v-back").onclick = () => act("POST", page("back"));
+$("v-reload").onclick = () => act("POST", page("press"), { key: "F5" });
+$("v-newtab").onclick = () => act("POST", page("tabs"), { url: null });
+$("v-nav").onsubmit = (e) => { e.preventDefault(); act("POST", page("navigate"), { url: $("v-url").value.trim() }); };
+$("v-screen").onclick = (e) => {
+  const img = e.currentTarget, rect = img.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (img.naturalWidth / rect.width);
+  const y = (e.clientY - rect.top) * (img.naturalHeight / rect.height);
+  act("POST", page("click-at"), { x, y });
+};
+$("v-type").onsubmit = (e) => {
+  e.preventDefault();
+  const text = $("v-text").value;
+  if (!text) return;
+  $("v-text").value = "";
+  act("POST", page("keyboard"), { text });
+};
+document.querySelectorAll("[data-key]").forEach((b) => { b.onclick = () => act("POST", page("press"), { key: b.dataset.key }); });
+
+// --- Boot ----------------------------------------------------------------------
+let listTimer = null;
+function showLogin() {
+  clearInterval(listTimer); listTimer = null;
+  $("app").classList.add("hidden"); $("viewer").classList.add("hidden"); $("login").classList.remove("hidden");
+  $("token").focus();
+}
+async function showApp(authRequired) {
+  $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+  $("logout-btn").classList.toggle("hidden", !authRequired);
+  await refresh();
+  if (!listTimer) listTimer = setInterval(() => { if (!viewing && !document.hidden) refresh(); }, 4000);
+}
+$("login-form").onsubmit = async (e) => {
+  e.preventDefault();
+  token = $("token").value.trim();
+  try { await api("GET", "/profiles"); store.set("foxprofile.token", token); $("login-err").textContent = ""; showApp(true); }
+  catch { $("login-err").textContent = t("bad_token"); token = ""; }
+};
+$("logout-btn").onclick = () => { token = ""; store.set("foxprofile.token", null); showLogin(); };
+$("new-btn").onclick = () => openEditor(null);
+$("mcp-btn").onclick = openMcpGuide;
+$("search").oninput = render;
+document.querySelectorAll("[data-lang]").forEach((b) => { b.onclick = () => { lang = b.dataset.lang; store.set("foxprofile.lang", lang); applyI18n(); render(); }; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("modal-root").replaceChildren(); } });
+
+(async () => {
+  applyI18n();
+  const info = await (await fetch("/api/v1/info")).json();
+  if (info.auth_required && !token) return showLogin();
+  try { await showApp(info.auth_required); } catch { showLogin(); }
+})();
+</script>
+</body>
+</html>

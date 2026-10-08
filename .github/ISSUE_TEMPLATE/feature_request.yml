@@ -1,0 +1,27 @@
+name: ✨ Đề xuất tính năng / Feature request
+description: Gợi ý một tính năng hoặc cải tiến
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vấn đề bạn gặp phải
+      description: Tính năng này giải quyết khó khăn gì?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Giải pháp đề xuất
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Các cách khác đã cân nhắc
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Đóng góp
+      options:
+        - label: Tôi muốn tự viết Pull Request cho tính năng này
