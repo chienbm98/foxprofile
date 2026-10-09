@@ -23,7 +23,7 @@
   </p>
 </div>
 
-![FoxProfile](docs/images/main.png)
+![FoxProfile](docs/images/en/main.png)
 
 FoxProfile manages anti-detect browser profiles: each profile is a separate identity with its own device fingerprint, cookies, proxy, timezone and locale. The default browser is [Camoufox](https://github.com/daijro/camoufox), a Firefox build that spoofs fingerprints at the engine level; an experimental Chrome engine based on [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium) is also available. It is a self-hosted alternative, on your machine or a VPS, to paid anti-detect browsers such as GoLogin, GPM or MoreLogin.
 
@@ -101,7 +101,7 @@ By default, every Camoufox launch looks up the exit IP (through the profile's pr
 - **GeoIP databases disagree.** Cloudflare may place an IP in one country and Google in another, and Camoufox may pick a same-offset timezone with a different name (a Vietnamese IP gets `Asia/Bangkok` rather than `Asia/Ho_Chi_Minh`).
 - **Datacenter IPs get captchas** whatever the browser looks like. For Cloudflare-protected sites a residential or mobile proxy matters more than any other setting.
 
-![Create profile dialog](docs/images/profile-dialog.png)
+![Create profile dialog](docs/images/en/profile-dialog.png)
 
 The profile dialog has **Timezone** (IANA name, e.g. `Asia/Ho_Chi_Minh`) and **Locale** (e.g. `vi-VN`) fields; blank means follow the IP. **Check IP** resolves the exit IP through the proxy, compares it with Cloudflare, ipinfo and ip-api, and warns about country or timezone mismatches, datacenter IPs, proxies that leave over different IPv4/IPv6 addresses, and a locale left on random.
 
@@ -118,7 +118,7 @@ Open `http://<host>:8000/` for the **web panel**: the same profile table, filter
 
 | Web panel | Remote screen view |
 | --- | --- |
-| ![Web panel](docs/images/panel.png) | ![Remote screen view](docs/images/panel-viewer.png) |
+| ![Web panel](docs/images/en/panel.png) | ![Remote screen view](docs/images/en/panel-viewer.png) |
 
 **Security:** when listening on anything but `127.0.0.1`, the server **refuses to start** without `FOXPROFILE_API_TOKEN` (24+ characters). The panel, the REST API and MCP share that token.
 
@@ -137,7 +137,7 @@ FoxProfile ships an MCP server so Claude Code, Claude Desktop, Cursor, VS Code a
 
 **Quickest:** click **Connect AI (MCP)** in the left sidebar of the desktop app or the web panel. It generates ready-to-paste configs for each AI app with your address and token.
 
-![Connect AI (MCP)](docs/images/mcp-guide.png)
+![Connect AI (MCP)](docs/images/en/mcp-guide.png)
 
 MCP is served over HTTP at `/mcp` on FoxProfile's own port, so it also works when FoxProfile runs on a VPS:
 
@@ -174,7 +174,7 @@ Pick the OS of the machine running FoxProfile: a persona of another OS leaks the
 
 ## Cookies and fingerprints
 
-![Cookies & fingerprint](docs/images/cookies.png)
+![Cookies & fingerprint](docs/images/en/cookies.png)
 
 Click the cookie button on a profile row to open **Cookies & fingerprint**. **The profile's browser must be stopped**: FoxProfile opens the profile headless to read and write cookies.
 

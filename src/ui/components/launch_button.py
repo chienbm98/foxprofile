@@ -6,7 +6,7 @@ from ...core.strings import get_string
 from ..theme.colors import COLORS
 from ..theme.styles import ACCENT_STYLE, INK_STYLE
 
-_WIDTH, _HEIGHT = 100, 36
+_WIDTH, _HEIGHT = 112, 36
 
 
 def build_launch_button(

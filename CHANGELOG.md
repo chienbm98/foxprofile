@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Sửa
+- App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
+
 ## [2.3.1] - 2026-10-09
 
 ### Sửa
