@@ -7,6 +7,9 @@
 ### Sửa
 - App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
 
+### Thay đổi
+- Ngôn ngữ giao diện mặc định của app desktop và web panel là English; đặt `FOXPROFILE_LANG=vi` (hoặc bấm "Tiếng Việt" trong app) để dùng tiếng Việt.
+
 ## [2.3.1] - 2026-10-09
 
 ### Sửa

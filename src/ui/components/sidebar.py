@@ -67,7 +67,7 @@ def build_sidebar(
     on_mcp: Callable,
     on_fullscreen_log: Callable,
     filter_column: ft.Column | None = None,
-    language: str = "vi",
+    language: str = "en",
     on_language: Callable[[str], None] | None = None,
 ) -> ft.Container:
     log_toggle_btn.on_click = on_toggle_log

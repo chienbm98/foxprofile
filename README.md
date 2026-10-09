@@ -2,7 +2,7 @@
   <img src="src/assets/icon.png" width="112" alt="FoxProfile logo" />
   <h1>FoxProfile</h1>
   <p><strong>Free, open-source manager for anti-detect browser profiles</strong></p>
-  <p>Per-profile device fingerprint, cookies and proxy · Two engines: Camoufox (Firefox) and Chrome · Vietnamese and English UI · REST API and MCP for automation</p>
+  <p>Per-profile device fingerprint, cookies and proxy · Two engines: Camoufox (Firefox) and Chrome · English and Vietnamese UI · REST API and MCP for automation</p>
 
   <p>
     <a href="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml"><img src="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -61,7 +61,7 @@ FoxProfile manages anti-detect browser profiles: each profile is a separate iden
 - **MCP server** so AI agents (Claude, Cursor...) can launch profiles, browse, click, type and take screenshots.
 - **Server mode + web panel** for VPS deployments: manage profiles and view their screens remotely, protected by a token.
 - **REST API** with Swagger docs for scripting.
-- **Vietnamese** (default) and English UI, switchable inside the app. Fonts are bundled, no network needed.
+- **English** (default) and Vietnamese UI, switchable inside the app. Fonts are bundled, no network needed.
 
 ## Requirements
 
@@ -91,7 +91,7 @@ Run the app:
 python -m src.main
 ```
 
-On Windows you can also double-click `run_foxprofile.bat`. The app opens the manager window and serves the API on `http://127.0.0.1:8000`; API docs are at `http://127.0.0.1:8000/docs`. Set `FOXPROFILE_LANG=en` for the English UI.
+On Windows you can also double-click `run_foxprofile.bat`. The app opens the manager window and serves the API on `http://127.0.0.1:8000`; API docs are at `http://127.0.0.1:8000/docs`. Set `FOXPROFILE_LANG=vi` for the Vietnamese UI.
 
 ## Timezone, locale and Check IP
 
@@ -187,7 +187,7 @@ Everything is optional. To override defaults, copy `.env.example` to `.env`.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `FOXPROFILE_LANG` | `vi` | UI language: `vi` or `en` |
+| `FOXPROFILE_LANG` | `en` | UI language: `en` or `vi` |
 | `FOXPROFILE_PROFILES_FILE` | `profiles.json` | Profile list file |
 | `FOXPROFILE_DATA_DIR` | `camoufox_data` | Data directory, one subdirectory per profile |
 | `FOXPROFILE_LOG_DIR` | `logs` | Log directory |
