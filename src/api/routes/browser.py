@@ -65,7 +65,11 @@ def launch_browser(
     response: Response,
     wait: bool = Query(
         True,
-        description="Wait until the browser is ready or has failed before replying",
+        description=(
+            "If true (default), block until the browser is ready or has failed, "
+            f"up to {LAUNCH_WAIT_TIMEOUT}s (FOXPROFILE_LAUNCH_TIMEOUT). "
+            "Pass wait=false to return 202 immediately and poll GET /{name}/status."
+        ),
     ),
     pm: IProfileManager = Depends(get_profile_manager),
     bl: IBrowserLauncher = Depends(get_browser_launcher),

@@ -68,6 +68,12 @@ def validate_proxy_format(proxy_str: str) -> tuple[bool, str]:
     if not 1 <= port <= 65535:
         return False, get_string("validation_invalid_port", port=port)
 
+    # RFC 1035/1123: a hostname must not exceed 253 characters.  Strip IPv6
+    # brackets before measuring so "[::1]" does not count as 5 chars.
+    host = match.group("host").strip("[]")
+    if len(host) > 253:
+        return False, get_string("validation_invalid_proxy")
+
     return True, ""
 
 

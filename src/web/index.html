@@ -950,11 +950,13 @@ function openCookies(p) {
           choice("upload", t("import"), t("import_hint"), () => file.click())), file,
         fpSection,
         h("div", { class: "choice" },
-          choice("fingerprint", t("reset_fp"), t("reset_fp_hint"), () => run(async () => {
+          choice("fingerprint", t("reset_fp"), t("reset_fp_hint"), async () => {
             if (!(await confirmDialog(t("confirm_reset", { name: p.name }), t("reset_fp"), true))) return;
-            await api("DELETE", `/profiles/${enc(p.name)}/fingerprint`);
-            fingerprints[p.name] = null; renderFp(); toast(t("fp_reset")); refresh();
-          }))),
+            await run(async () => {
+              await api("DELETE", `/profiles/${enc(p.name)}/fingerprint`);
+              fingerprints[p.name] = null; renderFp(); toast(t("fp_reset")); refresh();
+            });
+          })),
         msg),
       h("div", { class: "modal-foot" }, h("button", { type: "button", class: "btn btn-line", onclick: close }, t("close"))));
   });

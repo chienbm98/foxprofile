@@ -30,6 +30,16 @@ class ProfileManager:
         self._load_profiles()
         pathlib.Path(DATA_DIR).mkdir(exist_ok=True, parents=True)
 
+    def _find_by_casefold(self, name: str) -> str | None:
+        """Return the existing profile key that case-folds to *name*, or None.
+
+        Used to enforce case-insensitive uniqueness across all platforms so that
+        a profiles.json exported on Linux (case-sensitive FS) can be imported on
+        Windows/macOS (case-insensitive FS) without data-dir collisions.
+        """
+        lower = name.casefold()
+        return next((k for k in self.profiles if k.casefold() == lower), None)
+
     def _data_path(self, name: str) -> str:
         return os.path.join(DATA_DIR, name)
 
@@ -87,7 +97,7 @@ class ProfileManager:
         engine: str = "camoufox",
     ) -> bool:
         with self._lock:
-            if name in self.profiles:
+            if self._find_by_casefold(name) is not None:
                 return False
             # Create directory before touching profiles.json so a mkdir failure
             # does not leave an entry with no data dir on disk.
@@ -122,8 +132,12 @@ class ProfileManager:
             if original_name not in self.profiles:
                 return False
 
-            if new_name != original_name and new_name in self.profiles:
-                return False
+            if new_name != original_name:
+                # Case-insensitive uniqueness: a case-only rename of the profile
+                # itself is allowed; renaming to another profile's casefold is not.
+                conflicting = self._find_by_casefold(new_name)
+                if conflicting is not None and conflicting != original_name:
+                    return False
 
             # Rename the data directory BEFORE mutating in-memory state so that
             # an OSError leaves memory and JSON untouched.
@@ -132,13 +146,22 @@ class ProfileManager:
                 new_dir = pathlib.Path(self._data_path(new_name))
                 if old_dir.exists():
                     if new_dir.exists():
-                        # Refuse: do NOT delete potential user data.
-                        logger.warning(
-                            "Cannot rename %s -> %s: target data dir already exists",
-                            original_name,
-                            new_name,
-                        )
-                        return False
+                        # On case-insensitive filesystems (Windows/macOS) a
+                        # case-only rename sees the target as existing because
+                        # both paths point to the same directory entry.  Allow
+                        # the rename only in that situation.
+                        try:
+                            same = old_dir.samefile(new_dir)
+                        except OSError:
+                            same = False
+                        if not same:
+                            # Refuse: do NOT delete potential user data.
+                            logger.warning(
+                                "Cannot rename %s -> %s: target data dir already exists",
+                                original_name,
+                                new_name,
+                            )
+                            return False
                     try:
                         old_dir.rename(new_dir)
                     except OSError as e:
@@ -200,11 +223,15 @@ class ProfileManager:
         meta = read_profile_meta(zip_path) or {}
         name = meta.get("name")
         with self._lock:
-            if name in self.profiles:
+            # Case-insensitive collision check: find any existing profile whose
+            # name casefolds to the imported name so the check is consistent on
+            # all platforms (Windows/macOS case-insensitive FS, Linux sensitive).
+            existing_key = self._find_by_casefold(name) if name else None
+            if existing_key is not None:
                 if not overwrite:
                     return False, f"Profile '{name}' already exists"
-                if (meta.get("engine") or "camoufox") != self.profiles[name].engine:
-                    shutil.rmtree(self._data_path(name), ignore_errors=True)
+                if (meta.get("engine") or "camoufox") != self.profiles[existing_key].engine:
+                    shutil.rmtree(self._data_path(existing_key), ignore_errors=True)
 
             success, result = import_from_zip(zip_path, DATA_DIR)
             if not success:
@@ -212,6 +239,14 @@ class ProfileManager:
 
             profile = result
 
+            # An overwrite under a different case replaces the old entry rather
+            # than leaving two names for one data directory.
+            if existing_key is not None and existing_key != profile.name:
+                old_dir = pathlib.Path(self._data_path(existing_key))
+                new_dir = pathlib.Path(self._data_path(profile.name))
+                if old_dir.exists() and not (new_dir.exists() and old_dir.samefile(new_dir)):
+                    shutil.rmtree(old_dir, ignore_errors=True)
+                del self.profiles[existing_key]
             self.profiles[profile.name] = profile
             self.save_profiles()
             logger.info("Registered imported profile: %s", profile.name)

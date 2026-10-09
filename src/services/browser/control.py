@@ -11,7 +11,7 @@ import base64
 import re
 import secrets
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from aiohttp import web
 
@@ -30,6 +30,19 @@ _SCHEME = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]*):(.*)$", re.S)
 
 def _check_url(url: str) -> str:
     url = url.strip()
+    # Guard against percent-encoded scheme bypasses such as "%66ile:///C:/x"
+    # (decodes to "file:///C:/x") or "java%73cript:alert(1)" ("javascript:...").
+    # The _SCHEME regex only matches ASCII letters, so those inputs fall through
+    # to the "prepend https://" branch and sneak past the scheme check.
+    # Fix: if the token before the first ":" (and before any "/") contains "%",
+    # percent-decode it and reject disallowed schemes immediately.
+    colon = url.find(":")
+    slash = url.find("/")
+    if colon != -1 and "%" in url[:colon] and (slash == -1 or colon < slash):
+        decoded_scheme = unquote(url[:colon]).lower()
+        if decoded_scheme not in ALLOWED_SCHEMES:
+            raise ControlError(f"URL scheme '{decoded_scheme}' is not allowed")
+
     match = _SCHEME.match(url)
     # "localhost:8080/x" looks like a scheme but is host:port; bare hosts get https.
     if not match or re.match(r"\d+(/|$)", match.group(2)):

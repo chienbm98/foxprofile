@@ -124,7 +124,21 @@ def exit_ip(proxy_str: str) -> str:
     """
     from camoufox.ip import public_ip
 
-    return public_ip(requests_proxy_url(proxy_str))
+    try:
+        return public_ip(requests_proxy_url(proxy_str))
+    except Exception as e:
+        # The raw error is a urllib3 retry chain (class names, object addresses,
+        # the lookup host); log it, but report something a user can act on.
+        if not proxy_str or proxy_str == "None":
+            raise
+        _safe_print(f"Exit IP lookup failed: {_compact_error(e, 300)}")
+        parsed = parse_proxy(proxy_str)
+        server = parsed["server"].split("://", 1)[-1] if parsed else "the proxy"
+        raise ProxyUnreachable(f"no internet connection through proxy {server}") from e
+
+
+class ProxyUnreachable(RuntimeError):
+    pass
 
 
 async def run_browser(

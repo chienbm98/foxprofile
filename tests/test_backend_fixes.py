@@ -329,3 +329,67 @@ class TestMcpUpdateProfileProxyFilter:
     def test_none_os_type_excluded(self):
         body = self._build_body(os_type=None)
         assert "os_type" not in body
+
+
+# ---------------------------------------------------------------------------
+# 7. Case-insensitive profile name uniqueness (fix 1)
+# ---------------------------------------------------------------------------
+
+
+class TestCaseInsensitiveUniqueness:
+    def test_add_case_variant_rejected(self, manager_in_tmp):
+        pm, _ = manager_in_tmp
+        assert pm.add_profile("CaseDirA", "", "windows") is True
+        # "casedira" casefolds to the same as "CaseDirA" → must be rejected
+        assert pm.add_profile("casedirA", "", "windows") is False
+
+    def test_add_case_variant_not_registered(self, manager_in_tmp):
+        """A rejected case-variant add must not appear in the profiles dict."""
+        pm, _ = manager_in_tmp
+        pm.add_profile("MyProfile", "", "windows")
+        result = pm.add_profile("myprofile", "", "windows")
+        assert result is False
+        # The profile must not be registered under the new casing
+        assert "myprofile" not in pm.profiles
+
+    def test_add_same_name_exact_still_rejected(self, manager_in_tmp):
+        pm, _ = manager_in_tmp
+        pm.add_profile("alpha", "", "windows")
+        assert pm.add_profile("alpha", "", "windows") is False
+
+    def test_update_rename_to_case_variant_of_other_rejected(self, manager_in_tmp):
+        pm, _ = manager_in_tmp
+        pm.add_profile("ProfileA", "", "windows")
+        pm.add_profile("ProfileB", "", "windows")
+        # Renaming "ProfileA" to "profileb" conflicts with "ProfileB"
+        result = pm.update_profile("ProfileA", "profileb", "", "windows")
+        assert result is False
+        assert "ProfileA" in pm.profiles
+
+    def test_update_case_only_self_rename_allowed(self, manager_in_tmp):
+        """Renaming 'MyProf' -> 'myprof' keeps the profile and its data, also on
+        a case-insensitive file system where the target dir already "exists"."""
+        pm, _ = manager_in_tmp
+        pm.add_profile("MyProf", "", "windows")
+        (pathlib.Path(pm._data_path("MyProf")) / "marker.txt").write_text("x")
+        assert pm.update_profile("MyProf", "myprof", "", "windows") is True
+        assert list(pm.profiles) == ["myprof"]
+        assert (pathlib.Path(pm._data_path("myprof")) / "marker.txt").read_text() == "x"
+
+    def test_import_case_variant_needs_overwrite_and_replaces(self, manager_in_tmp, tmp_path):
+        pm, _ = manager_in_tmp
+        pm.add_profile("casedira", "", "windows")
+        ok, zip_path = pm.export_profile("casedira", str(tmp_path))
+        assert ok
+        assert pm.delete_profile("casedira")
+        pm.add_profile("CaseDirA", "", "windows")
+
+        assert pm.import_profile(zip_path)[0] is False
+        assert pm.import_profile(zip_path, overwrite=True) == (True, "casedira")
+        assert list(pm.profiles) == ["casedira"]
+
+    def test_add_profile_different_case_different_content_allowed(self, manager_in_tmp):
+        """Two truly distinct names that share no casefold match are both allowed."""
+        pm, _ = manager_in_tmp
+        assert pm.add_profile("alpha", "", "windows") is True
+        assert pm.add_profile("beta", "", "windows") is True
