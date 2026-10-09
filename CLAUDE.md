@@ -4,6 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 FoxProfile is a Python 3.10+ manager for [Camoufox](https://github.com/daijro/camoufox) anti-detect browser profiles: a Flet desktop UI, a FastAPI REST API + single-file web panel, and an MCP server for AI agents.
 
+## Open source first
+
+This is a public MIT-licensed repository (`github.com/chienbm98/foxprofile`). Everything committed, including commit messages, PR descriptions, test fixtures and docs, is published and stays in git history.
+
+- No secrets or personal data in tracked files or history: real proxies and their credentials, cookies, API tokens, server/VPS IPs and hostnames, provider names, personal or work emails, local paths such as `/Users/<name>/`, investigation logs. Commit with the repo's GitHub noreply identity.
+- Examples, tests and screenshots use fake data: IPs from the documentation ranges `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, placeholder credentials (`user:pass`), made-up profile names.
+- Bundled third-party code and assets must have a compatible license, kept next to them (fonts: `src/assets/fonts/OFL-*.txt`; fingerprint-chromium is BSD-3 and downloaded at run time, pinned by SHA-256). Do not add paid, proprietary or unlicensed assets.
+- Anything that leaves the user's machine must be opt-in and documented: no telemetry, no hidden network calls; downloads (Camoufox, GeoIP, the Chrome engine) are pinned or come from the upstream project.
+- Write for outside contributors: user-facing docs are bilingual (README.md Vietnamese, README.en.md English, kept in sync), community files live at the root (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`) and in `.github/` (issue and PR templates), and user-visible changes go into `CHANGELOG.md` under `[Unreleased]`.
+- Keep the responsible-use framing: the README states that multi-accounting can violate platform terms; do not add features or copy aimed at evading bans for abuse.
+
 ## Commands
 
 ```bash
@@ -54,4 +65,3 @@ Run everything from the repo root: `profiles.json`, `camoufox_data/`, `logs/` an
 - `README.md` (Vietnamese, primary) and `README.en.md` must stay in sync. `CONTRIBUTING.md`, `SECURITY.md` and `docs/DEPLOY.md` are in Vietnamese.
 - Release: bump `version` in `pyproject.toml`, `VERSION` in `src/api/app.py`, and `CHANGELOG.md` in one PR, then tag `vX.Y.Z`.
 - `main` is protected: changes go through a PR with all CI checks green. Commits follow Conventional Commits.
-- Never commit `profiles.json`, `camoufox_data/`, `logs/` or `.env`; they hold real cookies and proxy credentials.
