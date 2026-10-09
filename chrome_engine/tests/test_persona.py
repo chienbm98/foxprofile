@@ -157,6 +157,8 @@ def test_invalid_saved_values_are_regenerated(tmp_path):
         ("windows", "linux", personas.UNSUPPORTED),
         ("linux", "windows", personas.WARN),
         ("macos", "macos", personas.OK),
+        ("macos", "windows", personas.WARN),
+        ("macos", "linux", personas.UNSUPPORTED),
     ],
 )
 def test_compatibility(host, platform, level):

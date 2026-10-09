@@ -40,16 +40,21 @@ _VERSION = re.compile(r"^\d+\.\d+\.\d+$")
 
 # How well a persona OS can be presented on a host OS. fingerprint-chromium
 # spoofs navigator, client hints and the WebGL vendor/renderer everywhere, but
-# fonts come from the host, and on a Windows host the WebGL renderer of a Linux
-# persona still names Direct3D 11 (measured with 148.0.7778.215).
+# fonts come from the host. A Linux persona keeps the host's real WebGL renderer:
+# Direct3D 11 on Windows, the Apple GPU (e.g. "ANGLE Metal Renderer: Apple M1 Pro")
+# on macOS. macOS overlay scrollbars are 0px wide, which a Windows persona cannot
+# have. Measured with 148.0.7778.215 on Windows 11 and macOS 15 (Apple Silicon).
 OK, WARN, UNSUPPORTED = "ok", "warn", "unsupported"
 _COMPATIBILITY: dict[tuple[str, str], tuple[str, str]] = {
     ("windows", "macos"): (WARN, "the host's Windows fonts are visible to font probes"),
     ("windows", "linux"): (UNSUPPORTED, "WebGL still reports a Direct3D 11 renderer"),
     ("linux", "windows"): (WARN, "the host's Linux fonts are visible; install Windows fonts"),
     ("linux", "macos"): (WARN, "the host's Linux fonts are visible to font probes"),
-    ("macos", "windows"): (WARN, "the host's macOS fonts are visible to font probes"),
-    ("macos", "linux"): (WARN, "the host's macOS fonts are visible to font probes"),
+    ("macos", "windows"): (
+        WARN,
+        "the host's macOS fonts are visible to font probes and overlay scrollbars are 0px wide",
+    ),
+    ("macos", "linux"): (UNSUPPORTED, "WebGL still reports the host's Apple GPU renderer"),
 }
 
 

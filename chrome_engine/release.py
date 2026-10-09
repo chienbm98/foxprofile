@@ -14,6 +14,7 @@ the pin moves.
 from __future__ import annotations
 
 import platform
+import subprocess
 import sys
 from dataclasses import dataclass
 
@@ -107,17 +108,37 @@ def get_release(version: str | None = None) -> Release:
         ) from None
 
 
+def _under_rosetta() -> bool:
+    """True for an x86_64 process translated by Rosetta on an Apple Silicon Mac."""
+    try:
+        out = subprocess.run(
+            ["sysctl", "-n", "sysctl.proc_translated"], capture_output=True, text=True, timeout=5
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return out.stdout.strip() == "1"
+
+
+def _host_machine() -> str:
+    machine = platform.machine().lower()
+    # An x86_64 Python under Rosetta still runs on an arm64 Mac.
+    if sys.platform == "darwin" and machine == "x86_64" and _under_rosetta():
+        return "arm64"
+    return machine
+
+
 def host_platform(system: str | None = None, machine: str | None = None) -> str:
     """The asset key for this machine: windows-x64, linux-x64 or macos."""
     system = (system or sys.platform).lower()
-    machine = (machine or platform.machine()).lower()
+    machine = (machine or _host_machine()).lower()
     if system.startswith("win"):
         if machine in ("amd64", "x86_64"):
             return "windows-x64"
     elif system.startswith("linux"):
         if machine in ("x86_64", "amd64"):
             return "linux-x64"
-    elif system == "darwin":
+    # The macOS build is arm64 only (Mach-O thin); it cannot run on Intel Macs.
+    elif system == "darwin" and machine in ("arm64", "aarch64"):
         return "macos"
     raise UnsupportedPlatformError(f"No fingerprint-chromium build for {system}/{machine}")
 

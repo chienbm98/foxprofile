@@ -33,7 +33,6 @@ def test_unknown_version():
         ("win32", "AMD64", "windows-x64"),
         ("linux", "x86_64", "linux-x64"),
         ("darwin", "arm64", "macos"),
-        ("darwin", "x86_64", "macos"),
     ],
 )
 def test_host_platform(system, machine, expected):
@@ -41,7 +40,8 @@ def test_host_platform(system, machine, expected):
 
 
 @pytest.mark.parametrize(
-    ("system", "machine"), [("linux", "aarch64"), ("win32", "ARM64"), ("freebsd", "amd64")]
+    ("system", "machine"),
+    [("linux", "aarch64"), ("win32", "ARM64"), ("freebsd", "amd64"), ("darwin", "x86_64")],
 )
 def test_host_platform_unsupported(system, machine):
     with pytest.raises(UnsupportedPlatformError):
@@ -58,3 +58,18 @@ def test_host_os(system, expected):
 def test_asset_for_missing_platform():
     with pytest.raises(UnsupportedPlatformError, match="no build for"):
         release.get_release().asset_for("linux-arm64")
+
+
+def test_rosetta_python_counts_as_apple_silicon(monkeypatch):
+    monkeypatch.setattr(release.sys, "platform", "darwin")
+    monkeypatch.setattr(release.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(release, "_under_rosetta", lambda: True)
+    assert release.host_platform() == "macos"
+
+
+def test_intel_mac_is_unsupported(monkeypatch):
+    monkeypatch.setattr(release.sys, "platform", "darwin")
+    monkeypatch.setattr(release.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(release, "_under_rosetta", lambda: False)
+    with pytest.raises(UnsupportedPlatformError):
+        release.host_platform()
