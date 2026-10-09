@@ -21,8 +21,8 @@ COLUMNS = {
     "proxy": (9, None),
     "geo": (9, None),
     "status": (None, 100),
-    # Launch button (100) + gap (8) + three 40px icon buttons.
-    "actions": (None, 232),
+    # Launch button (112, wide enough for "Launch") + gap (8) + three 40px icon buttons.
+    "actions": (None, 244),
 }
 ROW_HEIGHT = 58
 

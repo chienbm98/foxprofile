@@ -375,7 +375,7 @@ STRINGS: dict[str, dict[str, str]] = {
     },
 }
 
-_ACTIVE = STRINGS.get(LANGUAGE, STRINGS["vi"])
+_ACTIVE = STRINGS.get(LANGUAGE, STRINGS["en"])
 
 
 def current_language() -> str:
