@@ -5,7 +5,7 @@ import pathlib
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
 from ..core.config import API_PORT, API_TOKEN, HEADLESS
@@ -30,6 +30,9 @@ logger = get_logger("api")
 API_PREFIX = "/api/v1"
 VERSION = "2.2.0"
 _PANEL = pathlib.Path(__file__).resolve().parents[1] / "web" / "index.html"
+_FONTS = pathlib.Path(__file__).resolve().parents[1] / "assets" / "fonts"
+# Served to the panel without a token: it needs them before login.
+_FONT_FILES = {f.name: f for f in _FONTS.glob("*.ttf")}
 
 
 def create_app(container: Container, self_url: str | None = None) -> FastAPI:
@@ -88,6 +91,15 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
     @app.get("/", include_in_schema=False)
     def panel() -> FileResponse:
         return FileResponse(_PANEL, headers={"Cache-Control": "no-store"})
+
+    @app.get("/assets/fonts/{name}", include_in_schema=False)
+    def font(name: str) -> FileResponse:
+        path = _FONT_FILES.get(name)
+        if path is None:
+            raise HTTPException(status_code=404)
+        return FileResponse(
+            path, media_type="font/ttf", headers={"Cache-Control": "public, max-age=604800"}
+        )
 
     logger.info("FastAPI application created")
     return app

@@ -1,12 +1,13 @@
 import asyncio
 import os
+import time
 
 import flet as ft
 
 from ..core.config import DATA_DIR
 from ..core.container import Container
 from ..core.logging import get_logger
-from ..core.strings import get_string
+from ..core.strings import current_language, get_string, set_language
 from ..interfaces.protocols import IBrowserLauncher, IProfileManager, IProxyService
 from ..services.browser import fingerprint
 from .components import (
@@ -17,11 +18,15 @@ from .components import (
     build_ui_refs,
     rebuild_bulk_bar,
 )
+from .components.profile_card import build_header_row
+from .components.sidebar import build_filter_buttons
 from .dialogs.mcp_guide import open_mcp_guide
 from .handlers import AppHandlers
 from .refs import UIRefs
 from .state import ITEMS_PER_PAGE, AppState
 from .theme import COLORS, configure_page
+from .theme.colors import FONT_SEMIBOLD
+from .theme.page import ASSETS_DIR
 
 logger = get_logger("app")
 
@@ -36,6 +41,10 @@ class App:
         self.page: ft.Page | None = None
         self._reconcile_started = False
         self.refs: UIRefs | None = None
+        self.filter = "all"
+        self._live_since: dict[str, str] = {}
+        self._filter_column = ft.Column(spacing=2)
+        self._header_slot = ft.Container()
         c.event_bus.subscribe(self.state.schedule_refresh)
         self.h = AppHandlers(
             pm=self.pm,
@@ -50,7 +59,7 @@ class App:
         )
 
     def run(self) -> None:
-        ft.run(self._main)
+        ft.run(self._main, assets_dir=ASSETS_DIR)
 
     def _main(self, page: ft.Page) -> None:
         self.page = page
@@ -59,18 +68,35 @@ class App:
         page.services.append(fp)
         self.clipboard = ft.Clipboard()
         page.services.append(self.clipboard)
-        self.refs = build_ui_refs(
-            pm=self.pm,
-            on_change_page=self._change_page,
-            file_picker=fp,
-            on_search=self._on_search,
-        )
-        page.add(self._build_root_layout(self.refs))
-        self._refresh_profiles()
+        self._file_picker = fp
+        self._build_ui()
         self.state._last_running_snapshot = self.bl.running_profile_names()
         if not self._reconcile_started:
             self._reconcile_started = True
             page.run_task(self._ui_reconcile_loop)
+
+    def _build_ui(self) -> None:
+        """(Re)build every control; strings are read at build time."""
+        assert self.page is not None
+        self.refs = build_ui_refs(
+            pm=self.pm,
+            on_change_page=self._change_page,
+            file_picker=self._file_picker,
+            on_search=self._on_search,
+        )
+        self._filter_column = ft.Column(spacing=2)
+        self._header_slot = ft.Container()
+        self.page.title = get_string("window_title")
+        self.page.controls.clear()
+        self.page.add(self._build_root_layout(self.refs))
+        self._refresh_profiles()
+
+    def _set_language(self, code: str) -> None:
+        if code == current_language():
+            return
+        set_language(code)
+        self.state.search_query = ""
+        self._build_ui()
 
     def _build_root_layout(self, r: UIRefs) -> ft.Row:
         sidebar = build_sidebar(
@@ -85,6 +111,9 @@ class App:
             on_mcp=lambda _: open_mcp_guide(self.page, self.clipboard),
             on_toggle_log=lambda _: self.h.toggle_log(),
             on_fullscreen_log=lambda _: self.h.open_log_fullscreen(),
+            filter_column=self._filter_column,
+            language=current_language(),
+            on_language=self._set_language,
         )
         content = build_content_area(
             r.content_subtitle,
@@ -94,13 +123,13 @@ class App:
             r.page_label,
             r.bulk_bar,
             r.search_field,
+            header_slot=self._header_slot,
         )
         return ft.Row(
             expand=True,
             spacing=0,
             controls=[
                 sidebar,
-                ft.VerticalDivider(width=1, color=COLORS["border"]),
                 content,
             ],
         )
@@ -110,8 +139,24 @@ class App:
         self.state.current_page = 1
         self._refresh_profiles()
 
+    def _on_filter(self, fid: str) -> None:
+        self.filter = fid
+        self.state.current_page = 1
+        self._refresh_profiles()
+
+    def _filter_tests(self) -> dict:
+        return {
+            "all": lambda p: True,
+            "running": lambda p: self.bl.is_running(p.name),
+            "proxy": lambda p: bool(p.proxy),
+            "direct": lambda p: not p.proxy,
+            "chrome": lambda p: p.engine == "chrome",
+        }
+
     def _get_page_profiles(self) -> tuple[list, list, int]:
         all_profiles = self.pm.list_profiles()
+        test = self._filter_tests().get(self.filter, lambda p: True)
+        all_profiles = [p for p in all_profiles if test(p)]
         if q := self.state.search_query:
             all_profiles = [
                 p for p in all_profiles if q in p.name.lower() or q in (p.proxy or "").lower()
@@ -128,9 +173,35 @@ class App:
         self._flush_log()
         all_profiles, page_profiles, total_pages = self._get_page_profiles()
 
-        all_names = {p.name for p in all_profiles}
+        all_names = set(self.pm.profiles)
         for stale in self.state.selected_names() - all_names:
             self.state.toggle_selection(stale)
+
+        running = self.bl.running_profile_names()
+        for name in running - set(self._live_since):
+            self._live_since[name] = time.strftime("%H:%M")
+        for name in set(self._live_since) - running:
+            del self._live_since[name]
+
+        everything = self.pm.list_profiles()
+        tests = self._filter_tests()
+        self._filter_column.controls = build_filter_buttons(
+            self.filter,
+            {fid: sum(1 for p in everything if test(p)) for fid, test in tests.items()},
+            self._on_filter,
+        )
+        names = [p.name for p in page_profiles]
+        all_sel = bool(names) and all(self.state.is_selected(n) for n in names)
+        any_sel = any(self.state.is_selected(n) for n in names)
+        self._header_slot.content = (
+            build_header_row(
+                all_sel,
+                any_sel,
+                lambda select: self.h.on_select_all_page() if select else self.h.on_deselect_page(),
+            )
+            if page_profiles
+            else None
+        )
 
         r.profile_list_area.controls = (
             [
@@ -145,6 +216,8 @@ class App:
                     on_select=self.h.on_toggle_select,
                     on_cookies=self.h.on_cookies,
                     device=self._device_label(p.name),
+                    since=self._live_since.get(p.name, ""),
+                    failed=p.name in self.state.failed,
                 )
                 for p in page_profiles
             ]
@@ -164,7 +237,7 @@ class App:
                 "clear": self.h.on_clear_selection,
             },
         )
-        r.content_subtitle.value = self._profiles_subtitle()
+        self._set_subtitle(r.content_subtitle)
         r.page_label.value = get_string(
             "page_of",
             current=self.state.current_page,
@@ -179,29 +252,59 @@ class App:
         info = fingerprint.summary(os.path.join(DATA_DIR, name))
         if not info:
             return ""
-        return f"{info['platform']} {info['screen']}"
+        return f"{info['screen']} · {info['hardware_concurrency']} CPU"
 
     def _build_empty_or_no_results(self) -> ft.Control:
-        if self.state.search_query and self.pm.profiles:
+        if self.pm.profiles:
             return ft.Container(
-                padding=ft.Padding.only(top=60),
+                padding=ft.Padding.symmetric(vertical=56, horizontal=24),
                 alignment=ft.Alignment(0, 0),
-                content=ft.Text(
-                    get_string("no_search_results", query=self.state.search_query),
-                    size=15,
-                    color=COLORS["text_sub"],
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=12,
+                    controls=[
+                        ft.Text(
+                            get_string("no_search_results", query=self.state.search_query)
+                            if self.state.search_query
+                            else get_string("no_filter_results"),
+                            size=14,
+                            color=COLORS["text_sub"],
+                        ),
+                        ft.OutlinedButton(
+                            get_string("clear_filters"),
+                            on_click=lambda _: self._clear_filters(),
+                        ),
+                    ],
                 ),
             )
         return build_empty_state(lambda _: self.h.open_add_dialog())
+
+    def _clear_filters(self) -> None:
+        self.filter = "all"
+        self.state.search_query = ""
+        if self.refs and self.refs.search_field is not None:
+            self.refs.search_field.value = ""
+        self._refresh_profiles()
 
     def _change_page(self, delta: int) -> None:
         self.state.current_page += delta
         self._refresh_profiles()
 
-    def _profiles_subtitle(self) -> str:
+    def _set_subtitle(self, text: ft.Text) -> None:
+        """ "10 profile · 2 đang chạy", the running count in stamp violet."""
         c, r = len(self.pm.profiles), self.bl.running_count()
-        suffix = get_string("profiles_running_suffix", count=r) if r else ""
-        return get_string("profiles_configured", count=c) + suffix
+        head = get_string("profiles_configured", count=c) + " · "
+        text.value = None
+        text.spans = (
+            [
+                ft.TextSpan(head),
+                ft.TextSpan(str(r), ft.TextStyle(color=COLORS["live"], font_family=FONT_SEMIBOLD)),
+                ft.TextSpan(" " + get_string("profiles_running_suffix")),
+            ]
+            if r
+            else [ft.TextSpan(head + get_string("profiles_none_running"))]
+        )
 
     def _update_stats(self) -> None:
         r = self.refs

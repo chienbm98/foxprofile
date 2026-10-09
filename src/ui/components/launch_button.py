@@ -3,18 +3,10 @@ from collections.abc import Callable
 import flet as ft
 
 from ...core.strings import get_string
-from ...models.profile import Profile
 from ..theme.colors import COLORS
-from ..theme.styles import ACCENT_STYLE, ERROR_STYLE
+from ..theme.styles import ACCENT_STYLE, INK_STYLE
 
-
-def resolve_status(profile: Profile, is_running: bool) -> tuple[str, str, str]:
-    """Return (icon, label, color) based on the profile's current state."""
-    if is_running:
-        return ft.Icons.CIRCLE, get_string("status_running"), COLORS["success"]
-    if profile.proxy:
-        return ft.Icons.CIRCLE, get_string("proxy_active"), COLORS["success"]
-    return ft.Icons.CIRCLE_OUTLINED, get_string("direct_connection"), COLORS["text_dim"]
+_WIDTH, _HEIGHT = 100, 36
 
 
 def build_launch_button(
@@ -26,31 +18,30 @@ def build_launch_button(
     """Create the context-aware Launch / Stop / Loading button."""
     if is_loading:
         return ft.Button(
-            get_string("loading"),
-            icon=ft.Icons.HOURGLASS_TOP,
-            width=130,
-            height=44,
+            content=ft.ProgressRing(width=16, height=16, stroke_width=2, color=COLORS["text_sub"]),
+            width=_WIDTH,
+            height=_HEIGHT,
             disabled=True,
+            tooltip=get_string("loading"),
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=10),
-                bgcolor=COLORS["text_dim"],
-                color="#FFFFFF",
+                shape=ft.RoundedRectangleBorder(radius=8),
+                bgcolor=COLORS["paper_sunk"],
             ),
         )
     if is_running:
         return ft.Button(
             get_string("stop"),
-            icon=ft.Icons.STOP,
-            width=120,
-            height=44,
-            style=ERROR_STYLE,
+            icon=ft.Icons.STOP_ROUNDED,
+            width=_WIDTH,
+            height=_HEIGHT,
+            style=INK_STYLE,
             on_click=lambda _, n=name: on_launch(n),
         )
     return ft.Button(
         get_string("launch"),
-        icon=ft.Icons.PLAY_ARROW,
-        width=120,
-        height=44,
+        icon=ft.Icons.PLAY_ARROW_ROUNDED,
+        width=_WIDTH,
+        height=_HEIGHT,
         style=ACCENT_STYLE,
         on_click=lambda _, n=name: on_launch(n),
     )
