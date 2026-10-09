@@ -14,14 +14,14 @@ from ...utils.validation import (
     validate_timezone,
 )
 from ..theme.colors import COLORS
-from ..theme.page import build_os_dropdown
+from ..theme.page import build_engine_dropdown, build_os_dropdown
 from ..theme.styles import ACCENT_STYLE, DLG_FIELD_KWARGS, OUTLINE_STYLE
 
 
 def open_profile_dialog(
     page: ft.Page,
     proxy_service: IProxyService,
-    on_save: Callable[[str, str, str, str, str], str | None],
+    on_save: Callable[[str, str, str, str, str, str], str | None],
     profile: Profile | None = None,
 ) -> None:
     is_edit = profile is not None
@@ -49,6 +49,25 @@ def open_profile_dialog(
     os_dropdown = build_os_dropdown(
         profile.os_type if profile is not None else "windows",
     )
+    os_dropdown.expand = 1
+    # Fixed once created: the engines keep incompatible browser data.
+    engine_dropdown = build_engine_dropdown(
+        profile.engine if profile is not None else "camoufox",
+        disabled=is_edit,
+    )
+    engine_dropdown.expand = 1
+    engine_note = ft.Text(
+        get_string("engine_chrome_note"),
+        size=12,
+        color=COLORS["text_sub"],
+        visible=engine_dropdown.value == "chrome",
+    )
+
+    def on_engine_change(_: ft.ControlEvent) -> None:
+        engine_note.visible = engine_dropdown.value == "chrome"
+        page.update()
+
+    engine_dropdown.on_select = on_engine_change
     timezone_field = ft.TextField(
         label=get_string("timezone_optional"),
         value=(profile.timezone or "") if profile is not None else "",
@@ -96,6 +115,7 @@ def open_profile_dialog(
         name = (name_field.value or "").strip()
         proxy = (proxy_field.value or "").strip()
         os_type = os_dropdown.value or "windows"
+        engine = engine_dropdown.value or "camoufox"
         timezone = (timezone_field.value or "").strip()
         locale = (locale_field.value or "").strip()
         name_error.visible = proxy_error.visible = geo_error.visible = False
@@ -122,7 +142,7 @@ def open_profile_dialog(
                 page.update()
                 return
 
-        error = on_save(name, proxy, os_type, timezone, locale)
+        error = on_save(name, proxy, os_type, timezone, locale, engine)
         if error:
             name_error.value = error
             name_error.visible = True
@@ -155,7 +175,8 @@ def open_profile_dialog(
                     proxy_error,
                     ft.Row(spacing=8, controls=[check_btn, ip_btn]),
                     ft.Container(height=6),
-                    os_dropdown,
+                    ft.Row(spacing=8, controls=[engine_dropdown, os_dropdown]),
+                    engine_note,
                     ft.Container(height=6),
                     ft.Row(spacing=8, controls=[timezone_field, locale_field]),
                     geo_error,

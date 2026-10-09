@@ -14,9 +14,9 @@ python -m src.main                      # desktop app + API on 127.0.0.1:8000
 python -m src.server [--port N] [--headed]   # API + web panel at /, no desktop window, browsers hidden
 python foxprofile_mcp.py                # MCP over stdio (client of a running API; FOXPROFILE_URL / FOXPROFILE_API_TOKEN)
 
-ruff check src tests
-ruff format --check src tests
-pytest                                  # unit tests only; no browser or network needed
+ruff check src tests chrome_engine
+ruff format --check src tests chrome_engine
+pytest                                  # tests + chrome_engine/tests; real-browser tests skip unless fetched
 pytest tests/test_validation.py::test_parse_proxy_with_auth   # single test
 ```
 
@@ -29,6 +29,8 @@ Run everything from the repo root: `profiles.json`, `camoufox_data/`, `logs/` an
 **One `Container`, two front ends.** `src/core/container.py` lazily builds the services (`ProfileManager`, `BrowserLauncher`, `ProxyService`, `EventBus`). In desktop mode (`src/main.py`) the FastAPI app runs in a background thread of the same process as the Flet UI and shares that container. The UI calls services directly; API routes that mutate state call `event_bus.emit()` so the desktop UI refreshes. Server mode (`src/server.py`) builds the same container with no UI.
 
 **Each browser is a subprocess.** `BrowserLauncher` (`services/browser/launcher.py`) spawns `services/browser/runner.py` per profile and reads a line protocol from its stdout: `CONTROL:<port>:<token>`, then `BROWSER_STARTED`, `BROWSER_CLOSED`, `LAUNCH_FAILED: ...`. `CONTROL` must be printed before `BROWSER_STARTED`. The runner hosts an aiohttp control server (`control.py`) on loopback with a per-launch token; the API's page-control routes (`api/routes/page.py`) forward through `BrowserLauncher.control()` to it. `control.py` also enforces the URL scheme allow-list (`http`, `https`, `about` only).
+
+**Two engines.** `Profile.engine` is `camoufox` (default) or `chrome`, fixed at creation. `process.runner_command` starts `services/browser/runner.py` or `python -m chrome_engine.runner`; both print the same protocol and share `control.py`/`session.py`. `chrome_engine/` (fingerprint-chromium driven by Playwright) keeps its persona in `chrome_persona.json`, which `fingerprint.summary/reset` also handle. Its browser build is fetched separately (`python -m chrome_engine fetch`); its tests live in `chrome_engine/tests` (browser tests skip unless fetched).
 
 **Stopped-profile operations** (cookie export/import) run `services/browser/cookie_tool.py` as its own headless Camoufox subprocess (last stdout line `RESULT:<json>`). They hold `BrowserLauncher.exclusive(name)`, which refuses launches while the data dir is in use and raises `ProfileBusyError` if the profile is running.
 

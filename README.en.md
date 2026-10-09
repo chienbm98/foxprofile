@@ -34,6 +34,7 @@ FoxProfile is a desktop manager for [Camoufox](https://github.com/daijro/camoufo
 - [Timezone, language and Check IP](#timezone-language-and-check-ip)
 - [Server mode and web panel](#server-mode-and-web-panel)
 - [MCP: let AI agents drive the browser](#mcp-let-ai-agents-drive-the-browser)
+- [Chrome engine (experimental)](#chrome-engine-experimental)
 - [Cookies and fingerprints](#cookies-and-fingerprints)
 - [Configuration](#configuration)
 - [REST API](#rest-api)
@@ -157,6 +158,16 @@ Then just ask, e.g. *"Open profile tiktok-us-02, go to tiktok.com and send me a 
 | Tabs | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
 
 There is deliberately **no** delete tool, so an agent cannot wipe an account's cookies by mistake. Only `http`, `https` and `about:blank` can be opened; `file://` and `about:config` are blocked.
+
+## Chrome engine (experimental)
+
+Besides Camoufox (Firefox), a profile can run on the **Chrome** engine: a Chromium build with fingerprint spoofing patched in C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)). Pick it in **Browser engine** when creating a profile; it cannot be changed afterwards. Download the browser once (~190 MB):
+
+```bash
+python -m chrome_engine fetch
+```
+
+Pick the OS of the machine running FoxProfile: a persona of another OS leaks the machine's fonts, and a Linux persona on Windows/macOS is refused because WebGL reveals the real GPU. Supported: Windows x64, macOS Apple Silicon, Linux x64 (untested). Details and test results (in Vietnamese): [chrome_engine/README.md](chrome_engine/README.md).
 
 ## Cookies and fingerprints
 

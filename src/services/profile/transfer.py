@@ -6,7 +6,7 @@ from datetime import datetime
 
 from ...core.config import FINGERPRINT_FILE
 from ...core.logging import get_logger
-from ...models.profile import Profile
+from ...models.profile import ENGINES, Profile
 from ...utils.validation import (
     valid_or_none,
     validate_locale,
@@ -84,6 +84,9 @@ def import_from_zip(
                 os_type=profile_data.get("os_type", "windows"),
                 timezone=valid_or_none(profile_data.get("timezone"), validate_timezone),
                 locale=valid_or_none(profile_data.get("locale"), validate_locale),
+                engine=profile_data.get("engine")
+                if profile_data.get("engine") in ENGINES
+                else "camoufox",
             )
 
             data_files = [f for f in zipf.namelist() if f.startswith("data/")]

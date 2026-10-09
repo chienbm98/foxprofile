@@ -165,11 +165,18 @@ def _build_left_section(
                 spacing=4,
                 alignment=ft.MainAxisAlignment.CENTER,
                 controls=[
-                    ft.Text(
-                        profile.name,
-                        size=16,
-                        weight=ft.FontWeight.BOLD,
-                        color=COLORS["text_main"],
+                    ft.Row(
+                        spacing=8,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Text(
+                                profile.name,
+                                size=16,
+                                weight=ft.FontWeight.BOLD,
+                                color=COLORS["text_main"],
+                            ),
+                            *_engine_chip(profile),
+                        ],
                     ),
                     ft.Row(
                         spacing=6,
@@ -190,6 +197,20 @@ def _build_left_section(
             ),
         ],
     )
+
+
+def _engine_chip(profile: Profile) -> list[ft.Control]:
+    """A "Chrome" tag on Chrome-engine profiles; Camoufox is the unmarked default."""
+    if profile.engine != "chrome":
+        return []
+    return [
+        ft.Container(
+            padding=ft.Padding.symmetric(horizontal=6, vertical=1),
+            border_radius=6,
+            border=ft.Border.all(1, COLORS["accent"]),
+            content=ft.Text(get_string("engine_chrome_short"), size=11, color=COLORS["accent"]),
+        )
+    ]
 
 
 def _details_line(profile: Profile, device: str) -> str:

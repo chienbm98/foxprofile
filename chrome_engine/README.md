@@ -2,7 +2,7 @@
 
 Engine trình duyệt thứ hai cho FoxProfile, chạy song song với Camoufox: một bản Chromium đã vá sẵn để giả fingerprint ngay trong C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), BSD-3, dựa trên ungoogled-chromium). Engine không tự build Chromium. Nó tải một bản build đã ghim checksum rồi thêm những phần mà fork chưa có.
 
-Thư mục này đứng riêng và chưa được nối vào UI/API của FoxProfile. `runner.py` đã nói đúng protocol của runner Camoufox nên việc nối vào sau này chỉ là chọn engine trong `BrowserLauncher`.
+Engine đã được nối vào FoxProfile: profile có trường `engine` (`camoufox` hoặc `chrome`, cố định sau khi tạo). `BrowserLauncher` chạy `python -m chrome_engine.runner` cho profile Chrome (cùng protocol với runner Camoufox), cookie đi qua `cookie_tool.py` với engine `chrome`, và vân tay của profile Chrome là `chrome_persona.json`.
 
 ## Cài và dùng
 

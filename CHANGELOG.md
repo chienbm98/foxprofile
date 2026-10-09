@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### Thêm
+- Nhân **Chrome (thử nghiệm)** bên cạnh Camoufox, dựa trên fingerprint-chromium: chọn khi tạo profile trên app, web panel, REST API (`"engine": "chrome"`) và MCP (`create_profile(engine="chrome")`). Nhân cố định sau khi tạo. Cookie, vân tay, điều khiển trang, mở lại tab và Kiểm tra IP dùng được như profile Camoufox. Cần tải bản trình duyệt một lần: `python -m chrome_engine fetch`.
 - Mở lại các tab đang mở khi profile được dừng (lưu vào `camoufox_data/<profile>/tabs.json` mỗi 2 giây khi tab thay đổi, chỉ `http`/`https`, tối đa 30 tab). Tắt bằng `FOXPROFILE_RESTORE_TABS=false`.
 
 ### Sửa

@@ -5,7 +5,7 @@ import shutil
 
 from ...core.config import DATA_DIR, PROFILES_FILE
 from ...core.logging import get_logger
-from ...models.profile import Profile
+from ...models.profile import ENGINES, Profile
 from ...utils.validation import (
     valid_or_none,
     validate_locale,
@@ -15,6 +15,10 @@ from ...utils.validation import (
 from .transfer import export_to_zip, import_from_zip
 
 logger = get_logger("profile.manager")
+
+
+def _engine_or_default(value: object) -> str:
+    return value if value in ENGINES else "camoufox"
 
 
 class ProfileManager:
@@ -44,6 +48,7 @@ class ProfileManager:
                             ),
                             "timezone": valid_or_none(p_data.get("timezone"), validate_timezone),
                             "locale": valid_or_none(p_data.get("locale"), validate_locale),
+                            "engine": _engine_or_default(p_data.get("engine")),
                         }
                         self.profiles[name] = Profile(**clean_data)
                 logger.info("Loaded %d profiles", len(self.profiles))
@@ -69,6 +74,7 @@ class ProfileManager:
         os_type: str,
         timezone: str | None = None,
         locale: str | None = None,
+        engine: str = "camoufox",
     ) -> bool:
         if name in self.profiles:
             return False
@@ -78,6 +84,7 @@ class ProfileManager:
             os_type=os_type,
             timezone=timezone or None,
             locale=locale or None,
+            engine=engine,
         )
         self.save_profiles()
         pathlib.Path(self._data_path(name)).mkdir(exist_ok=True, parents=True)

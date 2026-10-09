@@ -43,14 +43,16 @@ class CookieError(Exception):
     pass
 
 
-def _call_tool(action: str, profile_name: str, os_type: str, stdin: str = "") -> dict:
+def _call_tool(
+    action: str, profile_name: str, os_type: str, stdin: str = "", engine: str = "camoufox"
+) -> dict:
     env = os.environ.copy()
     env["PYTHONPATH"] = _PROJECT_ROOT + (
         os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
     )
     try:
         proc = subprocess.run(
-            [sys.executable, _TOOL, action, profile_name, os_type],
+            [sys.executable, _TOOL, action, profile_name, os_type, engine],
             input=stdin,
             capture_output=True,
             text=True,
@@ -211,11 +213,13 @@ def parse_cookies(text: str) -> list[dict[str, Any]]:
 # --- Public API --------------------------------------------------------------
 
 
-def export_cookies(profile_name: str, os_type: str, fmt: str = "json") -> tuple[str, int]:
+def export_cookies(
+    profile_name: str, os_type: str, fmt: str = "json", engine: str = "camoufox"
+) -> tuple[str, int]:
     """Return (text, count) of a stopped profile's cookies in `fmt`."""
     if fmt not in FORMATS:
         raise CookieError(f"Unknown format '{fmt}'. Use one of: {', '.join(FORMATS)}")
-    cookies = _call_tool("export", profile_name, os_type)["cookies"]
+    cookies = _call_tool("export", profile_name, os_type, engine=engine)["cookies"]
     logger.info("Exported %d cookies from %s (%s)", len(cookies), profile_name, fmt)
     if fmt == "netscape":
         return _to_netscape(cookies), len(cookies)
@@ -224,11 +228,11 @@ def export_cookies(profile_name: str, os_type: str, fmt: str = "json") -> tuple[
     )
 
 
-def import_cookies(profile_name: str, os_type: str, text: str) -> int:
+def import_cookies(profile_name: str, os_type: str, text: str, engine: str = "camoufox") -> int:
     """Add cookies from JSON or Netscape text to a stopped profile."""
     cookies = parse_cookies(text)
     if not cookies:
         raise CookieError("No valid cookies found in the input")
-    result = _call_tool("import", profile_name, os_type, json.dumps(cookies))
+    result = _call_tool("import", profile_name, os_type, json.dumps(cookies), engine)
     logger.info("Imported %d cookies into %s", result["imported"], profile_name)
     return result["imported"]

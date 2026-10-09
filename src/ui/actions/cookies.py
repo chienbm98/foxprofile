@@ -34,7 +34,7 @@ def manage_cookies(
 
     def _locked(fn, arg):
         with bl.exclusive(name):
-            return fn(name, profile.os_type, arg)
+            return fn(name, profile.os_type, arg, engine=profile.engine)
 
     async def on_export(fmt: str) -> None:
         path = await file_picker.save_file(

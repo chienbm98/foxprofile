@@ -40,6 +40,24 @@ def build_os_dropdown(value: str = "windows") -> ft.Dropdown:
     )
 
 
+def build_engine_dropdown(value: str = "camoufox", disabled: bool = False) -> ft.Dropdown:
+    return ft.Dropdown(
+        label=get_string("browser_engine"),
+        value=value,
+        disabled=disabled,
+        bgcolor=COLORS["input_bg"],
+        color=COLORS["text_main"],
+        border_color=COLORS["card_border"],
+        focused_border_color=COLORS["accent"],
+        label_style=ft.TextStyle(color=COLORS["text_sub"]),
+        border_radius=10,
+        options=[
+            ft.dropdown.Option("camoufox", get_string("engine_camoufox")),
+            ft.dropdown.Option("chrome", get_string("engine_chrome")),
+        ],
+    )
+
+
 def configure_page(page: ft.Page) -> None:
     page.title = get_string("window_title")
     page.window.width, page.window.height = 1280, 820
