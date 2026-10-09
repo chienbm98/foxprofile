@@ -263,9 +263,10 @@ The shell has two columns. On the left is the cover rail (252px on web, 240px on
 
 **The One Grid Rule.** The header row and every profile row share one column template: select (32px), profile name, device, proxy, timezone and locale, stamp (112px web / 100px desktop), and actions (232px). Each row is 58px tall with a 14px side padding. The header row is 40px on paper. Column gap is 16px on web and 12px on desktop. Nothing in a row may change the row height.
 
-Responsive behaviour (web only):
-- **At 1180px and below:** the timezone and locale column drops out. Geo moves inline into the row, and the stamp and action columns narrow (108px and 218px).
-- **At 860px and below:** the rail becomes a top band. The brand and Create button share a line, the filters become a horizontally scrolling row, and the footer controls wrap. The header row hides, and each profile becomes a stacked block: name and stamp on the first line, then device, then proxy, then a full-width action line with Launch up to 200px. Main padding is 18px 14px.
+Responsive behaviour (web only). The table reacts to the width of the sheet itself (a CSS container query on `.sheet`), not the viewport, because the rail takes 252px and all columns need about 1140px:
+- **Sheet 1150px and narrower:** the timezone and locale column drops out. Geo moves inline into the proxy cell, the name, device and proxy columns may shrink to 140px, the column gap drops to 12px, and the stamp and action columns narrow (108px and 218px).
+- **Sheet 880px and narrower:** the header row hides, and each profile becomes a stacked block: name and stamp on the first line, then device, then proxy, then a full-width action line with Launch up to 200px.
+- **Viewport 860px and narrower:** the rail becomes a top band. The brand and Create button share a line, the filters become a horizontally scrolling row, and the footer controls wrap. Main padding is 18px 14px.
 
 The desktop window opens at 1400×860 and its minimum size is 1180×680, so it never needs the stacked layout.
 

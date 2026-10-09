@@ -490,13 +490,18 @@
     "breakpoints": [
       {
         "name": "compact",
-        "value": "1180px",
-        "purpose": "Geo column folds inline."
+        "value": "@container sheet (max-width: 1150px)",
+        "purpose": "Geo column folds inline; columns tighten."
       },
       {
         "name": "stacked",
+        "value": "@container sheet (max-width: 880px)",
+        "purpose": "Header row hides; rows stack."
+      },
+      {
+        "name": "rail-band",
         "value": "860px",
-        "purpose": "Rail becomes top band; rows stack."
+        "purpose": "Rail becomes a top band."
       }
     ],
     "surfaces": {
