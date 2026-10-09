@@ -116,8 +116,9 @@ class BrowserLauncher:
         """Launch a profile's browser in the background.
 
         Returns False, without calling any callback, when the profile already
-        has a browser. Raises ProfileBusyError while another launch or a
-        stopped-profile operation holds it.
+        has a browser. Otherwise returns True and later calls on_ready or
+        on_stop, also when spawning fails. Raises ProfileBusyError while
+        another launch or a stopped-profile operation holds the profile.
         """
         with self._lock:
             if profile.name in self._active_sessions:
@@ -128,16 +129,9 @@ class BrowserLauncher:
             # concurrent launches cannot both spawn a browser.
             self._busy.add(profile.name)
 
-        log_callback(get_string("starting_profile", name=profile.name, os=profile.os_type))
-        logger.info(f"Starting browser for profile: {profile.name}")
-        if on_start:
-            on_start()
-
         stop_event = threading.Event()
         notify_lock = threading.Lock()
         result = _LaunchResult()
-        with self._lock:
-            self._launch_results[profile.name] = result
 
         def notify_stopped() -> None:
             with notify_lock:
@@ -146,39 +140,57 @@ class BrowserLauncher:
                 stop_event.set()
                 result.settle(False, "Browser exited before it was ready")
                 with self._lock:
-                    self._controls.pop(profile.name, None)
-                    self._active_sessions.pop(profile.name, None)
-                    self._stop_notifiers.pop(profile.name, None)
+                    # A newer launch may already own this name; leave it alone.
+                    if self._stop_notifiers.get(profile.name) is stop_event:
+                        self._controls.pop(profile.name, None)
+                        self._active_sessions.pop(profile.name, None)
+                        self._stop_notifiers.pop(profile.name, None)
                 log_callback(get_string("session_ended", name=profile.name))
                 logger.info(f"Session ended for profile: {profile.name}")
                 if on_stop:
                     on_stop()
 
+        registered = False
         try:
-            proc = spawn_browser(profile)
             with self._lock:
-                self._active_sessions[profile.name] = proc
-                self._stop_notifiers[profile.name] = stop_event
-                self._busy.discard(profile.name)
+                self._launch_results[profile.name] = result
+            log_callback(get_string("starting_profile", name=profile.name, os=profile.os_type))
+            logger.info(f"Starting browser for profile: {profile.name}")
+            if on_start:
+                on_start()
 
-            threading.Thread(
-                target=self._monitor_process,
-                args=(proc, profile.name, log_callback, on_ready, notify_stopped, result),
-                daemon=True,
-            ).start()
-            threading.Thread(
-                target=wait_for_exit,
-                args=(proc, profile.name, notify_stopped),
-                daemon=True,
-            ).start()
-        except Exception as e:
-            logger.exception(f"Error starting browser for {profile.name}: {e}")
-            log_callback(get_string("error_starting", error=e))
-            result.settle(False, str(e))
-            with self._lock:
-                self._busy.discard(profile.name)
-            if on_stop:
-                on_stop()
+            try:
+                proc = spawn_browser(profile)
+                with self._lock:
+                    self._active_sessions[profile.name] = proc
+                    self._stop_notifiers[profile.name] = stop_event
+                    self._busy.discard(profile.name)
+                    registered = True
+
+                threading.Thread(
+                    target=self._monitor_process,
+                    args=(proc, profile.name, log_callback, on_ready, notify_stopped, result),
+                    daemon=True,
+                ).start()
+                threading.Thread(
+                    target=wait_for_exit,
+                    args=(proc, profile.name, notify_stopped),
+                    daemon=True,
+                ).start()
+            except Exception as e:
+                logger.exception(f"Error starting browser for {profile.name}: {e}")
+                result.settle(False, str(e))
+                with self._lock:
+                    self._busy.discard(profile.name)
+                log_callback(get_string("error_starting", error=e))
+                if on_stop:
+                    on_stop()
+        finally:
+            # Never keep the reservation when a callback raised before the
+            # process was registered; the profile would stay busy for good.
+            if not registered:
+                with self._lock:
+                    self._busy.discard(profile.name)
         return True
 
     def stop_profile(self, profile_name: str, timeout: int = 2) -> bool:
@@ -232,6 +244,7 @@ class BrowserLauncher:
             for n in stale:
                 self._active_sessions.pop(n, None)
                 self._stop_notifiers.pop(n, None)
+                self._controls.pop(n, None)
             return set(self._active_sessions.keys())
 
     def running_count(self) -> int:
@@ -245,6 +258,7 @@ class BrowserLauncher:
                 return True
             del self._active_sessions[profile_name]
             self._stop_notifiers.pop(profile_name, None)
+            self._controls.pop(profile_name, None)
             return False
 
     def _monitor_process(

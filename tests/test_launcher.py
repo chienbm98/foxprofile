@@ -98,3 +98,50 @@ def test_ui_click_does_not_stay_loading_when_launched_elsewhere(bl, monkeypatch)
     assert not state.is_loading("p")
     assert "p" not in state.failed
     assert bl.spawned == ["p"]
+
+
+def test_a_raising_callback_does_not_leave_the_profile_busy(bl):
+    def boom():
+        raise RuntimeError("UI gone")
+
+    with pytest.raises(RuntimeError):
+        bl.start_thread(Profile(name="p"), lambda m: None, on_start=boom)
+    with bl.exclusive("p"):
+        pass
+    assert bl.spawned == []
+
+
+def test_an_old_session_ending_keeps_the_newer_launch(bl, monkeypatch):
+    exits = []
+    monkeypatch.setattr(
+        launcher_mod, "wait_for_exit", lambda proc, name, notify: exits.append(notify)
+    )
+    bl.start_thread(Profile(name="p"), lambda m: None)
+    # The first browser is gone but its exit callback has not run yet.
+    bl._active_sessions.clear()
+    bl._stop_notifiers.clear()
+    bl.start_thread(Profile(name="p"), lambda m: None)
+
+    exits[0]()
+
+    assert bl.is_running("p")
+    assert bl.spawned == ["p", "p"]
+
+
+def test_api_launch_answers_409_when_the_browser_appeared_meanwhile(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from src.api.app import create_app
+    from src.core.container import Container
+
+    monkeypatch.chdir(tmp_path)
+    container = Container()
+    client = TestClient(create_app(container), base_url="http://127.0.0.1")
+    assert client.post("/api/v1/profiles", json={"name": "p"}).status_code in (200, 201)
+    monkeypatch.setattr(container.browser_launcher, "is_running", lambda name: False)
+    monkeypatch.setattr(container.browser_launcher, "start_thread", lambda *a, **k: False)
+
+    r = client.post("/api/v1/browser/p/launch")
+
+    assert r.status_code == 409
+    assert r.json()["detail"] == "Browser already running"
