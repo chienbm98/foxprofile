@@ -51,7 +51,7 @@ def launch_or_stop(
         state.schedule_refresh()
 
     try:
-        bl.start_thread(
+        started = bl.start_thread(
             profile,
             log,
             None,
@@ -61,4 +61,10 @@ def launch_or_stop(
     except ProfileBusyError:
         state.set_loading(name, False)
         log(get_string("profile_busy", name=name))
+        state.schedule_refresh()
+        return
+    if not started:
+        # Launched elsewhere (API, MCP) since the check above; none of the
+        # callbacks will fire for this click.
+        state.set_loading(name, False)
         state.schedule_refresh()

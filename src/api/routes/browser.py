@@ -84,9 +84,11 @@ def launch_browser(
         bus.emit()
 
     try:
-        bl.start_thread(profile, _api_log, on_ready=_on_ready, on_stop=_on_stop)
+        started = bl.start_thread(profile, _api_log, on_ready=_on_ready, on_stop=_on_stop)
     except ProfileBusyError as e:
         raise HTTPException(status_code=409, detail="Profile is busy") from e
+    if not started:
+        raise HTTPException(status_code=409, detail="Browser already running")
     logger.info("API launched browser for: %s", name)
     bus.emit()
 
