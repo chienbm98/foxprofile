@@ -4,6 +4,7 @@ from collections.abc import Callable
 
 import flet as ft
 
+from ..core.strings import get_string
 from ..interfaces.protocols import IBrowserLauncher, IProfileManager, IProxyService
 from .actions.browser import launch_or_stop
 from .actions.bulk import bulk_delete_profiles, bulk_launch_profiles, bulk_stop_profiles
@@ -110,7 +111,11 @@ class AppHandlers:
     def on_bulk_delete(self) -> None:
         page = self._get_page()
         assert page is not None
-        if names := list(self._state.selected_names()):
+        selected = self._state.selected_names()
+        # Like the web panel and the API: a running profile is never deleted.
+        if running := [n for n in selected if self._bl.is_running(n)]:
+            self._log(get_string("bulk_skip_running", count=len(running)))
+        if names := [n for n in selected if not self._bl.is_running(n)]:
             bulk_delete_profiles(
                 page,
                 names,

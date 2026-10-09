@@ -71,7 +71,12 @@ def install(
     progress: Progress | None = None,
     host: str | None = None,
 ) -> Path:
-    """Install a pinned build if needed and return its executable."""
+    """Install a pinned build if needed and return its executable.
+
+    Safe across processes (FoxProfile prefetches while runners may launch): one
+    process holds `<version>.lock` and installs; the others wait for it, then
+    use its install instead of downloading the build again.
+    """
     release = get_release(version)
     home = home or engine_home()
     existing = installed_executable(release.version, home)
@@ -79,66 +84,110 @@ def install(
         return existing
     asset = release.asset_for(host or host_platform())
     home.mkdir(parents=True, exist_ok=True)
-    _remove_stale_parts(home)
-    waited = _wait_for_other_download(release, asset, home, progress)
-    if waited:
-        return waited
-    # Per-process name: FoxProfile prefetches while a runner may be installing too.
-    archive = home / f"{release.version}.{asset.kind}.{os.getpid()}.part"
+    lock = home / f"{release.version}.lock"
+    while not _try_lock(lock):
+        _wait_for_lock(lock, release, asset, home, progress)
+        existing = installed_executable(release.version, home)
+        if existing:
+            return existing
     try:
-        download(asset, archive, progress)
-        return unpack(release, asset, archive, home)
+        existing = installed_executable(release.version, home)
+        if existing:
+            return existing
+        _remove_leftovers(home, release.version)
+        archive = home / f"{release.version}.{asset.kind}.{os.getpid()}.part"
+        try:
+            download(asset, archive, progress)
+            return unpack(release, asset, archive, home)
+        finally:
+            with contextlib.suppress(OSError):
+                archive.unlink()
     finally:
         with contextlib.suppress(OSError):
-            archive.unlink()
+            lock.unlink()
 
 
-# A download in progress writes every chunk; one untouched this long was killed.
-_STALE_PART_SECONDS = 600
-# Another process's download counts as live while it wrote this recently.
-_STALE_DOWNLOAD_SECONDS = 60
 _POLL_SECONDS = 1.0
+_RENAME_ATTEMPTS = 10
+_RENAME_DELAY = 0.5
+# A lock older than this is abandoned even if its PID was reused by another process.
+_LOCK_MAX_AGE = 3600
 
 
-def _remove_stale_parts(home: Path) -> None:
-    now = time.time()
-    for part in home.glob("*.part"):
-        with contextlib.suppress(OSError):
-            if now - part.stat().st_mtime > _STALE_PART_SECONDS:
-                part.unlink()
+def _pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if sys.platform.startswith("win"):
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        try:
+            code = ctypes.c_ulong()
+            ok = kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+            return bool(ok) and code.value == 259  # STILL_ACTIVE
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
-def _wait_for_other_download(
-    release: Release, asset: Asset, home: Path, progress: Progress | None
-) -> Path | None:
-    """If another process is downloading this build, wait for it instead of downloading twice.
+def _lock_owner(lock: Path) -> int | None:
+    """The PID holding `lock`, or None when the lock is free or abandoned."""
+    try:
+        pid = int(lock.read_text(encoding="utf-8").strip() or 0)
+        age = time.time() - lock.stat().st_mtime
+    except (OSError, ValueError):
+        return None
+    return pid if _pid_alive(pid) and age < _LOCK_MAX_AGE else None
 
-    Returns its executable once installed, or None when there is no live download
-    (none, or it stalled or failed) and this process should download itself.
-    """
-    prefix = f"{release.version}.{asset.kind}."
-    waited = False
-    while True:
-        exe = installed_executable(release.version, home)
-        if exe:
-            return exe
-        now = time.time()
-        live = []
-        for part in home.glob(f"{prefix}*.part"):
+
+def _try_lock(lock: Path) -> bool:
+    try:
+        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        if _lock_owner(lock) is None:
+            # Abandoned by a killed process: take it over on the next attempt.
             with contextlib.suppress(OSError):
-                st = part.stat()
-                if now - st.st_mtime < _STALE_DOWNLOAD_SECONDS:
-                    live.append(st.st_size)
-        if not live:
-            if not waited:
-                return None
-            # The download we waited for just ended; give its unpack a moment.
-            time.sleep(_POLL_SECONDS)
-            return installed_executable(release.version, home)
-        waited = True
+                lock.unlink()
+        return False
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(str(os.getpid()))
+    return True
+
+
+def _wait_for_lock(
+    lock: Path, release: Release, asset: Asset, home: Path, progress: Progress | None
+) -> None:
+    """Wait while another live process installs, reporting its download progress."""
+    while (owner := _lock_owner(lock)) is not None:
+        if installed_executable(release.version, home):
+            return
         if progress:
-            progress(min(max(live), asset.size), asset.size)
+            part = home / f"{release.version}.{asset.kind}.{owner}.part"
+            with contextlib.suppress(OSError):
+                progress(min(part.stat().st_size, asset.size), asset.size)
         time.sleep(_POLL_SECONDS)
+
+
+def _remove_leftovers(home: Path, version: str) -> None:
+    """Delete partial downloads and staging dirs left by killed installs.
+
+    Only called while holding the install lock, so nothing here is in use.
+    """
+    for part in home.glob(f"{version}.*.part"):
+        with contextlib.suppress(OSError):
+            part.unlink()
+    for staging in home.glob(f".{version}-*"):
+        if staging.is_dir():
+            shutil.rmtree(staging, ignore_errors=True)
 
 
 def download(asset: Asset, dest: Path, progress: Progress | None = None) -> None:
@@ -195,15 +244,23 @@ def unpack(release: Release, asset: Asset, archive: Path, home: Path) -> Path:
             ),
             encoding="utf-8",
         )
-        for attempt in range(2):
-            if target.exists():
-                shutil.rmtree(target)
+        # A target without a marker is an unfinished copy; one with a marker is
+        # in use and is never removed.
+        if target.exists() and not installed_executable(release.version, home):
+            shutil.rmtree(target, ignore_errors=True)
+        for attempt in range(_RENAME_ATTEMPTS):
             try:
                 staging.rename(target)
                 break
             except OSError:
-                if attempt:
+                finished = installed_executable(release.version, home)
+                if finished:
+                    shutil.rmtree(staging, ignore_errors=True)
+                    return finished
+                if attempt == _RENAME_ATTEMPTS - 1:
                     raise
+                # Antivirus and indexers hold freshly extracted files for a moment.
+                time.sleep(_RENAME_DELAY)
         return target / relative
     except BaseException:
         shutil.rmtree(staging, ignore_errors=True)

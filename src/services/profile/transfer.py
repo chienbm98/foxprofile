@@ -13,6 +13,7 @@ from ...utils.validation import (
     validate_profile_name,
     validate_timezone,
 )
+from ..browser.fingerprint import CHROME_PERSONA_FILE
 
 logger = get_logger("profile.transfer")
 
@@ -44,15 +45,25 @@ def export_to_zip(
             else:
                 # The fingerprint is the profile's identity, not browser data:
                 # keep it so the imported profile presents the same device.
-                fp_file = os.path.join(profile_data_dir, FINGERPRINT_FILE)
-                if pathlib.Path(fp_file).exists():
-                    zipf.write(fp_file, os.path.join("data", FINGERPRINT_FILE))
+                for identity in (FINGERPRINT_FILE, CHROME_PERSONA_FILE):
+                    fp_file = os.path.join(profile_data_dir, identity)
+                    if pathlib.Path(fp_file).exists():
+                        zipf.write(fp_file, os.path.join("data", identity))
 
         logger.info("Exported profile %s to %s", profile.name, zip_path)
         return True, zip_path
     except Exception as e:
         logger.exception("Error exporting profile %s: %s", profile.name, e)
         return False, str(e)
+
+
+def read_profile_meta(zip_path: str) -> dict | None:
+    """profile.json of an archive without extracting anything, or None if unreadable."""
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zipf:
+            return json.loads(zipf.read("profile.json"))
+    except (OSError, KeyError, ValueError, zipfile.BadZipFile):
+        return None
 
 
 def import_from_zip(

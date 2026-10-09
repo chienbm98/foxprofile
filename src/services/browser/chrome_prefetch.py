@@ -19,6 +19,17 @@ _lock = threading.Lock()
 _thread: threading.Thread | None = None
 
 
+def unsupported_reason() -> str | None:
+    """Why this machine cannot run the Chrome engine, or None when it can."""
+    from chrome_engine.release import UnsupportedPlatformError, host_platform
+
+    try:
+        host_platform()
+    except UnsupportedPlatformError as e:
+        return str(e)
+    return None
+
+
 def is_installed() -> bool:
     from chrome_engine import fetch
 

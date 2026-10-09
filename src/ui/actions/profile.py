@@ -61,6 +61,8 @@ def add_profile(
     def on_save(
         name: str, proxy: str, os_type: str, timezone: str, locale: str, engine: str
     ) -> str | None:
+        if engine == "chrome" and (reason := chrome_prefetch.unsupported_reason()):
+            return get_string("chrome_engine_unsupported", reason=reason)
         if pm.add_profile(name, proxy, os_type, timezone, locale, engine):
             log(get_string("created_profile", name=name))
             if engine == "chrome":

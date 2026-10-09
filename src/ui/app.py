@@ -89,7 +89,22 @@ class App:
         self.page.title = get_string("window_title")
         self.page.controls.clear()
         self.page.add(self._build_root_layout(self.refs))
+        self._restore_log()
         self._refresh_profiles()
+
+    def _restore_log(self) -> None:
+        """Refill a freshly built log pane (flush_log only returns new lines)."""
+        r = self.refs
+        assert r is not None
+        lines = self.state.get_all_log_lines()[-6:]
+        r.log_text.value = "\n".join(lines)
+        r.log_column.height = max(72, len(lines) * 18 + 20)
+        r.log_column.visible = bool(lines) and not self.state.log_collapsed
+        r.log_toggle_btn.icon = (
+            ft.Icons.KEYBOARD_ARROW_RIGHT
+            if self.state.log_collapsed
+            else ft.Icons.KEYBOARD_ARROW_DOWN
+        )
 
     def _set_language(self, code: str) -> None:
         if code == current_language():
@@ -178,6 +193,8 @@ class App:
             self.state.toggle_selection(stale)
 
         running = self.bl.running_profile_names()
+        # A failure mark lasts until the profile runs again or is gone.
+        self.state.failed.intersection_update(all_names - running)
         for name in running - set(self._live_since):
             self._live_since[name] = time.strftime("%H:%M")
         for name in set(self._live_since) - running:
@@ -252,7 +269,8 @@ class App:
         info = fingerprint.summary(os.path.join(DATA_DIR, name))
         if not info:
             return ""
-        return f"{info['screen']} · {info['hardware_concurrency']} CPU"
+        cpu = f"{info['hardware_concurrency']} CPU"
+        return f"{info['screen']} · {cpu}" if info.get("screen") else cpu
 
     def _build_empty_or_no_results(self) -> ft.Control:
         if self.pm.profiles:

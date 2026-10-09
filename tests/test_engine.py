@@ -22,7 +22,11 @@ def workdir(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def client(workdir):
+def client(workdir, monkeypatch):
+    from src.services.browser import chrome_prefetch
+
+    # Creating a Chrome profile must not start a real ~150 MB download in tests.
+    monkeypatch.setattr(chrome_prefetch, "start", lambda log=None: False)
     # The token-less API only answers loopback Host headers.
     return TestClient(create_app(Container()), base_url="http://127.0.0.1")
 
@@ -87,7 +91,7 @@ def test_fingerprint_summary_reads_the_chrome_persona(tmp_path):
     assert fingerprint.summary(str(tmp_path)) == {
         "os": "macos",
         "platform": "MacIntel",
-        "screen": "1920x1080",
+        "screen": None,
         "hardware_concurrency": 12,
     }
     assert fingerprint.reset(str(tmp_path))
@@ -124,3 +128,12 @@ def test_prefetch_runs_once_at_a_time(monkeypatch):
     chrome_prefetch._thread.join(5)
     assert calls == [1]
     assert len(logs) == 2  # downloading..., ready
+
+
+def test_api_refuses_chrome_on_an_unsupported_host(client, monkeypatch):
+    from src.services.browser import chrome_prefetch
+
+    monkeypatch.setattr(chrome_prefetch, "unsupported_reason", lambda: "no build for darwin/x86_64")
+    r = client.post("/api/v1/profiles", json={"name": "c3", "engine": "chrome"})
+    assert r.status_code == 400
+    assert "darwin/x86_64" in r.json()["detail"]

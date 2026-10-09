@@ -63,6 +63,8 @@ def _require_engine(engine: str) -> None:
             status_code=400,
             detail=f"engine must be one of: {', '.join(ENGINES)}",
         )
+    if engine == "chrome" and (reason := chrome_prefetch.unsupported_reason()):
+        raise HTTPException(status_code=400, detail=f"Chrome engine unavailable here: {reason}")
 
 
 def _require_geo(timezone: str | None, locale: str | None) -> None:

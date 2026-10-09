@@ -88,7 +88,9 @@ def open_profile_dialog(
         **DLG_FIELD_KWARGS,
     )
     geo_error = ft.Text("", size=12, color=COLORS["error"], visible=False)
-    geo_result = ft.Column(spacing=4, visible=False)
+    # The Check IP report is the only part that can grow; it scrolls on its own
+    # so the dialog keeps its height on short windows.
+    geo_result = ft.Column(spacing=4, visible=False, scroll=ft.ScrollMode.AUTO)
     name_error = ft.Text("", size=12, color=COLORS["error"], visible=False)
     proxy_error = ft.Text("", size=12, color=COLORS["error"], visible=False)
     check_btn = ft.OutlinedButton(
@@ -336,6 +338,7 @@ def _do_ip_check(
         try:
             result = check_geo(proxy or None, timezone or None, locale or None)
             geo_result.controls = _geo_lines(result, use_locale)
+            geo_result.height = min(160, 22 * len(geo_result.controls))
         except Exception as e:
             geo_result.controls = [
                 ft.Text(get_string("geo_check_failed", error=e), size=12, color=COLORS["error"])

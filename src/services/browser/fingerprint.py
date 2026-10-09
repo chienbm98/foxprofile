@@ -48,8 +48,6 @@ def load_or_create(profile_dir: str, os_type: str) -> dict[str, Any]:
 # The Chrome engine's equivalent of fingerprint.json (chrome_engine/persona.py).
 CHROME_PERSONA_FILE = "chrome_persona.json"
 _NAVIGATOR_PLATFORM = {"windows": "Win32", "macos": "MacIntel", "linux": "Linux x86_64"}
-# The Chrome engine always presents this screen (chrome_engine/engine.py).
-_CHROME_SCREEN = "1920x1080"
 
 
 def reset(profile_dir: str) -> bool:
@@ -117,6 +115,8 @@ def _read_chrome_summary(path: pathlib.Path) -> dict[str, Any] | None:
     return {
         "os": platform,
         "platform": _NAVIGATOR_PLATFORM.get(platform),
-        "screen": _CHROME_SCREEN,
+        # The Chrome engine sets the screen only when headless; headed it is the
+        # real monitor, so there is no stored value to report.
+        "screen": None,
         "hardware_concurrency": data.get("hardware_concurrency"),
     }

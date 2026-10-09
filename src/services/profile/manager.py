@@ -12,7 +12,7 @@ from ...utils.validation import (
     validate_profile_name,
     validate_timezone,
 )
-from .transfer import export_to_zip, import_from_zip
+from .transfer import export_to_zip, import_from_zip, read_profile_meta
 
 logger = get_logger("profile.manager")
 
@@ -158,13 +158,22 @@ class ProfileManager:
         zip_path: str,
         overwrite: bool = False,
     ) -> tuple[bool, str]:
+        # Decide before extracting: an archive must not write into an existing
+        # profile's data unless overwriting, and an overwrite that changes the
+        # engine starts from an empty directory (the engines' data do not mix).
+        meta = read_profile_meta(zip_path) or {}
+        name = meta.get("name")
+        if name in self.profiles:
+            if not overwrite:
+                return False, f"Profile '{name}' already exists"
+            if (meta.get("engine") or "camoufox") != self.profiles[name].engine:
+                shutil.rmtree(self._data_path(name), ignore_errors=True)
+
         success, result = import_from_zip(zip_path, DATA_DIR)
         if not success:
             return False, result
 
         profile = result
-        if profile.name in self.profiles and not overwrite:
-            return False, f"Profile '{profile.name}' already exists"
 
         self.profiles[profile.name] = profile
         self.save_profiles()

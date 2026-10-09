@@ -388,7 +388,7 @@ const I18N = {
     stamp_live: "Đang chạy", stamp_starting: "Đang mở", stamp_stopping: "Đang dừng", stamp_failed: "Lỗi", idle: "Đã dừng",
     direct: "Trực tiếp", follow_ip: "Theo IP", no_fp_short: "chưa có fingerprint", no_proxy_short: "không proxy", selected: "Đã chọn {n}", bulk_launch: "Mở", bulk_stop: "Dừng", bulk_delete: "Xoá", clear_sel: "Bỏ chọn",
     select_all: "Chọn tất cả", select_row: "Chọn {name}",
-    confirm_bulk_delete: "Xoá {n} profile đã chọn? Cookie và dữ liệu của chúng sẽ mất vĩnh viễn.", bulk_skip_running: "Bỏ qua {n} profile đang chạy",
+    confirm_bulk_delete: "Xoá {n} profile đã chọn? Cookie và dữ liệu của chúng sẽ mất vĩnh viễn.", bulk_skip_running: "Bỏ qua {n} profile",
     login_side: "Server này chạy FoxProfile. Đăng nhập bằng API token để quản lý profile từ xa.",
     login_hint: "Nhập API token (biến FOXPROFILE_API_TOKEN) của server.", token: "API token", login: "Đăng nhập",
     bad_token: "Token không đúng", create: "Tạo profile", edit_title: "Sửa profile", edit_sub: "Đang sửa {name}", create_sub: "Một profile là một danh tính: thiết bị, proxy và vị trí riêng.",
@@ -439,7 +439,7 @@ const I18N = {
     stamp_live: "Running", stamp_starting: "Starting", stamp_stopping: "Stopping", stamp_failed: "Failed", idle: "Stopped",
     direct: "Direct", follow_ip: "Follows IP", no_fp_short: "no fingerprint yet", no_proxy_short: "no proxy", selected: "{n} selected", bulk_launch: "Launch", bulk_stop: "Stop", bulk_delete: "Delete", clear_sel: "Clear",
     select_all: "Select all", select_row: "Select {name}",
-    confirm_bulk_delete: "Delete {n} selected profiles? Their cookies and data are removed permanently.", bulk_skip_running: "Skipped {n} running profiles",
+    confirm_bulk_delete: "Delete {n} selected profiles? Their cookies and data are removed permanently.", bulk_skip_running: "Skipped {n}",
     login_side: "This server runs FoxProfile. Log in with the API token to manage profiles remotely.",
     login_hint: "Enter the server's API token (FOXPROFILE_API_TOKEN).", token: "API token", login: "Log in",
     bad_token: "Invalid token", create: "Create profile", edit_title: "Edit profile", edit_sub: "Editing {name}", create_sub: "A profile is an identity: its own device, proxy and location.",
@@ -574,6 +574,7 @@ async function refresh() {
     for (const name of [...liveSince.keys()]) if (!now.has(name)) liveSince.delete(name);
     running = now;
     for (const name of [...selected]) if (!profiles.some((p) => p.name === name)) selected.delete(name);
+    for (const name of [...failed.keys()]) if (now.has(name) || !profiles.some((p) => p.name === name)) failed.delete(name);
     await Promise.all(profiles.filter((p) => !(p.name in fingerprints)).map(loadFingerprint));
     render();
   } catch (e) { if (e.status !== 401) toast(e.message, true); }
@@ -601,7 +602,7 @@ function render() {
   const shown = visible();
   // Rebuilding the list replaces every button; skip it when nothing changed so a
   // periodic refresh cannot swap the button under the user's cursor mid-click.
-  const key = JSON.stringify([lang, q, filter, shown, [...running].sort(), [...busy], [...failed], [...selected].sort(),
+  const key = JSON.stringify([lang, q, filter, profiles, [...running].sort(), [...busy], [...failed], [...selected].sort(),
     [...justLanded], shown.map((p) => fingerprints[p.name] || null)]);
   if (key === lastRender) return;
   lastRender = key;
@@ -653,12 +654,12 @@ function headRow(shown) {
 function stamp(p) {
   const state = busy.get(p.name);
   if (state) return h("span", { class: "stamp pending" }, t(state === "stopping" ? "stamp_stopping" : "stamp_starting"));
-  if (failed.has(p.name)) return h("span", { class: "stamp failed", title: failed.get(p.name) }, t("stamp_failed"));
   if (running.has(p.name)) {
     const since = liveSince.get(p.name);
     return h("span", { class: "stamp" + (justLanded.has(p.name) ? " land" : "") },
       t("stamp_live"), since ? h("small", {}, hhmm(since)) : null);
   }
+  if (failed.has(p.name)) return h("span", { class: "stamp failed", title: failed.get(p.name) }, t("stamp_failed"));
   return h("span", { class: "idle" }, t("idle"));
 }
 
@@ -682,7 +683,7 @@ function row(p) {
     h("div", { class: "cell c-name" }, h("span", { class: "name", title: p.name }, p.name)),
     h("div", { class: "c-device device" }, h("span", { class: "os", title: p.os_type }, os),
       h("div", { class: "stack" }, h("span", { class: p.engine === "chrome" ? "engine chrome" : "engine" }, engine),
-        fp && fp.exists ? h("span", { class: "data minor" }, `${fp.screen || ""} · ${fp.hardware_concurrency || "?"} CPU`)
+        fp && fp.exists ? h("span", { class: "data minor" }, [fp.screen, `${fp.hardware_concurrency || "?"} CPU`].filter(Boolean).join(" · "))
           : h("span", { class: "minor" }, t("no_fp_short")))),
     h("div", { class: "c-proxy stack" }, proxy
       ? [h("span", { class: "data", title: proxy }, proxy.split("://")[1]), h("span", { class: "minor" }, proxy.split("://")[0].toUpperCase())]
@@ -715,8 +716,10 @@ async function bulk(action) {
     const stopped = names.filter((n) => !running.has(n));
     if (!stopped.length) return toast(t("stop_first"), true);
     if (!(await confirmDialog(t("confirm_bulk_delete", { n: stopped.length }), t("bulk_delete"), true))) return;
-    for (const n of stopped) { try { await api("DELETE", `/profiles/${enc(n)}`); selected.delete(n); delete fingerprints[n]; } catch (e) { toast(e.message, true); } }
-    toast(t("deleted_n", { n: stopped.length }) + (names.length > stopped.length ? " · " + t("bulk_skip_running", { n: names.length - stopped.length }) : ""));
+    let deleted = 0;
+    for (const n of stopped) { try { await api("DELETE", `/profiles/${enc(n)}`); deleted++; selected.delete(n); delete fingerprints[n]; } catch (e) { toast(`${n}: ${e.message}`, true); } }
+    const skipped = names.length - deleted;
+    if (deleted) toast(t("deleted_n", { n: deleted }) + (skipped ? " · " + t("bulk_skip_running", { n: skipped }) : ""));
     return refresh();
   }
   const targets = profiles.filter((p) => names.includes(p.name) && (action === "launch" ? !running.has(p.name) : running.has(p.name)));
@@ -747,11 +750,12 @@ async function toggle(p, { quiet = false } = {}) {
   await refresh();
 }
 
-function modal(build, { wide = false } = {}) {
+function modal(build, { wide = false, onDismiss = null } = {}) {
   const root = $("modal-root");
   const opener = document.activeElement;
   const close = () => { root.replaceChildren(); if (opener && opener.focus) opener.focus(); };
-  const bg = h("div", { class: "modal-bg", onclick: (e) => { if (e.target === bg) close(); } });
+  const dismiss = () => (onDismiss ? onDismiss() : close());
+  const bg = h("div", { class: "modal-bg", onclick: (e) => { if (e.target === bg) dismiss(); } });
   const box = build(close);
   box.classList.add("modal");
   if (wide) box.classList.add("wide");
@@ -777,7 +781,8 @@ function confirmDialog(message, actionLabel, danger = false) {
       h("div", { class: "modal-body" }, h("p", { style: "margin:8px 0 0" }, message)),
       h("div", { class: "modal-foot" },
         h("button", { class: "btn btn-line", onclick: () => finish(false) }, t("cancel")),
-        h("button", { class: "btn " + (danger ? "btn-danger" : "btn-act"), onclick: () => finish(true) }, actionLabel))));
+        h("button", { class: "btn " + (danger ? "btn-danger" : "btn-act"), onclick: () => finish(true) }, actionLabel))),
+      { onDismiss: () => finish(false) });
   });
 }
 function field(label, input, hint) {
