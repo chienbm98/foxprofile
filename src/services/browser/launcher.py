@@ -112,12 +112,21 @@ class BrowserLauncher:
         on_start: Callable[[], None] | None = None,
         on_ready: Callable[[], None] | None = None,
         on_stop: Callable[[], None] | None = None,
-    ) -> None:
+    ) -> bool:
+        """Launch a profile's browser in the background.
+
+        Returns False, without calling any callback, when the profile already
+        has a browser. Raises ProfileBusyError while another launch or a
+        stopped-profile operation holds it.
+        """
         with self._lock:
             if profile.name in self._active_sessions:
-                return
+                return False
             if profile.name in self._busy:
                 raise ProfileBusyError(profile.name)
+            # Reserve the profile until the process is registered, so two
+            # concurrent launches cannot both spawn a browser.
+            self._busy.add(profile.name)
 
         log_callback(get_string("starting_profile", name=profile.name, os=profile.os_type))
         logger.info(f"Starting browser for profile: {profile.name}")
@@ -150,6 +159,7 @@ class BrowserLauncher:
             with self._lock:
                 self._active_sessions[profile.name] = proc
                 self._stop_notifiers[profile.name] = stop_event
+                self._busy.discard(profile.name)
 
             threading.Thread(
                 target=self._monitor_process,
@@ -165,8 +175,11 @@ class BrowserLauncher:
             logger.exception(f"Error starting browser for {profile.name}: {e}")
             log_callback(get_string("error_starting", error=e))
             result.settle(False, str(e))
+            with self._lock:
+                self._busy.discard(profile.name)
             if on_stop:
                 on_stop()
+        return True
 
     def stop_profile(self, profile_name: str, timeout: int = 2) -> bool:
         with self._lock:
