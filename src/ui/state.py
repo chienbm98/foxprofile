@@ -94,4 +94,4 @@ class AppState:
 
     def select_all(self, names: list[str]) -> None:
         with self._selection_lock:
-            self._selected_profiles = set(names)
+            self._selected_profiles.update(names)

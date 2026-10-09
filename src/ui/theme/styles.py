@@ -52,7 +52,7 @@ OUTLINE_STYLE = ft.ButtonStyle(
 # Outline buttons sitting on the green rail.
 RAIL_STYLE = ft.ButtonStyle(
     shape=_SHAPE,
-    side=ft.BorderSide(1, "#2C524A"),
+    side=ft.BorderSide(1, COLORS["cover_line"]),
     color=COLORS["cover_ink"],
     overlay_color=COLORS["cover_deep"],
     text_style=ft.TextStyle(font_family=FONT_MEDIUM, size=13.5),

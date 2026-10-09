@@ -66,6 +66,7 @@ def open_export_dialog(
 
     dlg = ft.AlertDialog(
         modal=True,
+        bgcolor=COLORS["card_bg"],
         title=ft.Text(get_string("export_profiles"), size=20, weight=ft.FontWeight.BOLD),
         content=ft.Container(
             width=350,

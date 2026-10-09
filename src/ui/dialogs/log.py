@@ -5,7 +5,7 @@ from ..theme.colors import COLORS
 
 
 def open_log_dialog(page: ft.Page, log_lines: list[str]) -> None:
-    content = "\n".join(log_lines) if log_lines else "No activity yet."
+    content = "\n".join(log_lines) if log_lines else get_string("log_no_activity")
 
     dlg = ft.AlertDialog(
         modal=True,
@@ -20,7 +20,7 @@ def open_log_dialog(page: ft.Page, log_lines: list[str]) -> None:
                 scroll=ft.ScrollMode.AUTO,
                 controls=[
                     ft.Text(
-                        f"{len(log_lines)} entries",
+                        get_string("log_entries", count=len(log_lines)),
                         size=12,
                         color=COLORS["text_dim"],
                     ),

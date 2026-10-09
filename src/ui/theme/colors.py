@@ -32,6 +32,9 @@ COLORS = {
     "error": "#B42330",
     "delete_hover": "#951C27",
     "warning": "#8A5A00",
+    "warn_tint": "#F6EEDB",
+    "warn_text": "#5E3E00",
+    "cover_line": "#2C524A",
     "scrollbar_bg": "#F3F4EF",
     "scrollbar_grab": "#BCC3B6",
 }
