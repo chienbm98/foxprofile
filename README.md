@@ -1,8 +1,8 @@
 <div align="center">
   <img src="src/assets/icon.png" width="112" alt="FoxProfile logo" />
   <h1>FoxProfile</h1>
-  <p><strong>Quản lý nhiều profile trình duyệt chống phát hiện, miễn phí và mã nguồn mở</strong></p>
-  <p>Mỗi profile có fingerprint thiết bị, cookie và proxy riêng · Hai engine: Camoufox (Firefox) và Chrome · Giao diện tiếng Việt · REST API và MCP cho tự động hóa</p>
+  <p><strong>Free, open-source manager for anti-detect browser profiles</strong></p>
+  <p>Per-profile device fingerprint, cookies and proxy · Two engines: Camoufox (Firefox) and Chrome · Vietnamese and English UI · REST API and MCP for automation</p>
 
   <p>
     <a href="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml"><img src="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -10,64 +10,66 @@
     <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+" />
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Windows | macOS | Linux" />
     <a href="LICENSE"><img src="https://img.shields.io/github/license/chienbm98/foxprofile" alt="MIT License" /></a>
+    <a href="https://buymeacoffee.com/chienbm98"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" /></a>
   </p>
 
-  <p>Tiếng Việt · <a href="README.en.md">English</a></p>
+  <p>English · <a href="README.vi.md">Tiếng Việt</a></p>
   <p>
-    <a href="#bắt-đầu-nhanh">Bắt đầu nhanh</a> ·
-    <a href="#tính-năng">Tính năng</a> ·
+    <a href="#quick-start">Quick start</a> ·
+    <a href="#features">Features</a> ·
     <a href="#rest-api">REST API</a> ·
-    <a href="#mcp-cho-ai-điều-khiển-trình-duyệt">MCP</a> ·
-    <a href="#đóng-góp">Đóng góp</a>
+    <a href="#mcp-let-ai-agents-drive-the-browser">MCP</a> ·
+    <a href="#contributing">Contributing</a>
   </p>
 </div>
 
 ![FoxProfile](docs/images/main.png)
 
-FoxProfile quản lý các profile trình duyệt chống phát hiện: mỗi profile là một danh tính riêng với fingerprint thiết bị, cookie, proxy, timezone và locale của nó. Trình duyệt mặc định là [Camoufox](https://github.com/daijro/camoufox), một bản Firefox được chỉnh sửa ở tầng mã nguồn để giả lập fingerprint; ngoài ra có engine Chrome thử nghiệm dựa trên [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium). FoxProfile là lựa chọn tự host, chạy trên máy bạn hoặc VPS, thay cho các antidetect browser trả phí như GoLogin, GPM hay MoreLogin.
+FoxProfile manages anti-detect browser profiles: each profile is a separate identity with its own device fingerprint, cookies, proxy, timezone and locale. The default browser is [Camoufox](https://github.com/daijro/camoufox), a Firefox build that spoofs fingerprints at the engine level; an experimental Chrome engine based on [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium) is also available. It is a self-hosted alternative, on your machine or a VPS, to paid anti-detect browsers such as GoLogin, GPM or MoreLogin.
 
-## Mục lục
+## Contents
 
-- [Tính năng](#tính-năng)
-- [Yêu cầu](#yêu-cầu)
-- [Bắt đầu nhanh](#bắt-đầu-nhanh)
-- [Timezone, locale và Kiểm tra IP](#timezone-locale-và-kiểm-tra-ip)
-- [Chế độ server và web panel](#chế-độ-server-và-web-panel)
-- [MCP: cho AI điều khiển trình duyệt](#mcp-cho-ai-điều-khiển-trình-duyệt)
-- [Engine Chrome (thử nghiệm)](#engine-chrome-thử-nghiệm)
-- [Cookie và fingerprint](#cookie-và-fingerprint)
-- [Cấu hình](#cấu-hình)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Timezone, locale and Check IP](#timezone-locale-and-check-ip)
+- [Server mode and web panel](#server-mode-and-web-panel)
+- [MCP: let AI agents drive the browser](#mcp-let-ai-agents-drive-the-browser)
+- [Chrome engine (experimental)](#chrome-engine-experimental)
+- [Cookies and fingerprints](#cookies-and-fingerprints)
+- [Configuration](#configuration)
 - [REST API](#rest-api)
-- [Phát triển](#phát-triển)
-- [Đóng góp](#đóng-góp)
-- [Lưu ý sử dụng](#lưu-ý-sử-dụng)
-- [Giấy phép](#giấy-phép)
-- [Ghi công](#ghi-công)
+- [Development](#development)
+- [Contributing](#contributing)
+- [Support](#support)
+- [Responsible use](#responsible-use)
+- [License](#license)
+- [Acknowledgements](#acknowledgements)
 
-## Tính năng
+## Features
 
-- **Fingerprint cố định cho từng profile.** Lần mở đầu tiên sinh ra một thiết bị (màn hình, GPU, số nhân CPU, font, nhiễu canvas/audio) và lưu lại; các lần sau mở lại đúng thiết bị đó. Có thể chủ động tạo fingerprint mới.
-- **Hai engine.** Camoufox (Firefox, mặc định) hoặc Chrome (fingerprint-chromium, thử nghiệm), chọn khi tạo profile. Bản Chrome được tự tải về khi cần.
-- **Giữ phiên làm việc.** Lịch sử, cookie và đăng nhập nằm trong thư mục của profile; các tab đang mở được mở lại ở lần khởi động sau.
-- **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, kể cả dạng `host:port:user:pass`, có nút kiểm tra proxy.
-- **Timezone và locale** tự khớp theo IP hoặc đặt cố định cho từng profile. Nút **Kiểm tra IP** đối chiếu IP ra với Cloudflare, ipinfo, ip-api và cảnh báo khi lệch quốc gia/timezone hoặc IP bị gắn datacenter.
-- **Xuất/nhập cookie** dạng JSON Cookie-Editor / EditThisCookie (GoLogin, GPM, Multilogin, extension Cookie-Editor) và `cookies.txt` Netscape (yt-dlp, curl, wget).
-- **Xuất/nhập cả profile** ra file ZIP để chuyển sang máy khác, có hoặc không kèm dữ liệu trình duyệt. Fingerprint luôn đi kèm.
-- **Bảng profile dễ quét**: mỗi dòng cho thấy engine, thiết bị đang giả lập, proxy (đã ẩn mật khẩu), timezone/locale và trạng thái. Trạng thái phân biệt bằng cả hình lẫn màu: dấu tím viền kép kèm giờ mở là đang chạy, viền xám là đang mở, dấu đỏ gạch ngang là mở lỗi.
-- **Lọc và tìm kiếm**: lọc theo đang chạy, có/không proxy, engine Chrome (kèm số đếm); tìm theo tên hoặc proxy.
-- **Thao tác hàng loạt**: chọn nhiều profile để mở, dừng hoặc xóa cùng lúc.
-- **MCP server**: Claude, Cursor... tự mở profile, lướt web, click, gõ, chụp màn hình.
-- **Chế độ server + web panel**: chạy trên VPS, quản lý và xem màn hình từ xa qua trình duyệt, có token bảo vệ.
-- **REST API** để điều khiển bằng script, có trang tài liệu Swagger.
-- Giao diện **tiếng Việt** (mặc định) và tiếng Anh, đổi ngay trong app. Font đóng gói sẵn, không cần mạng.
+- **Persistent per-profile fingerprint.** The first launch generates a device (screen, GPU, CPU cores, fonts, canvas/audio noise) and stores it; later launches reuse the same device. Generate a new one on demand.
+- **Two engines.** Camoufox (Firefox, default) or Chrome (fingerprint-chromium, experimental), chosen when the profile is created. The Chrome build is downloaded automatically when needed.
+- **Sessions that stick.** History, cookies and logins live in the profile directory; the tabs that were open are reopened on the next launch.
+- **Per-profile proxy**: HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth, including the `host:port:user:pass` format, plus a proxy checker.
+- **Timezone and locale** follow the exit IP or can be pinned per profile. **Check IP** compares the exit IP across Cloudflare, ipinfo and ip-api and warns about country/timezone mismatches and datacenter IPs.
+- **Cookie export/import** as Cookie-Editor / EditThisCookie JSON (GoLogin, GPM, Multilogin, the Cookie-Editor extension) and Netscape `cookies.txt` (yt-dlp, curl, wget).
+- **Profile export/import** as ZIP, with or without browser data, to move profiles between machines. The fingerprint always travels with the profile.
+- **A profile table built for scanning**: every row shows the engine, the emulated device, the proxy (credentials hidden), timezone/locale and the state. States differ in shape as well as colour: a violet double-ruled stamp with the launch time means running, a grey rule means starting, a struck red stamp means the launch failed.
+- **Filters and search**: filter by running, with/without proxy and Chrome engine (with counts); search by name or proxy.
+- **Bulk actions**: launch, stop or delete many profiles at once.
+- **MCP server** so AI agents (Claude, Cursor...) can launch profiles, browse, click, type and take screenshots.
+- **Server mode + web panel** for VPS deployments: manage profiles and view their screens remotely, protected by a token.
+- **REST API** with Swagger docs for scripting.
+- **Vietnamese** (default) and English UI, switchable inside the app. Fonts are bundled, no network needed.
 
-## Yêu cầu
+## Requirements
 
-- Python 3.10 trở lên
-- Windows, macOS hoặc Linux (CI chạy test trên cả ba)
-- Vài trăm MB dung lượng trống cho Camoufox và cơ sở dữ liệu GeoIP, thêm ~140-190 MB nếu dùng engine Chrome
+- Python 3.10+
+- Windows, macOS or Linux (CI tests all three)
+- A few hundred MB of free disk space for Camoufox and the GeoIP database, plus ~140-190 MB for the Chrome engine if you use it
 
-## Bắt đầu nhanh
+## Quick start
 
 ```bash
 git clone https://github.com/chienbm98/foxprofile.git
@@ -81,69 +83,69 @@ pip install -r requirements.txt
 python -m camoufox fetch
 ```
 
-`camoufox fetch` tải bản trình duyệt Camoufox (vài trăm MB) từ GitHub của dự án Camoufox. Lần mở profile đầu tiên sẽ tải thêm cơ sở dữ liệu GeoIP (~50 MB).
+`camoufox fetch` downloads the Camoufox browser (a few hundred MB) from the Camoufox GitHub releases. The first profile launch also downloads a GeoIP database (~50 MB).
 
-Chạy ứng dụng:
+Run the app:
 
 ```bash
 python -m src.main
 ```
 
-Trên Windows có thể bấm đúp `run_foxprofile.bat`. Ứng dụng mở cửa sổ quản lý và đồng thời chạy API tại `http://127.0.0.1:8000`; tài liệu API ở `http://127.0.0.1:8000/docs`.
+On Windows you can also double-click `run_foxprofile.bat`. The app opens the manager window and serves the API on `http://127.0.0.1:8000`; API docs are at `http://127.0.0.1:8000/docs`. Set `FOXPROFILE_LANG=en` for the English UI.
 
-## Timezone, locale và Kiểm tra IP
+## Timezone, locale and Check IP
 
-Mặc định, mỗi lần mở profile Camoufox tra IP đi ra (qua proxy của profile) và đặt timezone, locale, toạ độ và IP WebRTC theo IP đó. Có ba điều nên biết:
+By default, every Camoufox launch looks up the exit IP (through the profile's proxy) and sets the timezone, locale, geolocation and WebRTC IP from it. Worth knowing:
 
-- **Locale tự động được chọn ngẫu nhiên ở mỗi lần mở**, theo tỷ lệ người nói từng ngôn ngữ ở quốc gia của IP. Ví dụ IP Pháp cho `fr-FR` khoảng 60% số lần, còn lại là `en-FR`, `es-FR`… Một tài khoản đổi ngôn ngữ giữa các phiên là điều đáng ngờ, nên hãy đặt cố định locale cho profile.
-- **Các cơ sở dữ liệu GeoIP không phải lúc nào cũng thống nhất.** Cùng một IP có thể được Cloudflare xếp vào nước này, Google vào nước khác; Camoufox cũng có thể chọn một timezone cùng giờ nhưng khác tên (ví dụ IP Việt Nam ra `Asia/Bangkok` thay vì `Asia/Ho_Chi_Minh`).
-- **IP datacenter dễ bị bắt captcha** bất kể cấu hình trình duyệt. Với các trang dùng Cloudflare, proxy residential hoặc 4G quan trọng hơn mọi tinh chỉnh khác.
+- **The automatic locale is drawn at random on every launch**, weighted by how many people speak each language in the IP's country. A French IP gives `fr-FR` roughly 60% of the time and `en-FR`, `es-FR`… otherwise. An account whose language changes between sessions looks suspicious, so pin the locale per profile.
+- **GeoIP databases disagree.** Cloudflare may place an IP in one country and Google in another, and Camoufox may pick a same-offset timezone with a different name (a Vietnamese IP gets `Asia/Bangkok` rather than `Asia/Ho_Chi_Minh`).
+- **Datacenter IPs get captchas** whatever the browser looks like. For Cloudflare-protected sites a residential or mobile proxy matters more than any other setting.
 
-![Hộp thoại tạo profile](docs/images/profile-dialog.png)
+![Create profile dialog](docs/images/profile-dialog.png)
 
-Trong hộp thoại tạo/sửa profile có hai ô **Timezone** (tên IANA, ví dụ `Asia/Ho_Chi_Minh`) và **Locale** (dạng `vi-VN`); để trống là tự động theo IP. Nút **Kiểm tra IP** lấy IP đi ra qua proxy, đối chiếu với Cloudflare, ipinfo và ip-api, rồi cảnh báo khi lệch quốc gia hoặc timezone, khi IP bị gắn datacenter, khi proxy ra Internet bằng IPv4 và IPv6 khác nhau, và khi locale đang để ngẫu nhiên.
+The profile dialog has **Timezone** (IANA name, e.g. `Asia/Ho_Chi_Minh`) and **Locale** (e.g. `vi-VN`) fields; blank means follow the IP. **Check IP** resolves the exit IP through the proxy, compares it with Cloudflare, ipinfo and ip-api, and warns about country or timezone mismatches, datacenter IPs, proxies that leave over different IPv4/IPv6 addresses, and a locale left on random.
 
-## Chế độ server và web panel
+## Server mode and web panel
 
-Không cần cửa sổ desktop: chỉ chạy API và web panel, trình duyệt chạy headless. Phù hợp để chạy trên VPS.
+No desktop window: API + web panel only, browsers run hidden. Suited to a VPS.
 
 ```bash
 python -m src.server                     # http://127.0.0.1:8000
-python -m src.server --host 0.0.0.0      # mở ra mạng: BẮT BUỘC đặt token
+python -m src.server --host 0.0.0.0      # exposed: FOXPROFILE_API_TOKEN is required
 ```
 
-Mở `http://<địa-chỉ>:8000/` để vào **web panel**: cùng bảng profile, bộ lọc và thao tác hàng loạt như app desktop; tạo, sửa, mở/dừng profile, xuất/nhập cookie và **xem màn hình từ xa**. Bạn có thể bấm thẳng lên ảnh màn hình và gõ phím để tự đăng nhập hay giải captcha, kể cả khi trình duyệt đang chạy headless trên server.
+Open `http://<host>:8000/` for the **web panel**: the same profile table, filters and bulk actions as the desktop app; create, edit, launch and stop profiles, move cookies, and **view a profile's screen remotely**. Click on the screenshot and type to log in or solve a captcha even when the browser runs hidden on a server.
 
-| Web panel | Xem màn hình từ xa |
+| Web panel | Remote screen view |
 | --- | --- |
-| ![Web panel](docs/images/panel.png) | ![Xem màn hình từ xa](docs/images/panel-viewer.png) |
+| ![Web panel](docs/images/panel.png) | ![Remote screen view](docs/images/panel-viewer.png) |
 
-**Bảo mật:** khi nghe ngoài `127.0.0.1`, server **từ chối khởi động** nếu chưa đặt `FOXPROFILE_API_TOKEN` (tối thiểu 24 ký tự). Web panel, REST API và MCP đều dùng chung token này.
+**Security:** when listening on anything but `127.0.0.1`, the server **refuses to start** without `FOXPROFILE_API_TOKEN` (24+ characters). The panel, the REST API and MCP share that token.
 
 ```bash
-# Tạo token ngẫu nhiên
+# Generate a random token
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-Khi đưa lên VPS, nên đặt server sau reverse proxy có HTTPS (Caddy, Nginx) để token không bị gửi đi dưới dạng chữ thường. Trên Linux không có màn hình, đặt `FOXPROFILE_HEADLESS=virtual` (cần cài `xvfb`) để trình duyệt chạy trên màn hình ảo, khó bị phát hiện hơn chế độ headless thường.
+On a VPS, put the server behind an HTTPS reverse proxy (Caddy, Nginx) so the token is never sent in clear text. On a display-less Linux box, `FOXPROFILE_HEADLESS=virtual` (needs `xvfb`) runs browsers on a virtual display, which is harder to detect than plain headless.
 
-Hướng dẫn triển khai đầy đủ (Ubuntu, systemd, nginx, HTTPS): [docs/DEPLOY.md](docs/DEPLOY.md).
+Full deployment guide (Ubuntu, systemd, nginx, HTTPS; in Vietnamese): [docs/DEPLOY.md](docs/DEPLOY.md).
 
-## MCP: cho AI điều khiển trình duyệt
+## MCP: let AI agents drive the browser
 
-FoxProfile có sẵn MCP server, để Claude Code, Claude Desktop, Cursor, VS Code... tự quản lý profile và thao tác trên trang: mở URL, đọc trang, click, gõ, chụp màn hình.
+FoxProfile ships an MCP server so Claude Code, Claude Desktop, Cursor, VS Code and others can manage profiles and act on pages: navigate, read, click, type, screenshot.
 
-**Cách nhanh nhất:** bấm **Kết nối AI (MCP)** ở thanh bên trái của app desktop hoặc web panel. Hộp thoại sinh sẵn cấu hình cho từng ứng dụng AI, đúng địa chỉ và token của bạn, chỉ cần bấm Sao chép rồi dán.
+**Quickest:** click **Connect AI (MCP)** in the left sidebar of the desktop app or the web panel. It generates ready-to-paste configs for each AI app with your address and token.
 
-![Kết nối AI (MCP)](docs/images/mcp-guide.png)
+![Connect AI (MCP)](docs/images/mcp-guide.png)
 
-MCP được phục vụ qua HTTP tại `/mcp`, ngay trên cổng của FoxProfile, nên dùng được cả khi FoxProfile chạy trên VPS:
+MCP is served over HTTP at `/mcp` on FoxProfile's own port, so it also works when FoxProfile runs on a VPS:
 
 ```bash
 # Claude Code
 claude mcp add --transport http foxprofile http://127.0.0.1:8000/mcp
-# Server có token:
-claude mcp add --transport http foxprofile https://vps.cua-ban.com/mcp --header "Authorization: Bearer <token>"
+# Server with a token:
+claude mcp add --transport http foxprofile https://your-vps.example.com/mcp --header "Authorization: Bearer <token>"
 ```
 
 ```jsonc
@@ -151,153 +153,159 @@ claude mcp add --transport http foxprofile https://vps.cua-ban.com/mcp --header 
 { "mcpServers": { "foxprofile": { "url": "http://127.0.0.1:8000/mcp" } } }
 ```
 
-Claude Desktop chỉ chạy được server MCP cục bộ: dùng `foxprofile_mcp.py` (cùng máy) hoặc cầu nối `npx mcp-remote` (máy khác). Hộp thoại "Kết nối AI" sinh sẵn cả hai.
+Claude Desktop only launches local MCP servers: use `foxprofile_mcp.py` on the same machine, or the `npx mcp-remote` bridge from another one. The Connect AI dialog generates both.
 
-Sau đó chỉ cần nhắn AI, ví dụ: *"Mở profile tiktok-us-02, vào tiktok.com và chụp màn hình cho tôi"*.
+Then just ask, e.g. *"Open profile tiktok-us-02, go to tiktok.com and send me a screenshot"*.
 
-| Nhóm | Tool |
+| Group | Tools |
 | --- | --- |
-| Profile | `list_profiles`, `get_profile`, `create_profile`, `update_profile`, `launch_profile`, `stop_profile`, `running_profiles` |
-| Cookie & fingerprint | `export_cookies`, `import_cookies`, `get_fingerprint`, `reset_fingerprint`, `check_proxy`, `check_profile_ip` |
-| Trang | `browser_navigate`, `browser_back`, `browser_snapshot`, `browser_get_text`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate` |
-| Tab | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
+| Profiles | `list_profiles`, `get_profile`, `create_profile`, `update_profile`, `launch_profile`, `stop_profile`, `running_profiles` |
+| Cookies & fingerprints | `export_cookies`, `import_cookies`, `get_fingerprint`, `reset_fingerprint`, `check_proxy`, `check_profile_ip` |
+| Page | `browser_navigate`, `browser_back`, `browser_snapshot`, `browser_get_text`, `browser_click`, `browser_click_at`, `browser_type`, `browser_press`, `browser_wait_for`, `browser_screenshot`, `browser_evaluate` |
+| Tabs | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
 
-MCP **không** có tool xóa profile, để AI không thể vô tình xóa cookie của tài khoản. Trang chỉ mở được `http`, `https` và `about:blank`; `file://` và `about:config` bị chặn.
+There is deliberately **no** delete tool, so an agent cannot wipe an account's cookies by mistake. Only `http`, `https` and `about:blank` can be opened; `file://` and `about:config` are blocked.
 
-## Engine Chrome (thử nghiệm)
+## Chrome engine (experimental)
 
-Ngoài Camoufox (Firefox), profile có thể chạy trên engine **Chrome**: một bản Chromium đã vá fingerprint ở tầng C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), giấy phép BSD-3). Chọn ở ô **Engine** khi tạo profile; không đổi được sau khi tạo. Bản trình duyệt (~140-190 MB tuỳ hệ điều hành, tải từ GitHub của fingerprint-chromium và kiểm tra SHA-256) được tự tải ở nền ngay khi tạo profile Chrome đầu tiên, hoặc lúc mở profile nếu chưa có; tiến độ hiện trong log. Muốn tải trước bằng tay: `python -m chrome_engine fetch`.
+Besides Camoufox (Firefox), a profile can run on the **Chrome** engine: a Chromium build with fingerprint spoofing patched in C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), BSD-3 license). Pick it in **Engine** when creating a profile; it cannot be changed afterwards. The browser build (~140-190 MB depending on the OS, fetched from fingerprint-chromium's GitHub releases and verified by SHA-256) is downloaded in the background as soon as the first Chrome profile is created, or on launch if it is still missing; progress shows in the log. To fetch it ahead of time: `python -m chrome_engine fetch`.
 
-Nên chọn đúng hệ điều hành của máy đang chạy FoxProfile: persona khác hệ điều hành sẽ lộ font của máy, và persona Linux trên Windows/macOS bị từ chối vì WebGL lộ GPU thật. Hỗ trợ Windows x64, macOS Apple Silicon và Linux x64 (chưa kiểm chứng). Chi tiết và kết quả kiểm thử: [chrome_engine/README.md](chrome_engine/README.md).
+Pick the OS of the machine running FoxProfile: a persona of another OS leaks the machine's fonts, and a Linux persona on Windows/macOS is refused because WebGL reveals the real GPU. Supported: Windows x64, macOS Apple Silicon, Linux x64 (untested). Details and test results (in Vietnamese): [chrome_engine/README.md](chrome_engine/README.md).
 
-## Cookie và fingerprint
+## Cookies and fingerprints
 
-![Cookie & fingerprint](docs/images/cookies.png)
+![Cookies & fingerprint](docs/images/cookies.png)
 
-Bấm nút cookie trên dòng profile để mở hộp thoại **Cookie & fingerprint**. **Trình duyệt của profile phải đang tắt**, vì FoxProfile mở profile ở chế độ headless để đọc và ghi cookie.
+Click the cookie button on a profile row to open **Cookies & fingerprint**. **The profile's browser must be stopped**: FoxProfile opens the profile headless to read and write cookies.
 
-- Cookie phiên (session) khi nhập vào sẽ được đặt hạn 1 năm. Nếu không, trình duyệt sẽ xóa chúng ngay khi đóng.
-- "Tạo fingerprint mới" xóa fingerprint đã lưu; lần mở sau profile sẽ là một thiết bị khác. Đổi hệ điều hành của profile cũng tự sinh fingerprint mới.
+- Imported session cookies are given a one-year lifetime; otherwise the browser would discard them when it closes.
+- "New fingerprint" deletes the stored fingerprint so the next launch presents a different device. Changing a profile's OS also regenerates it.
 
-## Cấu hình
+## Configuration
 
-Mọi cấu hình đều không bắt buộc. Muốn đổi thì sao chép `.env.example` thành `.env`.
+Everything is optional. To override defaults, copy `.env.example` to `.env`.
 
-| Biến | Mặc định | Ý nghĩa |
+| Variable | Default | Meaning |
 | --- | --- | --- |
-| `FOXPROFILE_LANG` | `vi` | Ngôn ngữ giao diện: `vi` hoặc `en` |
-| `FOXPROFILE_PROFILES_FILE` | `profiles.json` | File lưu danh sách profile |
-| `FOXPROFILE_DATA_DIR` | `camoufox_data` | Thư mục dữ liệu, mỗi profile một thư mục con |
-| `FOXPROFILE_LOG_DIR` | `logs` | Thư mục log |
-| `FOXPROFILE_LOG_LEVEL` | `INFO` | Mức log |
-| `FOXPROFILE_PROXY_TIMEOUT` | `10` | Thời gian chờ khi kiểm tra proxy (giây) |
-| `FOXPROFILE_LAUNCH_TIMEOUT` | `90` | Thời gian API chờ trình duyệt mở xong (giây) |
-| `FOXPROFILE_HEADLESS` | `false` (`true` ở chế độ server) | Chạy trình duyệt ẩn: `true`, `false` hoặc `virtual` (Linux + Xvfb) |
-| `FOXPROFILE_RESTORE_TABS` | `true` | Mở lại các tab của lần chạy trước |
-| `FOXPROFILE_API_TOKEN` | *(trống)* | Token cho API, web panel và MCP. Bắt buộc khi API nghe ngoài `127.0.0.1` |
-| `FOXPROFILE_API_HOST` | `127.0.0.1` | Địa chỉ API |
-| `FOXPROFILE_API_PORT` | `8000` | Cổng API |
+| `FOXPROFILE_LANG` | `vi` | UI language: `vi` or `en` |
+| `FOXPROFILE_PROFILES_FILE` | `profiles.json` | Profile list file |
+| `FOXPROFILE_DATA_DIR` | `camoufox_data` | Data directory, one subdirectory per profile |
+| `FOXPROFILE_LOG_DIR` | `logs` | Log directory |
+| `FOXPROFILE_LOG_LEVEL` | `INFO` | Log level |
+| `FOXPROFILE_PROXY_TIMEOUT` | `10` | Proxy check timeout (seconds) |
+| `FOXPROFILE_LAUNCH_TIMEOUT` | `90` | How long the API waits for a browser to finish launching (seconds) |
+| `FOXPROFILE_HEADLESS` | `false` (`true` in server mode) | Hidden browsers: `true`, `false` or `virtual` (Linux + Xvfb) |
+| `FOXPROFILE_RESTORE_TABS` | `true` | Reopen the tabs from the previous run |
+| `FOXPROFILE_API_TOKEN` | *(empty)* | Token for the API, web panel and MCP. Required when the API listens beyond `127.0.0.1` |
+| `FOXPROFILE_API_HOST` | `127.0.0.1` | API host |
+| `FOXPROFILE_API_PORT` | `8000` | API port |
 
-### Định dạng proxy
+### Proxy format
 
-`host:port`, `http://host:port`, `https://...`, `socks4://...`, `socks5://...`, có thể kèm `user:pass@`. Dạng `host:port:user:pass` mà nhà cung cấp proxy hay đưa cũng dùng được. Để trống nghĩa là kết nối trực tiếp.
+`host:port`, `http://host:port`, `https://...`, `socks4://...`, `socks5://...`, optionally with `user:pass@`. The provider format `host:port:user:pass` works too. Blank means a direct connection.
 
-### Dữ liệu được lưu ở đâu
+### Data layout
 
 ```text
-profiles.json                                     danh sách profile (tên, engine, proxy, hệ điều hành, timezone, locale)
-camoufox_data/<tên-profile>/                      dữ liệu trình duyệt: cookie, lịch sử, localStorage
-camoufox_data/<tên-profile>/fingerprint.json      fingerprint thiết bị (engine Camoufox)
-camoufox_data/<tên-profile>/chrome_persona.json   fingerprint thiết bị (engine Chrome)
-camoufox_data/<tên-profile>/tabs.json             các tab sẽ được mở lại
-logs/foxprofile_YYYYMMDD.log                      log theo ngày
+profiles.json                                  profile list (name, engine, proxy, OS, timezone, locale)
+camoufox_data/<profile>/                       browser data: cookies, history, localStorage
+camoufox_data/<profile>/fingerprint.json       device fingerprint (Camoufox engine)
+camoufox_data/<profile>/chrome_persona.json    device fingerprint (Chrome engine)
+camoufox_data/<profile>/tabs.json              tabs to reopen on next launch
+logs/foxprofile_YYYYMMDD.log                   daily log
 ```
 
 > [!WARNING]
-> `camoufox_data/` chứa cookie đăng nhập của mọi tài khoản. Không commit, không chia sẻ thư mục này.
+> `camoufox_data/` holds the login cookies of every account. Never commit or share it.
 
 ## REST API
 
-Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang chạy.
+Prefix `/api/v1`. The full reference is at `/docs` while the app is running.
 
-| Method | Đường dẫn | Mô tả |
+| Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/health` | Kiểm tra API |
-| `GET` / `POST` | `/profiles` | Liệt kê / tạo profile |
-| `GET` / `PATCH` / `DELETE` | `/profiles/{name}` | Xem / sửa / xóa profile (không đổi được `engine`) |
-| `GET` | `/profiles/{name}/data-dir` | Đường dẫn thư mục dữ liệu của profile |
-| `POST` | `/profiles/{name}/export` | Xuất profile ra ZIP |
-| `POST` | `/profiles/import` | Nhập profile từ ZIP |
-| `GET` | `/profiles/{name}/cookies?format=json\|netscape` | Xuất cookie |
-| `POST` | `/profiles/{name}/cookies` | Nhập cookie (`{"content": "<JSON hoặc cookies.txt>"}`) |
-| `GET` / `DELETE` | `/profiles/{name}/fingerprint` | Xem / tạo fingerprint mới |
-| `GET` | `/profiles/{name}/ip-check` | Kiểm tra IP ra của profile: quốc gia, timezone theo Cloudflare/ipinfo/ip-api, cảnh báo lệch |
-| `GET` | `/browser` | Danh sách profile đang chạy |
-| `GET` | `/browser/{name}/status` | Profile có đang chạy không |
-| `POST` | `/browser/{name}/launch` | Mở trình duyệt, chờ đến khi mở xong hoặc lỗi (409 nếu đang chạy hoặc đang bận) |
-| `POST` | `/browser/{name}/stop` | Đóng trình duyệt |
-| `POST` | `/proxy/check` | Kiểm tra proxy |
-| `POST` | `/proxy/geo-check` | Như `ip-check` cho tổ hợp `{proxy, timezone, locale}` chưa lưu |
-| `POST` | `/browser/{name}/page/navigate` · `back` | Mở URL trong tab đang chọn, quay lại trang trước |
-| `GET` | `/browser/{name}/page/snapshot` · `text` | Cây accessibility của trang (để chọn selector), chữ trên trang |
-| `POST` | `/browser/{name}/page/click` · `type` · `press` · `wait` | Click, gõ, bấm phím, chờ phần tử (selector Playwright) |
-| `POST` | `/browser/{name}/page/click-at` · `keyboard` | Click theo tọa độ, gõ vào ô đang chọn |
-| `GET` | `/browser/{name}/page/screenshot` | Ảnh PNG của tab (`?format=json` để nhận base64) |
-| `POST` | `/browser/{name}/page/evaluate` | Chạy JavaScript |
-| `GET` / `POST` | `/browser/{name}/page/tabs` | Liệt kê / mở tab mới |
-| `POST` / `DELETE` | `/browser/{name}/page/tabs/{index}/select` · `/page/tabs/{index}` | Chọn / đóng tab |
-| `GET` | `/mcp/setup?base_url=...` | Cấu hình MCP cho từng ứng dụng AI (dùng bởi hộp thoại Kết nối AI) |
+| `GET` | `/health` | Health check |
+| `GET` / `POST` | `/profiles` | List / create profiles |
+| `GET` / `PATCH` / `DELETE` | `/profiles/{name}` | Read / update / delete a profile (`engine` cannot change) |
+| `GET` | `/profiles/{name}/data-dir` | Path of the profile's data directory |
+| `POST` | `/profiles/{name}/export` | Export a profile to ZIP |
+| `POST` | `/profiles/import` | Import a profile from ZIP |
+| `GET` | `/profiles/{name}/cookies?format=json\|netscape` | Export cookies |
+| `POST` | `/profiles/{name}/cookies` | Import cookies (`{"content": "<JSON or cookies.txt>"}`) |
+| `GET` / `DELETE` | `/profiles/{name}/fingerprint` | Show / generate a new fingerprint |
+| `GET` | `/profiles/{name}/ip-check` | Where Cloudflare/ipinfo/ip-api place the profile's exit IP, with mismatch warnings |
+| `GET` | `/browser` | Running profiles |
+| `GET` | `/browser/{name}/status` | Whether the profile is running |
+| `POST` | `/browser/{name}/launch` | Launch and wait until ready or failed (409 if already running or busy) |
+| `POST` | `/browser/{name}/stop` | Stop |
+| `POST` | `/proxy/check` | Check a proxy |
+| `POST` | `/proxy/geo-check` | Same as `ip-check` for an unsaved `{proxy, timezone, locale}` |
+| `POST` | `/browser/{name}/page/navigate` · `back` | Open a URL in the active tab, go back |
+| `GET` | `/browser/{name}/page/snapshot` · `text` | Accessibility tree of the page (for picking selectors), page text |
+| `POST` | `/browser/{name}/page/click` · `type` · `press` · `wait` | Click, type, press a key, wait for an element (Playwright selectors) |
+| `POST` | `/browser/{name}/page/click-at` · `keyboard` | Click at coordinates, type into the focused element |
+| `GET` | `/browser/{name}/page/screenshot` | PNG of the tab (`?format=json` for base64) |
+| `POST` | `/browser/{name}/page/evaluate` | Run JavaScript |
+| `GET` / `POST` | `/browser/{name}/page/tabs` | List tabs / open a new tab |
+| `POST` / `DELETE` | `/browser/{name}/page/tabs/{index}/select` · `/page/tabs/{index}` | Select / close a tab |
+| `GET` | `/mcp/setup?base_url=...` | MCP configs for each AI app (used by the Connect AI dialog) |
 
-Khi có `FOXPROFILE_API_TOKEN`, mọi request (trừ `/health` và `/info`) phải gửi header `Authorization: Bearer <token>`.
+With `FOXPROFILE_API_TOKEN` set, every request except `/health` and `/info` needs `Authorization: Bearer <token>`.
 
-Ví dụ:
+Examples:
 
 ```bash
-# Tạo profile macOS có proxy. "engine": "chrome" để dùng engine Chrome (mặc định "camoufox").
+# Create a macOS profile with a proxy. Add "engine": "chrome" for the Chrome engine (default "camoufox").
 curl -X POST http://127.0.0.1:8000/api/v1/profiles \
   -H "Content-Type: application/json" \
   -d '{"name": "tiktok-us-02", "os_type": "macos", "proxy": "socks5://user:pass@203.0.113.10:1080"}'
 
-# Mở trình duyệt. Trả 200 khi đã mở, 502 kèm lý do nếu lỗi.
-# Thêm ?wait=false để trả về ngay (202).
+# Launch. Returns 200 once running, 502 with the reason on failure.
+# Add ?wait=false to return immediately (202).
 curl -X POST http://127.0.0.1:8000/api/v1/browser/tiktok-us-02/launch
 
-# Xuất cookie dạng cookies.txt
+# Export cookies as cookies.txt
 curl "http://127.0.0.1:8000/api/v1/profiles/tiktok-us-02/cookies?format=netscape" -o cookies.txt
 ```
 
-## Phát triển
+## Development
 
 ```bash
 pip install -r requirements-dev.txt
 ruff check src tests chrome_engine
 ruff format --check src tests chrome_engine
-pytest                  # test cần trình duyệt thật sẽ tự bỏ qua nếu chưa tải
+pytest                  # real-browser tests skip unless the browsers are fetched
 ```
 
-Cấu trúc thư mục, quy ước code và quy trình gửi PR nằm trong [CONTRIBUTING.md](CONTRIBUTING.md). Thay đổi giao diện theo [DESIGN.md](DESIGN.md) và sửa cả app desktop lẫn web panel. Lịch sử thay đổi: [CHANGELOG.md](CHANGELOG.md).
+Project layout, code conventions and the PR process are in [CONTRIBUTING.md](CONTRIBUTING.md) (Vietnamese; issues and PRs in English are welcome). UI changes follow [DESIGN.md](DESIGN.md) and touch both the desktop app and the web panel. Release notes: [CHANGELOG.md](CHANGELOG.md).
 
-## Đóng góp
+## Contributing
 
-Mọi đóng góp đều được chào đón: báo lỗi, đề xuất tính năng, sửa tài liệu, dịch thuật hay viết code.
+Contributions of all kinds are welcome: bug reports, feature ideas, docs, translations and code.
 
-- Báo lỗi hoặc đề xuất: mở [issue](https://github.com/chienbm98/foxprofile/issues/new/choose) theo mẫu.
-- Gửi code: đọc [CONTRIBUTING.md](CONTRIBUTING.md) trước khi mở Pull Request.
-- Lỗ hổng bảo mật: **không** mở issue công khai, xem [SECURITY.md](SECURITY.md).
-- Mọi người tham gia cần tuân theo [Quy tắc ứng xử](CODE_OF_CONDUCT.md).
+- Bugs and ideas: open an [issue](https://github.com/chienbm98/foxprofile/issues/new/choose) from a template.
+- Code: read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- Security issues: **do not** open a public issue, see [SECURITY.md](SECURITY.md).
+- Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Nếu FoxProfile có ích với bạn, hãy cho dự án một ⭐ trên GitHub.
+If FoxProfile is useful to you, consider giving it a ⭐ on GitHub.
 
-## Lưu ý sử dụng
+## Support
 
-Antidetect browser là công cụ hợp pháp, thường dùng để bảo vệ quyền riêng tư, kiểm thử web, hoặc để agency quản lý tài khoản của nhiều khách hàng. Tuy vậy, dùng nhiều tài khoản trên cùng một nền tảng có thể vi phạm điều khoản của Facebook, TikTok, Google, Shopee... Bạn tự chịu trách nhiệm về cách mình sử dụng.
+FoxProfile is free and open source, built in my spare time, and will stay that way. If it saves you time or money, you can buy me a coffee; it goes toward bug fixes, keeping up with upstream browser releases and faster replies on issues.
 
-## Giấy phép
+<a href="https://buymeacoffee.com/chienbm98"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" /></a>
 
-Phát hành theo [giấy phép MIT](LICENSE). Copyright (c) 2026 chienbm98.
+## Responsible use
 
-## Ghi công
+Anti-detect browsers are legitimate tools for privacy, web testing and agencies managing client accounts. Running multiple accounts on one platform may still violate the terms of Facebook, TikTok, Google, Shopee and others. You are responsible for how you use this software.
 
-- Trình duyệt [Camoufox](https://github.com/daijro/camoufox) của daijro.
-- [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium) của adryfish cho engine Chrome (BSD-3).
-- Font [Be Vietnam Pro](https://github.com/bettergui/BeVietnamPro) và [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), giấy phép SIL Open Font License (`src/assets/fonts/`).
+## License
+
+Released under the [MIT License](LICENSE). Copyright (c) 2026 chienbm98.
+
+## Acknowledgements
+
+- The [Camoufox](https://github.com/daijro/camoufox) browser by daijro.
+- [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium) by adryfish for the Chrome engine (BSD-3).
+- The [Be Vietnam Pro](https://github.com/bettergui/BeVietnamPro) and [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) fonts, SIL Open Font License (`src/assets/fonts/`).
