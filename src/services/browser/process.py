@@ -14,24 +14,32 @@ logger = get_logger("browser.process")
 _PROJECT_ROOT = str(pathlib.Path(__file__).parents[3])
 
 
+def runner_command(profile: Profile) -> list[str]:
+    """The runner for the profile's engine; both speak the same stdout protocol."""
+    if profile.engine == "chrome":
+        runner = ["-m", "chrome_engine.runner"]
+    else:
+        runner = [os.path.join(pathlib.Path(__file__).parent, "runner.py")]
+    return [
+        sys.executable,
+        *runner,
+        profile.name,
+        str(profile.proxy),
+        profile.os_type,
+        profile.timezone or "",
+        profile.locale or "",
+    ]
+
+
 def spawn_browser(profile: Profile) -> subprocess.Popen:
-    """Spawn a Camoufox browser subprocess for the given profile."""
-    script = os.path.join(pathlib.Path(__file__).parent, "runner.py")
+    """Spawn the browser subprocess for the given profile."""
     env = os.environ.copy()
     existing_pythonpath = env.get("PYTHONPATH", "")
     env["PYTHONPATH"] = _PROJECT_ROOT + (
         os.pathsep + existing_pythonpath if existing_pythonpath else ""
     )
     return subprocess.Popen(
-        [
-            sys.executable,
-            script,
-            profile.name,
-            str(profile.proxy),
-            profile.os_type,
-            profile.timezone or "",
-            profile.locale or "",
-        ],
+        runner_command(profile),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=pathlib.Path.cwd(),

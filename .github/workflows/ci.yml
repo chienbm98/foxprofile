@@ -17,8 +17,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install "ruff>=0.6"
-      - run: ruff check src tests
-      - run: ruff format --check src tests
+      - run: ruff check src tests chrome_engine
+      - run: ruff format --check src tests chrome_engine
 
   test:
     strategy:

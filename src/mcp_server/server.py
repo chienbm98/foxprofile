@@ -137,13 +137,23 @@ async def create_profile(
     proxy: str | None = None,
     timezone: str | None = None,
     locale: str | None = None,
+    engine: Literal["camoufox", "chrome"] = "camoufox",
 ) -> dict:
-    """Create a profile. proxy format: [scheme://][user:pass@]host:port (http, https, socks4, socks5).
-    timezone (IANA, e.g. Asia/Ho_Chi_Minh) and locale (e.g. vi-VN) default to following the proxy's IP."""
+    """Create a profile. proxy format: [scheme://][user:pass@]host:port or host:port:user:pass
+    (http, https, socks4, socks5). timezone (IANA, e.g. Asia/Ho_Chi_Minh) and locale (e.g. vi-VN)
+    default to following the proxy's IP. engine: camoufox (Firefox, default) or chrome
+    (experimental Chromium); it cannot be changed later."""
     return await _arequest(
         "POST",
         "/profiles",
-        {"name": name, "os_type": os_type, "proxy": proxy, "timezone": timezone, "locale": locale},
+        {
+            "name": name,
+            "os_type": os_type,
+            "proxy": proxy,
+            "timezone": timezone,
+            "locale": locale,
+            "engine": engine,
+        },
     )
 
 

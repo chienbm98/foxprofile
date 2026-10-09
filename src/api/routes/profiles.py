@@ -9,7 +9,8 @@ from fastapi.responses import PlainTextResponse
 
 from ...core.config import DATA_DIR
 from ...core.logging import get_logger
-from ...services.browser import cookies, fingerprint
+from ...models.profile import ENGINES
+from ...services.browser import chrome_prefetch, cookies, fingerprint
 from ...services.browser.launcher import ProfileBusyError
 from ...services.proxy.geo_check import check_geo
 from ...utils.validation import (
@@ -56,6 +57,16 @@ def _require_os(os_type: str) -> None:
         )
 
 
+def _require_engine(engine: str) -> None:
+    if engine not in ENGINES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"engine must be one of: {', '.join(ENGINES)}",
+        )
+    if engine == "chrome" and (reason := chrome_prefetch.unsupported_reason()):
+        raise HTTPException(status_code=400, detail=f"Chrome engine unavailable here: {reason}")
+
+
 def _require_geo(timezone: str | None, locale: str | None) -> None:
     for validate, value in ((validate_timezone, timezone), (validate_locale, locale)):
         valid, msg = validate(value or "")
@@ -88,6 +99,7 @@ def create_profile(
     if not valid:
         raise HTTPException(status_code=400, detail=msg)
     _require_os(body.os_type)
+    _require_engine(body.engine)
     _require_geo(body.timezone, body.locale)
 
     if body.proxy:
@@ -96,11 +108,18 @@ def create_profile(
             raise HTTPException(status_code=400, detail=msg)
 
     if not pm.add_profile(
-        body.name, body.proxy or "", body.os_type, body.timezone or None, body.locale or None
+        body.name,
+        body.proxy or "",
+        body.os_type,
+        body.timezone or None,
+        body.locale or None,
+        body.engine,
     ):
         raise HTTPException(status_code=409, detail="Profile already exists")
 
     logger.info("API created profile: %s", body.name)
+    if body.engine == "chrome":
+        chrome_prefetch.start()
     bus.emit()
     return build_profile_response(body.name, pm, bl)
 
@@ -151,6 +170,11 @@ def update_profile(
                 detail="Stop the browser before renaming",
             )
 
+    if supplied.get("engine") not in (None, profile.engine):
+        raise HTTPException(
+            status_code=400,
+            detail="A profile's engine cannot be changed; create a new profile instead",
+        )
     if "os_type" in supplied:
         _require_os(new_os)
     _require_geo(supplied.get("timezone"), supplied.get("locale"))
@@ -282,7 +306,9 @@ def export_cookies(
     _require_stopped(name, bl, "exporting cookies")
     try:
         with bl.exclusive(name):
-            text, count = cookies.export_cookies(name, pm.profiles[name].os_type, format)
+            text, count = cookies.export_cookies(
+                name, pm.profiles[name].os_type, format, pm.profiles[name].engine
+            )
     except ProfileBusyError as e:
         raise HTTPException(status_code=409, detail=_BUSY_DETAIL) from e
     except cookies.CookieError as e:
@@ -307,7 +333,9 @@ def import_cookies(
     _require_stopped(name, bl, "importing cookies")
     try:
         with bl.exclusive(name):
-            count = cookies.import_cookies(name, pm.profiles[name].os_type, body.content)
+            count = cookies.import_cookies(
+                name, pm.profiles[name].os_type, body.content, pm.profiles[name].engine
+            )
     except ProfileBusyError as e:
         raise HTTPException(status_code=409, detail=_BUSY_DETAIL) from e
     except cookies.CookieError as e:

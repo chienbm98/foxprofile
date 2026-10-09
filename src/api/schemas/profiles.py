@@ -11,6 +11,11 @@ class ProfileCreate(BaseModel):
     locale: str | None = Field(
         None, description="language-REGION, e.g. vi-VN. Unset = follow the IP"
     )
+    engine: str = Field(
+        "camoufox",
+        description="camoufox (Firefox) or chrome (experimental, fingerprint-chromium). "
+        "Fixed once the profile is created",
+    )
 
 
 class ProfileUpdate(BaseModel):
@@ -21,6 +26,7 @@ class ProfileUpdate(BaseModel):
     os_type: str | None = None
     timezone: str | None = Field(None, description='"" switches back to automatic')
     locale: str | None = Field(None, description='"" switches back to automatic')
+    engine: str | None = Field(None, description="Cannot be changed; only the current value")
 
 
 class ProfileResponse(BaseModel):
@@ -29,6 +35,7 @@ class ProfileResponse(BaseModel):
     os_type: str
     timezone: str | None = None
     locale: str | None = None
+    engine: str = "camoufox"
     data_dir: str
     is_running: bool
 

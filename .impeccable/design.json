@@ -1,0 +1,653 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-09T07:05:18+00:00",
+  "title": "Design System: FoxProfile",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Security Paper",
+        "canonical": "#F3F4EF",
+        "oklch": "oklch(96.5% 0.007 116)",
+        "tonalRamp": [
+          "#0B0C08",
+          "#252522",
+          "#42423E",
+          "#61625D",
+          "#82837E",
+          "#A5A6A1",
+          "#C9CAC5",
+          "#EEEFEA"
+        ],
+        "desktopKey": "bg"
+      },
+      "paper-raised": {
+        "role": "neutral",
+        "displayName": "Raised Paper",
+        "canonical": "#FBFBF8",
+        "oklch": "oklch(98.7% 0.004 106)",
+        "tonalRamp": [
+          "#0B0B09",
+          "#252523",
+          "#424240",
+          "#61615F",
+          "#828280",
+          "#A5A5A2",
+          "#C9C9C6",
+          "#EFEFEC"
+        ],
+        "desktopKey": "card_bg"
+      },
+      "paper-sunk": {
+        "role": "neutral",
+        "displayName": "Sunk Paper",
+        "canonical": "#E9ECE4",
+        "oklch": "oklch(93.9% 0.011 123)",
+        "tonalRamp": [
+          "#0A0C07",
+          "#242620",
+          "#41433D",
+          "#60625B",
+          "#81837C",
+          "#A3A69F",
+          "#C7CAC3",
+          "#EDF0E8"
+        ],
+        "desktopKey": "paper_sunk"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#D5DACF",
+        "oklch": "oklch(88.1% 0.016 127)",
+        "tonalRamp": [
+          "#090C06",
+          "#23271E",
+          "#40443B",
+          "#5F6359",
+          "#80847A",
+          "#A2A79D",
+          "#C6CBC0",
+          "#ECF1E5"
+        ],
+        "desktopKey": "card_border"
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#BCC3B6",
+        "oklch": "oklch(80.8% 0.020 130)",
+        "tonalRamp": [
+          "#080D05",
+          "#22271D",
+          "#3E4439",
+          "#5D6458",
+          "#7E8579",
+          "#A1A89B",
+          "#C5CCBF",
+          "#EAF1E4"
+        ],
+        "desktopKey": "rule_strong"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1E2422",
+        "oklch": "oklch(25.4% 0.009 173)",
+        "tonalRamp": [
+          "#070C0B",
+          "#212725",
+          "#3D4441",
+          "#5C6361",
+          "#7D8482",
+          "#9FA7A4",
+          "#C3CBC8",
+          "#E8F1EE"
+        ],
+        "desktopKey": "text_main"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "#48514C",
+        "oklch": "oklch(42.5% 0.014 162)",
+        "tonalRamp": [
+          "#060D09",
+          "#1F2723",
+          "#3C4440",
+          "#5B645F",
+          "#7B8580",
+          "#9EA8A2",
+          "#C2CCC6",
+          "#E7F2EB"
+        ],
+        "desktopKey": "text_sub"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "#66706A",
+        "oklch": "oklch(53.5% 0.015 160)",
+        "tonalRamp": [
+          "#060D09",
+          "#1F2722",
+          "#3B453F",
+          "#5A645E",
+          "#7B857F",
+          "#9DA8A2",
+          "#C1CCC6",
+          "#E6F2EB"
+        ],
+        "desktopKey": "text_dim"
+      },
+      "row-selected": {
+        "role": "neutral",
+        "displayName": "Selected Sheet",
+        "canonical": "#E4EBE2",
+        "oklch": "oklch(93.2% 0.014 139)",
+        "tonalRamp": [
+          "#080D07",
+          "#222720",
+          "#3E443D",
+          "#5D635C",
+          "#7E847C",
+          "#A1A79F",
+          "#C5CBC3",
+          "#EAF1E8"
+        ],
+        "desktopKey": "card_selected_bg"
+      },
+      "cover": {
+        "role": "secondary",
+        "displayName": "Passport Cover Green",
+        "canonical": "#17332E",
+        "oklch": "oklch(29.7% 0.035 181)",
+        "tonalRamp": [
+          "#00100C",
+          "#0E2B26",
+          "#2C4843",
+          "#4B6862",
+          "#6C8A83",
+          "#8EADA6",
+          "#B1D1CA",
+          "#D6F7F0"
+        ],
+        "desktopKey": "sidebar"
+      },
+      "cover-deep": {
+        "role": "secondary",
+        "displayName": "Cover Deep",
+        "canonical": "#102622",
+        "oklch": "oklch(24.9% 0.029 181)",
+        "tonalRamp": [
+          "#000F0C",
+          "#142A26",
+          "#314743",
+          "#4F6762",
+          "#708883",
+          "#92ABA6",
+          "#B6D0CA",
+          "#DAF5EF"
+        ],
+        "desktopKey": "cover_deep"
+      },
+      "cover-line": {
+        "role": "secondary",
+        "displayName": "Cover Line",
+        "canonical": "#21433C",
+        "oklch": "oklch(35.5% 0.042 179)",
+        "tonalRamp": [
+          "#00100B",
+          "#082C25",
+          "#274942",
+          "#476961",
+          "#678B83",
+          "#89AEA5",
+          "#ADD3C9",
+          "#D2F8EF"
+        ]
+      },
+      "cover-ink": {
+        "role": "secondary",
+        "displayName": "Cover Ink",
+        "canonical": "#E8EFEA",
+        "oklch": "oklch(94.5% 0.010 155)",
+        "tonalRamp": [
+          "#080C09",
+          "#212723",
+          "#3E4440",
+          "#5D635F",
+          "#7E8480",
+          "#A0A7A2",
+          "#C4CBC6",
+          "#EAF1EC"
+        ],
+        "desktopKey": "cover_ink"
+      },
+      "cover-muted": {
+        "role": "secondary",
+        "displayName": "Cover Muted",
+        "canonical": "#A3BAB0",
+        "oklch": "oklch(76.9% 0.029 168)",
+        "tonalRamp": [
+          "#010F09",
+          "#162A22",
+          "#33473F",
+          "#52675E",
+          "#72887F",
+          "#94ABA1",
+          "#B8D0C5",
+          "#DDF5EB"
+        ],
+        "desktopKey": "cover_muted"
+      },
+      "act": {
+        "role": "primary",
+        "displayName": "Fox Orange",
+        "canonical": "#C2510F",
+        "oklch": "oklch(57.4% 0.160 44)",
+        "tonalRamp": [
+          "#250000",
+          "#4A0900",
+          "#722600",
+          "#9C4212",
+          "#C26539",
+          "#E28C66",
+          "#FFB492",
+          "#FFDCBF"
+        ],
+        "desktopKey": "accent"
+      },
+      "act-hover": {
+        "role": "primary",
+        "displayName": "Burnt Fox",
+        "canonical": "#A84408",
+        "oklch": "oklch(51.4% 0.145 44)",
+        "tonalRamp": [
+          "#250000",
+          "#4A0900",
+          "#722600",
+          "#9C4212",
+          "#C26539",
+          "#E28C66",
+          "#FFB492",
+          "#FFDCBF"
+        ],
+        "desktopKey": "accent_hover"
+      },
+      "live": {
+        "role": "tertiary",
+        "displayName": "Entry Violet",
+        "canonical": "#5B3FA8",
+        "oklch": "oklch(45.8% 0.161 291)",
+        "tonalRamp": [
+          "#0E002C",
+          "#271652",
+          "#44327B",
+          "#6350A6",
+          "#8372CB",
+          "#A597E9",
+          "#C9BEFF",
+          "#EEE5FF"
+        ],
+        "desktopKey": "live"
+      },
+      "live-tint": {
+        "role": "tertiary",
+        "displayName": "Violet Wash",
+        "canonical": "#EFECF6",
+        "oklch": "oklch(94.8% 0.014 300)",
+        "tonalRamp": [
+          "#0C0A10",
+          "#26242B",
+          "#434048",
+          "#626068",
+          "#83818A",
+          "#A6A3AD",
+          "#CAC7D1",
+          "#F0EDF7"
+        ],
+        "desktopKey": "card_hover"
+      },
+      "ok": {
+        "role": "tertiary",
+        "displayName": "Visa Green",
+        "canonical": "#1F7A50",
+        "oklch": "oklch(51.6% 0.107 158)",
+        "tonalRamp": [
+          "#001400",
+          "#003210",
+          "#00522B",
+          "#14734A",
+          "#40966A",
+          "#65BA8C",
+          "#8DDEB0",
+          "#BCFFD9"
+        ],
+        "desktopKey": "success"
+      },
+      "err": {
+        "role": "tertiary",
+        "displayName": "Refusal Red",
+        "canonical": "#B42330",
+        "oklch": "oklch(50.3% 0.179 23)",
+        "tonalRamp": [
+          "#260000",
+          "#4B020B",
+          "#741F23",
+          "#9F3B3D",
+          "#C55E5D",
+          "#E58683",
+          "#FFAFAA",
+          "#FFD8D3"
+        ],
+        "desktopKey": "error"
+      },
+      "err-hover": {
+        "role": "tertiary",
+        "displayName": "Refusal Red Deep",
+        "canonical": "#951C27",
+        "desktopKey": "delete_hover"
+      },
+      "err-tint": {
+        "role": "tertiary",
+        "displayName": "Red Wash",
+        "canonical": "#F7E7E8",
+        "oklch": "oklch(94.1% 0.017 13)",
+        "tonalRamp": [
+          "#120809",
+          "#2D2223",
+          "#4B3E3F",
+          "#6B5D5E",
+          "#8D7E7F",
+          "#B0A1A2",
+          "#D4C5C6",
+          "#FAEAEB"
+        ]
+      },
+      "warn": {
+        "role": "tertiary",
+        "displayName": "Customs Amber",
+        "canonical": "#8A5A00",
+        "oklch": "oklch(50.8% 0.108 73)",
+        "tonalRamp": [
+          "#1F0100",
+          "#411800",
+          "#633600",
+          "#855600",
+          "#A9772E",
+          "#CE9A53",
+          "#F2BF7C",
+          "#FFE6AD"
+        ],
+        "desktopKey": "warning"
+      },
+      "warn-tint": {
+        "role": "tertiary",
+        "displayName": "Amber Wash",
+        "canonical": "#F6EEDB",
+        "oklch": "oklch(95.0% 0.027 88)",
+        "tonalRamp": [
+          "#100A01",
+          "#2A2416",
+          "#484132",
+          "#686150",
+          "#898271",
+          "#ACA493",
+          "#D0C9B6",
+          "#F6EEDB"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page title; login heading at 24px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Dialog titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default UI text, inputs, buttons."
+      },
+      "body-strong": {
+        "displayName": "Body Strong",
+        "purpose": "Profile name in a row (14px on desktop)."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Column headers and rail nav title."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Proxy, timezone and other machine values; first line of a cell."
+      },
+      "data-minor": {
+        "displayName": "Data Minor",
+        "purpose": "Second line of a cell: scheme, locale, screen."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "Entry stamp text, uppercase."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog-lift",
+        "value": "0 24px 60px -12px rgba(16,38,34,.45), 0 2px 8px rgba(16,38,34,.12)",
+        "purpose": "Modal dialogs over a rgba(16,38,34,.42) scrim."
+      },
+      {
+        "name": "toast-lift",
+        "value": "0 12px 30px -8px rgba(0,0,0,.4)",
+        "purpose": "Bottom-right toast."
+      },
+      {
+        "name": "screen-lift",
+        "value": "0 10px 30px -10px rgba(16,38,34,.35)",
+        "purpose": "Remote screen image in the viewer."
+      },
+      {
+        "name": "segment-nub",
+        "value": "0 1px 2px rgba(0,0,0,.25)",
+        "purpose": "Active language segment."
+      },
+      {
+        "name": "focus-halo",
+        "value": "0 0 0 3px rgba(23,51,46,.14)",
+        "purpose": "Focused input, with cover-green border."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "Stamp landing, dialog and toast rise."
+      },
+      {
+        "name": "stamp-land",
+        "value": "340ms ease-out; rotate(-11deg) scale(1.55) opacity .25 -> rotate(-4deg) scale(1)",
+        "purpose": "Live stamp lands once when a profile starts (web only; desktop static)."
+      },
+      {
+        "name": "rise",
+        "value": "200-220ms ease-out; translateY(8px) + fade",
+        "purpose": "Dialog and toast entry."
+      },
+      {
+        "name": "control-transition",
+        "value": "150ms",
+        "purpose": "Button and field colour/border changes."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: all animation and transition off",
+        "purpose": "Accessibility."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact",
+        "value": "1180px",
+        "purpose": "Geo column folds inline."
+      },
+      {
+        "name": "stacked",
+        "value": "860px",
+        "purpose": "Rail becomes top band; rows stack."
+      }
+    ],
+    "surfaces": {
+      "web": "src/web/index.html :root custom properties (token source)",
+      "desktop": "src/ui/theme/colors.py COLORS (desktopKey per colour), styles.py, profile_card.py COLUMNS",
+      "desktopDifferences": [
+        "Rail 240px (web 252px); column gap 12px (web 16px); stamp column 100px (web 112px)",
+        "Launch/Stop 100px wide (web 96px); icon buttons 40px (web 34px)",
+        "Text fields 48px tall to match Flet dropdown minimum (web 40px)",
+        "Starting stamp: solid 1px rule, unrotated (web dashed 1.5px, -2deg)",
+        "Stamp is static; no landing animation",
+        "Guilloché painted from src/assets/rail-guilloche.png (2x raster of the web SVG) at scale 2",
+        "Rail outline buttons border #2C524A (web cover-line #21433C)"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Act Button",
+      "kind": "button",
+      "refersTo": "button-act",
+      "description": "Fox orange: the only colour for things you press (Launch, Create, Save).",
+      "html": "<button class=\"ds-btn ds-btn-act\"><svg viewBox=\"0 0 24 24\"><path d=\"M7 5v14l11-7z\"/></svg>Mở</button>",
+      "css": ":host{--paper:#F3F4EF;--paper-raised:#FBFBF8;--paper-sunk:#E9ECE4;--rule:#D5DACF;--rule-strong:#BCC3B6;--ink:#1E2422;--ink-2:#48514C;--ink-3:#66706A;--cover:#17332E;--cover-deep:#102622;--cover-line:#21433C;--cover-ink:#E8EFEA;--cover-muted:#A3BAB0;--act:#C2510F;--act-hover:#A84408;--live:#5B3FA8;--live-tint:#EFECF6;--err:#B42330;--ui:'Be Vietnam Pro',system-ui,sans-serif;--data:'JetBrains Mono',ui-monospace,monospace;}.ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:8px;border:1px solid transparent;font:600 14px/1 var(--ui);cursor:pointer;transition:background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--act);outline-offset:2px;}.ds-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}.ds-btn-act{background:var(--act);color:#fff;}.ds-btn-act:hover{background:var(--act-hover);}"
+    },
+    {
+      "name": "Stop Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Stop is ink, not red: routine, not destructive.",
+      "html": "<button class=\"ds-btn ds-btn-ink\"><svg viewBox=\"0 0 24 24\"><rect x=\"7\" y=\"7\" width=\"10\" height=\"10\" rx=\"1.5\"/></svg>Dừng</button>",
+      "css": ":host{--paper:#F3F4EF;--paper-raised:#FBFBF8;--paper-sunk:#E9ECE4;--rule:#D5DACF;--rule-strong:#BCC3B6;--ink:#1E2422;--ink-2:#48514C;--ink-3:#66706A;--cover:#17332E;--cover-deep:#102622;--cover-line:#21433C;--cover-ink:#E8EFEA;--cover-muted:#A3BAB0;--act:#C2510F;--act-hover:#A84408;--live:#5B3FA8;--live-tint:#EFECF6;--err:#B42330;--ui:'Be Vietnam Pro',system-ui,sans-serif;--data:'JetBrains Mono',ui-monospace,monospace;}.ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:8px;border:1px solid transparent;font:600 14px/1 var(--ui);cursor:pointer;transition:background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--act);outline-offset:2px;}.ds-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}.ds-btn-ink{background:var(--ink);color:#fff;}.ds-btn-ink:hover{background:#000;}"
+    },
+    {
+      "name": "Line Button",
+      "kind": "button",
+      "refersTo": "button-line",
+      "description": "Secondary actions: Cancel, Close, Import, bulk Stop and Delete.",
+      "html": "<button class=\"ds-btn ds-btn-line\">Hủy</button>",
+      "css": ":host{--paper:#F3F4EF;--paper-raised:#FBFBF8;--paper-sunk:#E9ECE4;--rule:#D5DACF;--rule-strong:#BCC3B6;--ink:#1E2422;--ink-2:#48514C;--ink-3:#66706A;--cover:#17332E;--cover-deep:#102622;--cover-line:#21433C;--cover-ink:#E8EFEA;--cover-muted:#A3BAB0;--act:#C2510F;--act-hover:#A84408;--live:#5B3FA8;--live-tint:#EFECF6;--err:#B42330;--ui:'Be Vietnam Pro',system-ui,sans-serif;--data:'JetBrains Mono',ui-monospace,monospace;}.ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:8px;border:1px solid transparent;font:600 14px/1 var(--ui);cursor:pointer;transition:background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--act);outline-offset:2px;}.ds-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}.ds-btn-line{background:var(--paper-raised);color:var(--ink);border-color:var(--rule-strong);font-weight:500;}.ds-btn-line:hover{border-color:var(--ink-2);}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Raised paper field; focus turns the border cover green with a soft halo; orange caret.",
+      "html": "<label class=\"ds-field\"><span>Proxy</span><input placeholder=\"socks5://host:port\"></label>",
+      "css": ":host{--paper:#F3F4EF;--paper-raised:#FBFBF8;--paper-sunk:#E9ECE4;--rule:#D5DACF;--rule-strong:#BCC3B6;--ink:#1E2422;--ink-2:#48514C;--ink-3:#66706A;--cover:#17332E;--cover-deep:#102622;--cover-line:#21433C;--cover-ink:#E8EFEA;--cover-muted:#A3BAB0;--act:#C2510F;--act-hover:#A84408;--live:#5B3FA8;--live-tint:#EFECF6;--err:#B42330;--ui:'Be Vietnam Pro',system-ui,sans-serif;--data:'JetBrains Mono',ui-monospace,monospace;}.ds-field{display:block;width:320px;font:400 14px/1.5 var(--ui);}.ds-field span{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:6px;}.ds-field input{width:100%;height:40px;padding:0 12px;font:inherit;color:var(--ink);background:var(--paper-raised);border:1px solid var(--rule-strong);border-radius:8px;outline:none;caret-color:var(--act);transition:border-color .15s,box-shadow .15s;}.ds-field input::placeholder{color:var(--ink-3);}.ds-field input:focus{border-color:var(--cover);box-shadow:0 0 0 3px rgba(23,51,46,.14);}"
+    },
+    {
+      "name": "Cover Rail Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Filter list on the guilloché passport-cover rail; active item is a cover-ink pill; counts in mono.",
+      "html": "<nav class=\"ds-rail\"><div class=\"ds-nav-title\">Lọc</div><button class=\"active\">Tất cả<span>10</span></button><button>Đang chạy<span>2</span></button><button>Có proxy<span>8</span></button></nav>",
+      "css": ":host{--paper:#F3F4EF;--paper-raised:#FBFBF8;--paper-sunk:#E9ECE4;--rule:#D5DACF;--rule-strong:#BCC3B6;--ink:#1E2422;--ink-2:#48514C;--ink-3:#66706A;--cover:#17332E;--cover-deep:#102622;--cover-line:#21433C;--cover-ink:#E8EFEA;--cover-muted:#A3BAB0;--act:#C2510F;--act-hover:#A84408;--live:#5B3FA8;--live-tint:#EFECF6;--err:#B42330;--ui:'Be Vietnam Pro',system-ui,sans-serif;--data:'JetBrains Mono',ui-monospace,monospace;}.ds-rail{width:240px;padding:16px;display:flex;flex-direction:column;gap:2px;color:var(--cover-ink);background-color:var(--cover);background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='44' viewBox='0 0 160 44'%3E%3Cg fill='none' stroke='%2321433C' stroke-width='.7'%3E%3Cpath d='M0 22c20-16 40-16 60 0s40 16 60 0 40-16 60 0'/%3E%3Cpath d='M0 22c20 16 40 16 60 0s40-16 60 0 40 16 60 0'/%3E%3Cpath d='M0 0c20 12 40 12 60 0s40-12 60 0 40 12 60 0M0 44c20-12 40-12 60 0s40 12 60 0 40-12 60 0'/%3E%3C/g%3E%3C/svg%3E\");font:500 14px/1.5 var(--ui);}.ds-nav-title{font-size:12px;font-weight:600;color:var(--cover-muted);padding:0 10px 6px;}.ds-rail button{display:flex;align-items:center;height:36px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:var(--cover-ink);font:inherit;text-align:left;cursor:pointer;}.ds-rail button span{margin-left:auto;font:12px var(--data);opacity:.8;}.ds-rail button:hover{background:var(--cover-deep);}.ds-rail button.active{background:var(--cover-ink);color:var(--cover);font-weight:600;}.ds-rail button:focus-visible{outline:2px solid var(--act);outline-offset:2px;}"
+    },
+    {
+      "name": "OS Badge",
+      "kind": "chip",
+      "refersTo": "os-badge",
+      "description": "Monochrome outlined OS code; never a coloured tile.",
+      "html": "<span class=\"ds-os\">WIN</span> <span class=\"ds-os\">MAC</span> <span class=\"ds-os\">LIN</span>",
+      "css": ":host{--paper:#F3F4EF;--paper-raised:#FBFBF8;--paper-sunk:#E9ECE4;--rule:#D5DACF;--rule-strong:#BCC3B6;--ink:#1E2422;--ink-2:#48514C;--ink-3:#66706A;--cover:#17332E;--cover-deep:#102622;--cover-line:#21433C;--cover-ink:#E8EFEA;--cover-muted:#A3BAB0;--act:#C2510F;--act-hover:#A84408;--live:#5B3FA8;--live-tint:#EFECF6;--err:#B42330;--ui:'Be Vietnam Pro',system-ui,sans-serif;--data:'JetBrains Mono',ui-monospace,monospace;}.ds-os{display:inline-grid;place-items:center;width:38px;height:22px;border-radius:4px;border:1px solid var(--ink-2);font:600 11px var(--data);color:var(--ink);}"
+    },
+    {
+      "name": "Entry Stamp",
+      "kind": "custom",
+      "refersTo": "stamp-live",
+      "description": "Signature state mark: live double rule violet rotated; starting single dashed grey; failed struck red.",
+      "html": "<div class=\"ds-stamps\"><span class=\"ds-stamp\">Đang chạy<small>13:52</small></span><span class=\"ds-stamp pending\">Đang mở</span><span class=\"ds-stamp failed\">Lỗi</span><span class=\"ds-idle\">Đã dừng</span></div>",
+      "css": ":host{--paper:#F3F4EF;--paper-raised:#FBFBF8;--paper-sunk:#E9ECE4;--rule:#D5DACF;--rule-strong:#BCC3B6;--ink:#1E2422;--ink-2:#48514C;--ink-3:#66706A;--cover:#17332E;--cover-deep:#102622;--cover-line:#21433C;--cover-ink:#E8EFEA;--cover-muted:#A3BAB0;--act:#C2510F;--act-hover:#A84408;--live:#5B3FA8;--live-tint:#EFECF6;--err:#B42330;--ui:'Be Vietnam Pro',system-ui,sans-serif;--data:'JetBrains Mono',ui-monospace,monospace;}.ds-stamps{display:flex;gap:24px;align-items:center;padding:16px;background:var(--paper-raised);}.ds-idle{color:var(--ink-3);font:13px var(--ui);}.ds-stamp{display:inline-flex;flex-direction:column;align-items:center;min-width:86px;padding:3px 9px 2px;border:1.5px solid currentColor;outline:1px solid currentColor;outline-offset:2px;border-radius:6px;transform:rotate(-4deg);color:var(--live);font:700 10.5px/1.2 var(--data);letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.35);}.ds-stamp small{font-weight:500;font-size:10px;letter-spacing:.02em;}.ds-stamp.pending{color:var(--ink-2);border-style:dashed;outline:0;transform:rotate(-2deg);}.ds-stamp.failed{color:var(--err);outline:0;text-decoration:line-through;text-decoration-thickness:1.5px;}"
+    },
+    {
+      "name": "Profile Row",
+      "kind": "card",
+      "refersTo": "row-live",
+      "description": "One row on the shared column grid: two lines per cell, mono data, stamp, Launch/Stop and icon actions.",
+      "html": "<div class=\"ds-sheet\"><div class=\"ds-row ds-head\"><span></span><span>Profile</span><span>Thiết bị</span><span>Proxy</span><span>Trạng thái</span><span></span></div><div class=\"ds-row live\"><input type=\"checkbox\"><b>google-ads-11</b><span class=\"ds-cell\"><span>Camoufox</span><small class=\"m\">1920x1080 · 4 CPU</small></span><span class=\"ds-cell\"><span class=\"m0\">203.0.113.24:1080</span><small class=\"m\">SOCKS5</small></span><span class=\"ds-stamp\">Đang chạy<small>13:52</small></span><button class=\"ds-btn ds-btn-ink\"><svg viewBox=\"0 0 24 24\"><rect x=\"7\" y=\"7\" width=\"10\" height=\"10\" rx=\"1.5\"/></svg>Dừng</button></div><div class=\"ds-row\"><input type=\"checkbox\"><b>shop-facebook-01</b><span class=\"ds-cell\"><span>Camoufox</span><small class=\"m\">chưa có fingerprint</small></span><span class=\"ds-cell\"><span>Trực tiếp</span><small>không proxy</small></span><span class=\"ds-idle\">Đã dừng</span><button class=\"ds-btn ds-btn-act\"><svg viewBox=\"0 0 24 24\"><path d=\"M7 5v14l11-7z\"/></svg>Mở</button></div></div>",
+      "css": ":host{--paper:#F3F4EF;--paper-raised:#FBFBF8;--paper-sunk:#E9ECE4;--rule:#D5DACF;--rule-strong:#BCC3B6;--ink:#1E2422;--ink-2:#48514C;--ink-3:#66706A;--cover:#17332E;--cover-deep:#102622;--cover-line:#21433C;--cover-ink:#E8EFEA;--cover-muted:#A3BAB0;--act:#C2510F;--act-hover:#A84408;--live:#5B3FA8;--live-tint:#EFECF6;--err:#B42330;--ui:'Be Vietnam Pro',system-ui,sans-serif;--data:'JetBrains Mono',ui-monospace,monospace;}.ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:8px;border:1px solid transparent;font:600 14px/1 var(--ui);cursor:pointer;transition:background-color .15s,border-color .15s;}.ds-btn:focus-visible{outline:2px solid var(--act);outline-offset:2px;}.ds-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}.ds-stamp{display:inline-flex;flex-direction:column;align-items:center;min-width:86px;padding:3px 9px 2px;border:1.5px solid currentColor;outline:1px solid currentColor;outline-offset:2px;border-radius:6px;transform:rotate(-4deg);color:var(--live);font:700 10.5px/1.2 var(--data);letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.35);}.ds-stamp small{font-weight:500;font-size:10px;letter-spacing:.02em;}.ds-stamp.pending{color:var(--ink-2);border-style:dashed;outline:0;transform:rotate(-2deg);}.ds-stamp.failed{color:var(--err);outline:0;text-decoration:line-through;text-decoration-thickness:1.5px;}.ds-sheet{background:var(--paper-raised);border:1px solid var(--rule);border-radius:10px;font:400 14px/1.5 var(--ui);color:var(--ink);overflow:hidden;}.ds-row{display:grid;grid-template-columns:32px 1.15fr 1.05fr 1.15fr 112px 104px;align-items:center;column-gap:16px;min-height:58px;padding:0 14px;border-bottom:1px solid var(--rule);}.ds-row:last-child{border-bottom:0;}.ds-row:not(.ds-head):hover{background:#F6F7F2;}.ds-row.live{background:var(--live-tint);}.ds-head{min-height:40px;background:var(--paper);color:var(--ink-3);font-size:12px;font-weight:600;}.ds-row b{font-weight:600;font-size:14.5px;}.ds-cell{display:flex;flex-direction:column;line-height:1.35;font-size:13px;}.ds-cell small{font-size:11.5px;color:var(--ink-3);}.ds-cell .m,.ds-cell .m0{font-family:var(--data);}.ds-cell .m0{font-size:12.5px;font-variant-numeric:tabular-nums;}.ds-idle{color:var(--ink-3);font-size:13px;}.ds-row .ds-btn{height:36px;width:96px;}input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:var(--cover);}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Passport Data Page",
+    "overview": "**Creative North Star: \"The Passport Data Page\"**\n\nEvery profile is one identity with one device, set down like the data page of a passport: security paper, hairline rules, ink text, fixed fields that line up the same way on every page. A running profile gets an entry stamp. The deep green passport cover forms the left rail. It carries a fine guilloché line pattern, the one ornament in the system. Everything else is paper and ink.\n\nThe system is dense and made for scanning. Operators keep tens to hundreds of profiles open all day, so the profile list is a ruled table rather than a grid of cards. Every row has the same columns, height and baseline. Colour carries meaning. Fox orange marks things you can press. Stamp inks mark state: violet for live, green for ok, red for error and amber for warnings. Paper and ink cover everything else. The world explicitly refuses the category's dark card dashboard with coloured OS tiles and orange-on-black.\n\nTwo surfaces share this one system. The web panel (`src/web/index.html`, CSS custom properties on `:root`) is the token source. The Flet desktop app (`src/ui/theme/colors.py`, `styles.py`) mirrors the same values under its own key names. Where Flet cannot match the web, the differences are recorded below.",
+    "keyCharacteristics": [
+      "Light security-paper ground with hairline rules. A passport-cover green rail carries the guilloché.",
+      "Flat colour throughout: no gradient fills, no glass, no glow.",
+      "Fox orange appears only on pressable things.",
+      "State is encoded by form (rule count, rotation, strike) as well as by ink colour.",
+      "A dual typeface system: Be Vietnam Pro for UI language, JetBrains Mono for machine values (proxy, IP, timezone, locale, screen, fingerprint, counts).",
+      "One column grid and one row height for the header and every row."
+    ],
+    "rules": [
+      {
+        "name": "The Pressable Orange Rule",
+        "body": "Fox orange appears only on things you can press. It is never used for a heading, a status, a badge or decoration. If an element is orange and nothing happens when you click it, it is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stamp Ink Rule",
+        "body": "Violet, green, red and amber mean state and nothing else. Violet in particular is never used as an accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink Stop Rule",
+        "body": "Stop is an ink button, not red. Stopping a browser is routine, not destructive. Red is reserved for failure and for confirming deletion.",
+        "section": "colors"
+      },
+      {
+        "name": "The Machine Zone Rule",
+        "body": "Values a machine reads (proxy, IP, timezone, locale, screen, fingerprint, counts) are set in JetBrains Mono. Words a person reads are set in Be Vietnam Pro. Never set a sentence in mono, and never set an IP in the sans.",
+        "section": "typography"
+      },
+      {
+        "name": "The Two-Line Cell Rule",
+        "body": "Every data cell in a profile row has exactly two lines: a primary line, plus a minor line in ink-3. When there is no value, the minor line is filled with honest copy (`không proxy`, `Theo IP`, `chưa có fingerprint`). That keeps row heights and baselines identical.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Grid Rule",
+        "body": "The header row and every profile row share one column template: select (32px), profile name, device, proxy, timezone and locale, stamp (112px web / 100px desktop), and actions (232px). Each row is 58px tall with a 14px side padding. The header row is 40px on paper. Column gap is 16px on web and 12px on desktop. Nothing in a row may change the row height.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Paper Rule",
+        "body": "Anything that sits on the page is flat. Only things that float above the page (dialog, toast, remote screen) may cast a shadow. Gradient fills, glassy blur and glow are never used.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Form-Before-Hue Rule",
+        "body": "You can tell every state apart without colour: a double rule means live, a single plain rule means in transition, a struck rule means failed, and no frame means idle.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** keep fox orange (#C2510F) on pressable elements only: Launch, Create, Save, confirm and the focus ring.",
+      "**Do** make Stop an ink button (#1E2422) and keep red for failure and destructive confirmation.",
+      "**Do** put every profile row on the shared column grid at 58px, with two lines in every data cell.",
+      "**Do** set proxy, IP, timezone, locale, screen, fingerprint and counts in JetBrains Mono with tabular figures.",
+      "**Do** encode state by stamp form (double, single, struck, none) as well as ink.",
+      "**Do** separate surfaces with hairline rules and paper tones instead of shadows.",
+      "**Do** keep industry terms in English inside Vietnamese copy (profile, proxy, cookie, engine, fingerprint)."
+    ],
+    "donts": [
+      "**Don't** build the dark card dashboard this world refuses: no dark-mode card grid, no coloured OS tiles, no orange-on-black.",
+      "**Don't** use gradient fills, glass or blur, or glow anywhere.",
+      "**Don't** use violet, green, red or amber as decoration or accent. They are stamp inks for state.",
+      "**Don't** put the guilloché on paper surfaces, or add any other pattern.",
+      "**Don't** add shadows to rows, the sheet, buttons or inputs.",
+      "**Don't** let a row grow a third line or collapse to one. Fill empty values with honest minor copy instead."
+    ]
+  }
+}

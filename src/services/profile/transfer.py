@@ -6,13 +6,14 @@ from datetime import datetime
 
 from ...core.config import FINGERPRINT_FILE
 from ...core.logging import get_logger
-from ...models.profile import Profile
+from ...models.profile import ENGINES, Profile
 from ...utils.validation import (
     valid_or_none,
     validate_locale,
     validate_profile_name,
     validate_timezone,
 )
+from ..browser.fingerprint import CHROME_PERSONA_FILE
 
 logger = get_logger("profile.transfer")
 
@@ -44,15 +45,25 @@ def export_to_zip(
             else:
                 # The fingerprint is the profile's identity, not browser data:
                 # keep it so the imported profile presents the same device.
-                fp_file = os.path.join(profile_data_dir, FINGERPRINT_FILE)
-                if pathlib.Path(fp_file).exists():
-                    zipf.write(fp_file, os.path.join("data", FINGERPRINT_FILE))
+                for identity in (FINGERPRINT_FILE, CHROME_PERSONA_FILE):
+                    fp_file = os.path.join(profile_data_dir, identity)
+                    if pathlib.Path(fp_file).exists():
+                        zipf.write(fp_file, os.path.join("data", identity))
 
         logger.info("Exported profile %s to %s", profile.name, zip_path)
         return True, zip_path
     except Exception as e:
         logger.exception("Error exporting profile %s: %s", profile.name, e)
         return False, str(e)
+
+
+def read_profile_meta(zip_path: str) -> dict | None:
+    """profile.json of an archive without extracting anything, or None if unreadable."""
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zipf:
+            return json.loads(zipf.read("profile.json"))
+    except (OSError, KeyError, ValueError, zipfile.BadZipFile):
+        return None
 
 
 def import_from_zip(
@@ -84,6 +95,9 @@ def import_from_zip(
                 os_type=profile_data.get("os_type", "windows"),
                 timezone=valid_or_none(profile_data.get("timezone"), validate_timezone),
                 locale=valid_or_none(profile_data.get("locale"), validate_locale),
+                engine=profile_data.get("engine")
+                if profile_data.get("engine") in ENGINES
+                else "camoufox",
             )
 
             data_files = [f for f in zipf.namelist() if f.startswith("data/")]

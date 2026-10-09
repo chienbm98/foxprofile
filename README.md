@@ -34,6 +34,7 @@ FoxProfile là ứng dụng desktop quản lý profile cho [Camoufox](https://gi
 - [Múi giờ, ngôn ngữ và Kiểm tra IP](#múi-giờ-ngôn-ngữ-và-kiểm-tra-ip)
 - [Chế độ server và web panel](#chế-độ-server-và-web-panel)
 - [MCP: cho AI điều khiển trình duyệt](#mcp-cho-ai-điều-khiển-trình-duyệt)
+- [Nhân Chrome (thử nghiệm)](#nhân-chrome-thử-nghiệm)
 - [Cookie và vân tay](#cookie-và-vân-tay)
 - [Cấu hình](#cấu-hình)
 - [REST API](#rest-api)
@@ -157,6 +158,12 @@ Sau đó chỉ cần nhắn AI, ví dụ: *"Mở profile tiktok-us-02, vào tikt
 | Tab | `browser_tabs`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close` |
 
 MCP **không** có tool xóa profile, để AI không thể vô tình xóa cookie của tài khoản. Trang chỉ mở được `http`, `https` và `about:blank`; `file://` và `about:config` bị chặn.
+
+## Nhân Chrome (thử nghiệm)
+
+Ngoài Camoufox (Firefox), profile có thể chạy trên nhân **Chrome**: một bản Chromium đã vá vân tay ở tầng C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)). Chọn ở ô **Nhân trình duyệt** khi tạo profile; không đổi được sau khi tạo. Bản trình duyệt (~140-190 MB tuỳ hệ điều hành) được tự tải ở nền ngay khi tạo profile Chrome đầu tiên, hoặc lúc mở profile nếu chưa có; tiến độ hiện trong log. Muốn tải trước bằng tay: `python -m chrome_engine fetch`.
+
+Nên chọn đúng hệ điều hành của máy đang chạy FoxProfile: persona khác hệ điều hành sẽ lộ font của máy, và persona Linux trên Windows/macOS bị từ chối vì WebGL lộ GPU thật. Hỗ trợ Windows x64, macOS Apple Silicon và Linux x64 (chưa kiểm chứng). Chi tiết và kết quả kiểm thử: [chrome_engine/README.md](chrome_engine/README.md).
 
 ## Cookie và vân tay
 

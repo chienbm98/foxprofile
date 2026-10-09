@@ -3,7 +3,7 @@ import time
 
 from ..core.strings import get_string
 
-ITEMS_PER_PAGE = 8
+ITEMS_PER_PAGE = 12
 
 
 class AppState:
@@ -14,6 +14,8 @@ class AppState:
 
         self._log_lines: list[str] = []
         self._loading_profiles: set[str] = set()
+        # Profiles whose last launch exited before it was ready.
+        self.failed: set[str] = set()
         self._loading_lock = threading.Lock()
         self._log_lock = threading.Lock()
         self._last_log_ui_update: float = 0.0

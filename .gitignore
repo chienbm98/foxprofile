@@ -184,3 +184,9 @@ logs/
 uv.lock
 e2e-output/
 .omc/
+
+# Impeccable design run artifacts (screenshots, decision payloads)
+.impeccable/review/
+.impeccable/decision/
+.impeccable/questions/
+.impeccable/mocks/

@@ -34,14 +34,19 @@ def launch_or_stop(
         return
 
     state.set_loading(name, True)
+    state.failed.discard(name)
     log(get_string("launching_profile", name=name))
     state.schedule_refresh()
+    ready = threading.Event()
 
     def _on_ready() -> None:
+        ready.set()
         state.set_loading(name, False)
         state.schedule_refresh()
 
     def _on_stop() -> None:
+        if not ready.is_set():
+            state.failed.add(name)
         state.set_loading(name, False)
         state.schedule_refresh()
 
