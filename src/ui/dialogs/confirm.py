@@ -14,6 +14,8 @@ def open_confirm_dialog(
     *,
     title: str | None = None,
     body: str | None = None,
+    action_label: str | None = None,
+    action_icon: ft.IconData = ft.Icons.DELETE,
 ) -> None:
 
     def _on_confirm(_: ft.ControlEvent) -> None:
@@ -35,8 +37,8 @@ def open_confirm_dialog(
         actions=[
             ft.TextButton(get_string("cancel"), on_click=lambda _: page.pop_dialog()),
             ft.Button(
-                get_string("delete"),
-                icon=ft.Icons.DELETE,
+                action_label if action_label is not None else get_string("delete"),
+                icon=action_icon,
                 style=ERROR_STYLE,
                 on_click=_on_confirm,
             ),

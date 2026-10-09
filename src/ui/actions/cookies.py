@@ -81,6 +81,8 @@ def manage_cookies(
             name,
             _do_reset,
             title=get_string("confirm_reset_fingerprint", name=name),
+            action_label=get_string("fingerprint_reset"),
+            action_icon=ft.Icons.FINGERPRINT,
         )
 
     info = fingerprint.summary(profile_dir)
