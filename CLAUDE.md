@@ -12,7 +12,7 @@ This is a public MIT-licensed repository (`github.com/chienbm98/foxprofile`). Ev
 - Examples, tests and screenshots use fake data: IPs from the documentation ranges `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, placeholder credentials (`user:pass`), made-up profile names.
 - Bundled third-party code and assets must have a compatible license, kept next to them (fonts: `src/assets/fonts/OFL-*.txt`; fingerprint-chromium is BSD-3 and downloaded at run time, pinned by SHA-256). Do not add paid, proprietary or unlicensed assets.
 - Anything that leaves the user's machine must be opt-in and documented: no telemetry, no hidden network calls; downloads (Camoufox, GeoIP, the Chrome engine) are pinned or come from the upstream project.
-- Write for outside contributors: user-facing docs are bilingual (README.md Vietnamese, README.en.md English, kept in sync), community files live at the root (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`) and in `.github/` (issue and PR templates), and user-visible changes go into `CHANGELOG.md` under `[Unreleased]`.
+- Write for outside contributors: user-facing docs are bilingual (README.md English, README.vi.md Vietnamese, kept in sync), community files live at the root (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`) and in `.github/` (issue and PR templates), and user-visible changes go into `CHANGELOG.md` under `[Unreleased]`.
 - Keep the responsible-use framing: the README states that multi-accounting can violate platform terms; do not add features or copy aimed at evading bans for abuse.
 
 ## Commands
@@ -62,6 +62,6 @@ Run everything from the repo root: `profiles.json`, `camoufox_data/`, `logs/` an
 - In Vietnamese copy, keep industry terms in English: profile, proxy, cookie, fingerprint, engine, timezone, locale, headless, API, MCP.
 - Profile names become directory names: always pass them through `validate_profile_name`.
 - Proxies go through `utils/proxy_parser.parse_proxy` (accepts `[scheme://][user:pass@]host:port` and `host:port:user:pass`); validation is `utils/validation.validate_proxy_format`.
-- `README.md` (Vietnamese, primary) and `README.en.md` must stay in sync. `CONTRIBUTING.md`, `SECURITY.md` and `docs/DEPLOY.md` are in Vietnamese.
+- `README.md` (English, primary) and `README.vi.md` (Vietnamese) must stay in sync. `CONTRIBUTING.md`, `SECURITY.md` and `docs/DEPLOY.md` are in Vietnamese.
 - Release: bump `version` in `pyproject.toml`, `VERSION` in `src/api/app.py`, and `CHANGELOG.md` in one PR, then tag `vX.Y.Z`.
 - `main` is protected: changes go through a PR with all CI checks green. Commits follow Conventional Commits.
