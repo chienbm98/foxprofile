@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 logger = get_logger("api")
 
 API_PREFIX = "/api/v1"
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 _PANEL = pathlib.Path(__file__).resolve().parents[1] / "web" / "index.html"
 _FONTS = pathlib.Path(__file__).resolve().parents[1] / "assets" / "fonts"
 # Served to the panel without a token: it needs them before login.
