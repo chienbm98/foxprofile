@@ -67,7 +67,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "proxy_hint": "user:pass@ip:port",
         "profile_busy": "'{name}' is busy (starting or a cookie operation), try again shortly",
         "operating_system": "Operating System",
-        "browser_engine": "Browser engine",
+        "browser_engine": "Engine",
         "engine_camoufox": "Camoufox (Firefox)",
         "engine_chrome": "Chrome (experimental)",
         "engine_chrome_short": "Chrome",

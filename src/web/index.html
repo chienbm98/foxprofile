@@ -115,7 +115,7 @@ main { min-width: 0; padding: 26px 32px 40px; }
 .search input { padding-left: 38px; }
 
 /* Table */
-.sheet { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 10px; }
+.sheet { container: sheet / inline-size; background: var(--paper-raised); border: 1px solid var(--rule); border-radius: 10px; }
 .bulk { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--rule); background: var(--paper-sunk); border-radius: 10px 10px 0 0; }
 .bulk .n { font-weight: 600; margin-right: 6px; }
 .bulk .btn { height: 32px; padding: 0 12px; font-size: 13px; }
@@ -241,10 +241,24 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
-@media (max-width: 1180px) {
-  :root { --cols: 32px minmax(140px, 1.1fr) minmax(160px, 1fr) minmax(160px, 1.1fr) 108px 218px; }
+/* The table follows its own width, not the viewport: all columns need about
+   1140px, the version without Timezone · Locale about 870px. */
+@container sheet (max-width: 1150px) {
+  .row { --cols: 32px minmax(140px, 1.1fr) minmax(140px, 1fr) minmax(140px, 1.1fr) 108px 218px; column-gap: 12px; }
   .col-geo { display: none; }
   .geo-inline { display: block; }
+}
+@container sheet (max-width: 880px) {
+  .row.head-row { display: none; }
+  .row.body { grid-template-columns: 24px 1fr auto; grid-template-areas: "sel name stamp" "sel device device" "sel proxy proxy" "acts acts acts"; row-gap: 6px; padding: 12px; }
+  .row.body > .c-sel { grid-area: sel; align-self: start; padding-top: 3px; }
+  .row.body > .c-name { grid-area: name; }
+  .row.body > .c-device { grid-area: device; }
+  .row.body > .c-proxy { grid-area: proxy; }
+  .row.body > .col-geo { display: none; }
+  .row.body > .c-stamp { grid-area: stamp; }
+  .row.body > .actions { grid-area: acts; justify-content: flex-start; }
+  .actions .main { flex: 1; max-width: 200px; }
 }
 @media (max-width: 860px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
@@ -258,16 +272,6 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
   .seg button { white-space: nowrap; }
   main { padding: 18px 14px 32px; }
   .search { width: 100%; }
-  .row.head-row { display: none; }
-  .row.body { grid-template-columns: 24px 1fr auto; grid-template-areas: "sel name stamp" "sel device device" "sel proxy proxy" "acts acts acts"; row-gap: 6px; padding: 12px; }
-  .row.body > .c-sel { grid-area: sel; align-self: start; padding-top: 3px; }
-  .row.body > .c-name { grid-area: name; }
-  .row.body > .c-device { grid-area: device; }
-  .row.body > .c-proxy { grid-area: proxy; }
-  .row.body > .col-geo { display: none; }
-  .row.body > .c-stamp { grid-area: stamp; }
-  .row.body > .actions { grid-area: acts; justify-content: flex-start; }
-  .actions .main { flex: 1; max-width: 200px; }
   .login { grid-template-columns: 1fr; }
   .login .cover-side { padding: 24px; }
 }

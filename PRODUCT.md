@@ -45,7 +45,7 @@ Open source (MIT), runs on the user's own machine or VPS, no account and no per-
 
 ## Evidence on Hand
 
-- Screenshots of the current UI: `docs/images/main.png`, `panel.png`, `panel-viewer.png`, `cookies.png`, `mcp-guide.png`.
+- Screenshots of the current UI: `docs/images/main.png` (desktop), `panel.png`, `panel-viewer.png`, `cookies.png`, `mcp-guide.png` (web panel), `profile-dialog.png` (desktop).
 - README (vi/en) describing every feature. No user testimonials, usage numbers or customer names exist; do not invent them.
 
 ## Product Principles

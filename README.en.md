@@ -2,7 +2,7 @@
   <img src="src/assets/icon.png" width="112" alt="FoxProfile logo" />
   <h1>FoxProfile</h1>
   <p><strong>Free, open-source manager for anti-detect browser profiles</strong></p>
-  <p>Per-profile device fingerprint, cookies and proxy · Vietnamese and English UI · REST API and MCP for automation</p>
+  <p>Per-profile device fingerprint, cookies and proxy · Two engines: Camoufox (Firefox) and Chrome · Vietnamese and English UI · REST API and MCP for automation</p>
 
   <p>
     <a href="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml"><img src="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -24,14 +24,14 @@
 
 ![FoxProfile](docs/images/main.png)
 
-FoxProfile is a desktop manager for [Camoufox](https://github.com/daijro/camoufox) profiles, a Firefox build that spoofs device fingerprints at the engine level. It is a self-hosted alternative to paid anti-detect browsers such as GoLogin, GPM or MoreLogin.
+FoxProfile manages anti-detect browser profiles: each profile is a separate identity with its own device fingerprint, cookies, proxy, timezone and locale. The default browser is [Camoufox](https://github.com/daijro/camoufox), a Firefox build that spoofs fingerprints at the engine level; an experimental Chrome engine based on [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium) is also available. It is a self-hosted alternative, on your machine or a VPS, to paid anti-detect browsers such as GoLogin, GPM or MoreLogin.
 
 ## Contents
 
 - [Features](#features)
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
-- [Timezone, language and Check IP](#timezone-language-and-check-ip)
+- [Timezone, locale and Check IP](#timezone-locale-and-check-ip)
 - [Server mode and web panel](#server-mode-and-web-panel)
 - [MCP: let AI agents drive the browser](#mcp-let-ai-agents-drive-the-browser)
 - [Chrome engine (experimental)](#chrome-engine-experimental)
@@ -42,27 +42,30 @@ FoxProfile is a desktop manager for [Camoufox](https://github.com/daijro/camoufo
 - [Contributing](#contributing)
 - [Responsible use](#responsible-use)
 - [License](#license)
+- [Acknowledgements](#acknowledgements)
 
 ## Features
 
-- **Persistent per-profile fingerprint.** The first launch generates a device (screen, GPU, CPU cores, fonts, canvas/audio noise) and stores it; later launches reuse the same device. Reset it on demand.
+- **Persistent per-profile fingerprint.** The first launch generates a device (screen, GPU, CPU cores, fonts, canvas/audio noise) and stores it; later launches reuse the same device. Generate a new one on demand.
+- **Two engines.** Camoufox (Firefox, default) or Chrome (fingerprint-chromium, experimental), chosen when the profile is created. The Chrome build is downloaded automatically when needed.
 - **Sessions that stick.** History, cookies and logins live in the profile directory; the tabs that were open are reopened on the next launch.
-- **Per-profile proxy**: HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth, plus a proxy checker.
-- **Timezone and language** follow the exit IP or can be pinned per profile. **Check IP** compares the exit IP across Cloudflare, ipinfo and ip-api and warns about country/timezone mismatches and datacenter IPs.
+- **Per-profile proxy**: HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth, including the `host:port:user:pass` format, plus a proxy checker.
+- **Timezone and locale** follow the exit IP or can be pinned per profile. **Check IP** compares the exit IP across Cloudflare, ipinfo and ip-api and warns about country/timezone mismatches and datacenter IPs.
 - **Cookie export/import** as Cookie-Editor / EditThisCookie JSON (GoLogin, GPM, Multilogin, the Cookie-Editor extension) and Netscape `cookies.txt` (yt-dlp, curl, wget).
 - **Profile export/import** as ZIP, with or without browser data, to move profiles between machines. The fingerprint always travels with the profile.
+- **A profile table built for scanning**: every row shows the engine, the emulated device, the proxy (credentials hidden), timezone/locale and the state. States differ in shape as well as colour: a violet double-ruled stamp with the launch time means running, a grey rule means starting, a struck red stamp means the launch failed.
+- **Filters and search**: filter by running, with/without proxy and Chrome engine (with counts); search by name or proxy.
 - **Bulk actions**: launch, stop or delete many profiles at once.
-- **Search** profiles by name or proxy. Cards show the proxy (credentials hidden) and the emulated device.
 - **MCP server** so AI agents (Claude, Cursor...) can launch profiles, browse, click, type and take screenshots.
 - **Server mode + web panel** for VPS deployments: manage profiles and view their screens remotely, protected by a token.
 - **REST API** with Swagger docs for scripting.
-- **Vietnamese** (default) and English UI.
+- **Vietnamese** (default) and English UI, switchable inside the app. Fonts are bundled, no network needed.
 
 ## Requirements
 
 - Python 3.10+
 - Windows, macOS or Linux (CI tests all three)
-- A few hundred MB of free disk space for Camoufox and the GeoIP database
+- A few hundred MB of free disk space for Camoufox and the GeoIP database, plus ~140-190 MB for the Chrome engine if you use it
 
 ## Quick start
 
@@ -88,15 +91,17 @@ python -m src.main
 
 On Windows you can also double-click `run_foxprofile.bat`. The app opens the manager window and serves the API on `http://127.0.0.1:8000`; API docs are at `http://127.0.0.1:8000/docs`. Set `FOXPROFILE_LANG=en` for the English UI.
 
-## Timezone, language and Check IP
+## Timezone, locale and Check IP
 
-By default, every launch looks up the exit IP (through the profile's proxy) and sets the timezone, language, geolocation and WebRTC IP from it. Worth knowing:
+By default, every Camoufox launch looks up the exit IP (through the profile's proxy) and sets the timezone, locale, geolocation and WebRTC IP from it. Worth knowing:
 
-- **The automatic language is drawn at random on every launch**, weighted by how many people speak each language in the IP's country. A French IP gives `fr-FR` roughly 60% of the time and `en-FR`, `es-FR`… otherwise. An account whose language changes between sessions looks suspicious, so pin the language per profile.
+- **The automatic locale is drawn at random on every launch**, weighted by how many people speak each language in the IP's country. A French IP gives `fr-FR` roughly 60% of the time and `en-FR`, `es-FR`… otherwise. An account whose language changes between sessions looks suspicious, so pin the locale per profile.
 - **GeoIP databases disagree.** Cloudflare may place an IP in one country and Google in another, and Camoufox may pick a same-offset timezone with a different name (a Vietnamese IP gets `Asia/Bangkok` rather than `Asia/Ho_Chi_Minh`).
 - **Datacenter IPs get captchas** whatever the browser looks like. For Cloudflare-protected sites a residential or mobile proxy matters more than any other setting.
 
-The profile dialog has **Timezone** (IANA name, e.g. `Asia/Ho_Chi_Minh`) and **Language** (e.g. `vi-VN`) fields; blank means follow the IP. **Check IP** resolves the exit IP through the proxy, compares it with Cloudflare, ipinfo and ip-api, and warns about country or timezone mismatches, datacenter IPs, proxies that leave over different IPv4/IPv6 addresses, and a language left on random.
+![Create profile dialog](docs/images/profile-dialog.png)
+
+The profile dialog has **Timezone** (IANA name, e.g. `Asia/Ho_Chi_Minh`) and **Locale** (e.g. `vi-VN`) fields; blank means follow the IP. **Check IP** resolves the exit IP through the proxy, compares it with Cloudflare, ipinfo and ip-api, and warns about country or timezone mismatches, datacenter IPs, proxies that leave over different IPv4/IPv6 addresses, and a locale left on random.
 
 ## Server mode and web panel
 
@@ -107,7 +112,7 @@ python -m src.server                     # http://127.0.0.1:8000
 python -m src.server --host 0.0.0.0      # exposed: FOXPROFILE_API_TOKEN is required
 ```
 
-Open `http://<host>:8000/` for the **web panel**: create, edit, launch and stop profiles, move cookies, and **view a profile's screen remotely**. Click on the screenshot and type to log in or solve a captcha even when the browser runs hidden on a server.
+Open `http://<host>:8000/` for the **web panel**: the same profile table, filters and bulk actions as the desktop app; create, edit, launch and stop profiles, move cookies, and **view a profile's screen remotely**. Click on the screenshot and type to log in or solve a captcha even when the browser runs hidden on a server.
 
 | Web panel | Remote screen view |
 | --- | --- |
@@ -128,7 +133,7 @@ Full deployment guide (Ubuntu, systemd, nginx, HTTPS; in Vietnamese): [docs/DEPL
 
 FoxProfile ships an MCP server so Claude Code, Claude Desktop, Cursor, VS Code and others can manage profiles and act on pages: navigate, read, click, type, screenshot.
 
-**Quickest:** click **🤖 Connect AI (MCP)** in the desktop app or the web panel. It generates ready-to-paste configs for each AI app with your address and token.
+**Quickest:** click **Connect AI (MCP)** in the left sidebar of the desktop app or the web panel. It generates ready-to-paste configs for each AI app with your address and token.
 
 ![Connect AI (MCP)](docs/images/mcp-guide.png)
 
@@ -161,7 +166,7 @@ There is deliberately **no** delete tool, so an agent cannot wipe an account's c
 
 ## Chrome engine (experimental)
 
-Besides Camoufox (Firefox), a profile can run on the **Chrome** engine: a Chromium build with fingerprint spoofing patched in C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)). Pick it in **Browser engine** when creating a profile; it cannot be changed afterwards. The browser build (~140-190 MB depending on the OS) is downloaded in the background as soon as the first Chrome profile is created, or on launch if it is still missing; progress shows in the log. To fetch it ahead of time: `python -m chrome_engine fetch`.
+Besides Camoufox (Firefox), a profile can run on the **Chrome** engine: a Chromium build with fingerprint spoofing patched in C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), BSD-3 license). Pick it in **Engine** when creating a profile; it cannot be changed afterwards. The browser build (~140-190 MB depending on the OS, fetched from fingerprint-chromium's GitHub releases and verified by SHA-256) is downloaded in the background as soon as the first Chrome profile is created, or on launch if it is still missing; progress shows in the log. To fetch it ahead of time: `python -m chrome_engine fetch`.
 
 Pick the OS of the machine running FoxProfile: a persona of another OS leaks the machine's fonts, and a Linux persona on Windows/macOS is refused because WebGL reveals the real GPU. Supported: Windows x64, macOS Apple Silicon, Linux x64 (untested). Details and test results (in Vietnamese): [chrome_engine/README.md](chrome_engine/README.md).
 
@@ -169,9 +174,9 @@ Pick the OS of the machine running FoxProfile: a persona of another OS leaks the
 
 ![Cookies & fingerprint](docs/images/cookies.png)
 
-Click the 🍪 icon on a profile card. **The profile's browser must be stopped**: FoxProfile opens the profile headless to read and write cookies.
+Click the cookie button on a profile row to open **Cookies & fingerprint**. **The profile's browser must be stopped**: FoxProfile opens the profile headless to read and write cookies.
 
-- Imported session cookies are given a one-year lifetime; otherwise Firefox would discard them when the browser closes.
+- Imported session cookies are given a one-year lifetime; otherwise the browser would discard them when it closes.
 - "New fingerprint" deletes the stored fingerprint so the next launch presents a different device. Changing a profile's OS also regenerates it.
 
 ## Configuration
@@ -200,9 +205,10 @@ Everything is optional. To override defaults, copy `.env.example` to `.env`.
 ### Data layout
 
 ```text
-profiles.json                                  profile list (name, proxy, OS)
+profiles.json                                  profile list (name, engine, proxy, OS, timezone, locale)
 camoufox_data/<profile>/                       browser data: cookies, history, localStorage
-camoufox_data/<profile>/fingerprint.json       the profile's device fingerprint
+camoufox_data/<profile>/fingerprint.json       device fingerprint (Camoufox engine)
+camoufox_data/<profile>/chrome_persona.json    device fingerprint (Chrome engine)
 camoufox_data/<profile>/tabs.json              tabs to reopen on next launch
 logs/foxprofile_YYYYMMDD.log                   daily log
 ```
@@ -218,35 +224,39 @@ Prefix `/api/v1`. The full reference is at `/docs` while the app is running.
 | --- | --- | --- |
 | `GET` | `/health` | Health check |
 | `GET` / `POST` | `/profiles` | List / create profiles |
-| `GET` / `PATCH` / `DELETE` | `/profiles/{name}` | Read / update / delete a profile |
+| `GET` / `PATCH` / `DELETE` | `/profiles/{name}` | Read / update / delete a profile (`engine` cannot change) |
+| `GET` | `/profiles/{name}/data-dir` | Path of the profile's data directory |
 | `POST` | `/profiles/{name}/export` | Export a profile to ZIP |
 | `POST` | `/profiles/import` | Import a profile from ZIP |
 | `GET` | `/profiles/{name}/cookies?format=json\|netscape` | Export cookies |
 | `POST` | `/profiles/{name}/cookies` | Import cookies (`{"content": "<JSON or cookies.txt>"}`) |
-| `GET` / `DELETE` | `/profiles/{name}/fingerprint` | Show / reset the fingerprint |
+| `GET` / `DELETE` | `/profiles/{name}/fingerprint` | Show / generate a new fingerprint |
 | `GET` | `/profiles/{name}/ip-check` | Where Cloudflare/ipinfo/ip-api place the profile's exit IP, with mismatch warnings |
 | `GET` | `/browser` | Running profiles |
-| `POST` | `/browser/{name}/launch` | Launch and wait until ready or failed |
+| `GET` | `/browser/{name}/status` | Whether the profile is running |
+| `POST` | `/browser/{name}/launch` | Launch and wait until ready or failed (409 if already running or busy) |
 | `POST` | `/browser/{name}/stop` | Stop |
 | `POST` | `/proxy/check` | Check a proxy |
 | `POST` | `/proxy/geo-check` | Same as `ip-check` for an unsaved `{proxy, timezone, locale}` |
-| `POST` | `/browser/{name}/page/navigate` | Open a URL in the active tab |
-| `GET` | `/browser/{name}/page/snapshot` | Accessibility tree of the page (for picking selectors) |
+| `POST` | `/browser/{name}/page/navigate` · `back` | Open a URL in the active tab, go back |
+| `GET` | `/browser/{name}/page/snapshot` · `text` | Accessibility tree of the page (for picking selectors), page text |
 | `POST` | `/browser/{name}/page/click` · `type` · `press` · `wait` | Click, type, press a key, wait for an element (Playwright selectors) |
 | `POST` | `/browser/{name}/page/click-at` · `keyboard` | Click at coordinates, type into the focused element |
 | `GET` | `/browser/{name}/page/screenshot` | PNG of the tab (`?format=json` for base64) |
 | `POST` | `/browser/{name}/page/evaluate` | Run JavaScript |
-| `GET` / `POST` / `DELETE` | `/browser/{name}/page/tabs` | Manage tabs |
+| `GET` / `POST` | `/browser/{name}/page/tabs` | List tabs / open a new tab |
+| `POST` / `DELETE` | `/browser/{name}/page/tabs/{index}/select` · `/page/tabs/{index}` | Select / close a tab |
+| `GET` | `/mcp/setup?base_url=...` | MCP configs for each AI app (used by the Connect AI dialog) |
 
 With `FOXPROFILE_API_TOKEN` set, every request except `/health` and `/info` needs `Authorization: Bearer <token>`.
 
 Examples:
 
 ```bash
-# Create a macOS profile with a proxy
+# Create a macOS profile with a proxy. Add "engine": "chrome" for the Chrome engine (default "camoufox").
 curl -X POST http://127.0.0.1:8000/api/v1/profiles \
   -H "Content-Type: application/json" \
-  -d '{"name": "tiktok-us-02", "os_type": "macos", "proxy": "socks5://user:pass@1.2.3.4:1080"}'
+  -d '{"name": "tiktok-us-02", "os_type": "macos", "proxy": "socks5://user:pass@203.0.113.10:1080"}'
 
 # Launch. Returns 200 once running, 502 with the reason on failure.
 # Add ?wait=false to return immediately (202).
@@ -260,12 +270,12 @@ curl "http://127.0.0.1:8000/api/v1/profiles/tiktok-us-02/cookies?format=netscape
 
 ```bash
 pip install -r requirements-dev.txt
-ruff check src tests
-ruff format --check src tests
-pytest
+ruff check src tests chrome_engine
+ruff format --check src tests chrome_engine
+pytest                  # real-browser tests skip unless the browsers are fetched
 ```
 
-Project layout, code conventions and the PR process are in [CONTRIBUTING.md](CONTRIBUTING.md) (Vietnamese; issues and PRs in English are welcome). Release notes: [CHANGELOG.md](CHANGELOG.md).
+Project layout, code conventions and the PR process are in [CONTRIBUTING.md](CONTRIBUTING.md) (Vietnamese; issues and PRs in English are welcome). UI changes follow [DESIGN.md](DESIGN.md) and touch both the desktop app and the web panel. Release notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
@@ -288,4 +298,6 @@ Released under the [MIT License](LICENSE). Copyright (c) 2026 chienbm98.
 
 ## Acknowledgements
 
-FoxProfile is built on the [Camoufox](https://github.com/daijro/camoufox) browser by daijro.
+- The [Camoufox](https://github.com/daijro/camoufox) browser by daijro.
+- [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium) by adryfish for the Chrome engine (BSD-3).
+- The [Be Vietnam Pro](https://github.com/bettergui/BeVietnamPro) and [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) fonts, SIL Open Font License (`src/assets/fonts/`).
