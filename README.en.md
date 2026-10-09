@@ -161,11 +161,7 @@ There is deliberately **no** delete tool, so an agent cannot wipe an account's c
 
 ## Chrome engine (experimental)
 
-Besides Camoufox (Firefox), a profile can run on the **Chrome** engine: a Chromium build with fingerprint spoofing patched in C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)). Pick it in **Browser engine** when creating a profile; it cannot be changed afterwards. Download the browser once (~190 MB):
-
-```bash
-python -m chrome_engine fetch
-```
+Besides Camoufox (Firefox), a profile can run on the **Chrome** engine: a Chromium build with fingerprint spoofing patched in C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)). Pick it in **Browser engine** when creating a profile; it cannot be changed afterwards. The browser build (~140-190 MB depending on the OS) is downloaded in the background as soon as the first Chrome profile is created, or on launch if it is still missing; progress shows in the log. To fetch it ahead of time: `python -m chrome_engine fetch`.
 
 Pick the OS of the machine running FoxProfile: a persona of another OS leaks the machine's fonts, and a Linux persona on Windows/macOS is refused because WebGL reveals the real GPU. Supported: Windows x64, macOS Apple Silicon, Linux x64 (untested). Details and test results (in Vietnamese): [chrome_engine/README.md](chrome_engine/README.md).
 

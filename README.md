@@ -161,11 +161,7 @@ MCP **không** có tool xóa profile, để AI không thể vô tình xóa cooki
 
 ## Nhân Chrome (thử nghiệm)
 
-Ngoài Camoufox (Firefox), profile có thể chạy trên nhân **Chrome**: một bản Chromium đã vá vân tay ở tầng C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)). Chọn ở ô **Nhân trình duyệt** khi tạo profile; không đổi được sau khi tạo. Tải trình duyệt một lần (~190 MB):
-
-```bash
-python -m chrome_engine fetch
-```
+Ngoài Camoufox (Firefox), profile có thể chạy trên nhân **Chrome**: một bản Chromium đã vá vân tay ở tầng C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)). Chọn ở ô **Nhân trình duyệt** khi tạo profile; không đổi được sau khi tạo. Bản trình duyệt (~140-190 MB tuỳ hệ điều hành) được tự tải ở nền ngay khi tạo profile Chrome đầu tiên, hoặc lúc mở profile nếu chưa có; tiến độ hiện trong log. Muốn tải trước bằng tay: `python -m chrome_engine fetch`.
 
 Nên chọn đúng hệ điều hành của máy đang chạy FoxProfile: persona khác hệ điều hành sẽ lộ font của máy, và persona Linux trên Windows/macOS bị từ chối vì WebGL lộ GPU thật. Hỗ trợ Windows x64, macOS Apple Silicon và Linux x64 (chưa kiểm chứng). Chi tiết và kết quả kiểm thử: [chrome_engine/README.md](chrome_engine/README.md).
 

@@ -19,6 +19,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from chrome_engine import fetch
 from chrome_engine.engine import ChromeEngine
 from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
 from src.services.browser import control, session
@@ -39,6 +40,29 @@ def _compact(exc: BaseException, limit: int = 220) -> str:
     text = " ".join(str(exc).split())
     text = text.split("Call log:", 1)[0].strip()
     return text[:limit] + ("..." if len(text) > limit else "")
+
+
+def _install_progress() -> fetch.Progress:
+    """Report download progress every 10% (the launcher shows these lines in the log)."""
+    last = -1
+
+    def report(done: int, total: int) -> None:
+        nonlocal last
+        pct = done * 100 // total if total else 0
+        if pct // 10 != last // 10:
+            last = pct
+            _say(f"Downloading Chrome engine: {pct}% ({done / 1e6:.0f}/{total / 1e6:.0f} MB)")
+
+    return report
+
+
+async def ensure_installed() -> None:
+    """Download the pinned browser build on first use."""
+    if fetch.installed_executable():
+        return
+    _say("Chrome engine is not installed yet; downloading it once...")
+    await asyncio.to_thread(fetch.install, progress=_install_progress())
+    _say("Chrome engine installed")
 
 
 def _headless() -> bool:
@@ -66,6 +90,7 @@ async def run_browser(
     )
     _say(f"Starting Chrome engine for {profile_name}...")
     try:
+        await ensure_installed()
         context = await engine.start()
     except asyncio.CancelledError:
         _say("LAUNCH_CANCELLED")

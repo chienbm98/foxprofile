@@ -10,7 +10,7 @@ from fastapi.responses import PlainTextResponse
 from ...core.config import DATA_DIR
 from ...core.logging import get_logger
 from ...models.profile import ENGINES
-from ...services.browser import cookies, fingerprint
+from ...services.browser import chrome_prefetch, cookies, fingerprint
 from ...services.browser.launcher import ProfileBusyError
 from ...services.proxy.geo_check import check_geo
 from ...utils.validation import (
@@ -116,6 +116,8 @@ def create_profile(
         raise HTTPException(status_code=409, detail="Profile already exists")
 
     logger.info("API created profile: %s", body.name)
+    if body.engine == "chrome":
+        chrome_prefetch.start()
     bus.emit()
     return build_profile_response(body.name, pm, bl)
 

@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import urllib.request
 import zipfile
 from collections.abc import Callable
@@ -78,13 +79,66 @@ def install(
         return existing
     asset = release.asset_for(host or host_platform())
     home.mkdir(parents=True, exist_ok=True)
-    archive = home / f"{release.version}.{asset.kind}.part"
+    _remove_stale_parts(home)
+    waited = _wait_for_other_download(release, asset, home, progress)
+    if waited:
+        return waited
+    # Per-process name: FoxProfile prefetches while a runner may be installing too.
+    archive = home / f"{release.version}.{asset.kind}.{os.getpid()}.part"
     try:
         download(asset, archive, progress)
         return unpack(release, asset, archive, home)
     finally:
         with contextlib.suppress(OSError):
             archive.unlink()
+
+
+# A download in progress writes every chunk; one untouched this long was killed.
+_STALE_PART_SECONDS = 600
+# Another process's download counts as live while it wrote this recently.
+_STALE_DOWNLOAD_SECONDS = 60
+_POLL_SECONDS = 1.0
+
+
+def _remove_stale_parts(home: Path) -> None:
+    now = time.time()
+    for part in home.glob("*.part"):
+        with contextlib.suppress(OSError):
+            if now - part.stat().st_mtime > _STALE_PART_SECONDS:
+                part.unlink()
+
+
+def _wait_for_other_download(
+    release: Release, asset: Asset, home: Path, progress: Progress | None
+) -> Path | None:
+    """If another process is downloading this build, wait for it instead of downloading twice.
+
+    Returns its executable once installed, or None when there is no live download
+    (none, or it stalled or failed) and this process should download itself.
+    """
+    prefix = f"{release.version}.{asset.kind}."
+    waited = False
+    while True:
+        exe = installed_executable(release.version, home)
+        if exe:
+            return exe
+        now = time.time()
+        live = []
+        for part in home.glob(f"{prefix}*.part"):
+            with contextlib.suppress(OSError):
+                st = part.stat()
+                if now - st.st_mtime < _STALE_DOWNLOAD_SECONDS:
+                    live.append(st.st_size)
+        if not live:
+            if not waited:
+                return None
+            # The download we waited for just ended; give its unpack a moment.
+            time.sleep(_POLL_SECONDS)
+            return installed_executable(release.version, home)
+        waited = True
+        if progress:
+            progress(min(max(live), asset.size), asset.size)
+        time.sleep(_POLL_SECONDS)
 
 
 def download(asset: Asset, dest: Path, progress: Progress | None = None) -> None:
@@ -130,6 +184,11 @@ def unpack(release: Release, asset: Asset, archive: Path, home: Path) -> Path:
         exe = _locate_executable(staging, asset.executable)
         _make_executable(exe)
         relative = exe.relative_to(staging).as_posix()
+        # Another process finished first: keep its copy, which may already be running.
+        finished = installed_executable(release.version, home)
+        if finished:
+            shutil.rmtree(staging, ignore_errors=True)
+            return finished
         (staging / MARKER).write_text(
             json.dumps(
                 {"version": release.version, "sha256": asset.sha256, "executable": relative}

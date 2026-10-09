@@ -93,3 +93,34 @@ def test_fingerprint_summary_reads_the_chrome_persona(tmp_path):
     assert fingerprint.reset(str(tmp_path))
     assert not (tmp_path / fingerprint.CHROME_PERSONA_FILE).exists()
     assert fingerprint.summary(str(tmp_path)) is None
+
+
+def test_prefetch_skips_an_installed_engine(monkeypatch):
+    from src.services.browser import chrome_prefetch
+
+    monkeypatch.setattr(chrome_prefetch, "is_installed", lambda: True)
+    assert chrome_prefetch.start() is False
+
+
+def test_prefetch_runs_once_at_a_time(monkeypatch):
+    import threading
+
+    from chrome_engine import fetch
+    from src.services.browser import chrome_prefetch
+
+    release = threading.Event()
+    calls = []
+
+    def fake_install():
+        calls.append(1)
+        release.wait(5)
+
+    monkeypatch.setattr(chrome_prefetch, "is_installed", lambda: False)
+    monkeypatch.setattr(fetch, "install", fake_install)
+    logs = []
+    assert chrome_prefetch.start(logs.append) is True
+    assert chrome_prefetch.start(logs.append) is False
+    release.set()
+    chrome_prefetch._thread.join(5)
+    assert calls == [1]
+    assert len(logs) == 2  # downloading..., ready

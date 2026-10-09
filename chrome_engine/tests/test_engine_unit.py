@@ -223,3 +223,31 @@ def test_start_twice_is_refused(tmp_path):
     eng.context = object()
     with pytest.raises(EngineError, match="already running"):
         asyncio.run(eng.start())
+
+
+def test_runner_installs_the_engine_on_first_launch(monkeypatch, capsys):
+    import asyncio
+
+    from chrome_engine import fetch, runner
+
+    installed = []
+    monkeypatch.setattr(
+        fetch, "installed_executable", lambda *a, **k: installed[0] if installed else None
+    )
+
+    def fake_install(progress=None):
+        for done in (0, 50, 100, 100, 100):
+            progress(done, 100)
+        installed.append("chrome")
+        return "chrome"
+
+    monkeypatch.setattr(fetch, "install", fake_install)
+    asyncio.run(runner.ensure_installed())
+    out = capsys.readouterr().out
+    assert "downloading it once" in out
+    assert out.count("Downloading Chrome engine: 100%") == 1
+    assert "Chrome engine installed" in out
+
+    # Already installed: nothing is printed or downloaded.
+    asyncio.run(runner.ensure_installed())
+    assert capsys.readouterr().out == ""

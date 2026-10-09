@@ -1,7 +1,9 @@
 import hashlib
 import io
 import json
+import os
 import tarfile
+import time
 import zipfile
 
 import pytest
@@ -172,3 +174,65 @@ def test_old_python_extraction_skips_links(tmp_path, fake_release, monkeypatch):
     assert exe.read_bytes() == b"#!"
     assert not (exe.parent / "escape").exists()
     assert not (exe.parent / "escape").is_symlink()
+
+
+def test_unpack_keeps_a_copy_another_process_finished_first(tmp_path, fake_release):
+    archive = tmp_path / "b.zip"
+    _zip(archive, {"chrome-win/chrome.exe": b"MZ"})
+    rel = fake_release(_release(archive, "zip", "chrome-win/chrome.exe"))
+    home = tmp_path / "home"
+    first = fetch.install(rel.version, home=home, host="test")
+    (first.parent / "in-use").write_text("running")
+    # A second installer that downloaded in parallel must not replace it.
+    again = fetch.unpack(rel, rel.assets["test"], archive, home)
+    assert again == first
+    assert (first.parent / "in-use").exists()
+    assert [p.name for p in home.iterdir() if p.name.startswith(".")] == []
+
+
+def test_install_removes_stale_partial_downloads(tmp_path, fake_release):
+    archive = tmp_path / "b.zip"
+    _zip(archive, {"chrome-win/chrome.exe": b"MZ"})
+    rel = fake_release(_release(archive, "zip", "chrome-win/chrome.exe"))
+    home = tmp_path / "home"
+    home.mkdir()
+    stale, fresh = home / "1.0.0.zip.111.part", home / "1.0.0.zip.222.part"
+    stale.write_bytes(b"x")
+    fresh.write_bytes(b"x")
+    old = time.time() - fetch._STALE_PART_SECONDS - 60
+    os.utime(stale, (old, old))
+    # Stalled (not a live download to wait for) but too recent to delete.
+    stalled = time.time() - fetch._STALE_DOWNLOAD_SECONDS - 60
+    os.utime(fresh, (stalled, stalled))
+    fetch.install(rel.version, home=home, host="test")
+    assert not stale.exists()
+    assert fresh.exists()
+
+
+def test_install_waits_for_a_live_download_by_another_process(tmp_path, fake_release, monkeypatch):
+    import threading
+
+    archive = tmp_path / "b.zip"
+    _zip(archive, {"chrome-win/chrome.exe": b"MZ"})
+    rel = fake_release(_release(archive, "zip", "chrome-win/chrome.exe"))
+    home = tmp_path / "home"
+    home.mkdir()
+    other = home / "1.0.0.zip.999.part"
+    other.write_bytes(b"x" * 10)
+    monkeypatch.setattr(fetch, "_POLL_SECONDS", 0.05)
+
+    def finish_other():
+        time.sleep(0.3)
+        fetch.unpack(rel, rel.assets["test"], archive, home)
+        other.unlink()
+
+    downloads = []
+    monkeypatch.setattr(fetch, "download", lambda *a, **k: downloads.append(1))
+    threading.Thread(target=finish_other).start()
+    progress = []
+    exe = fetch.install(
+        rel.version, home=home, host="test", progress=lambda d, t: progress.append(d)
+    )
+    assert exe == home / "1.0.0" / "chrome-win" / "chrome.exe"
+    assert downloads == []  # waited instead of downloading again
+    assert progress and progress[0] == 10

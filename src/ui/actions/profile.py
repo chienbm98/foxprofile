@@ -4,6 +4,7 @@ import flet as ft
 
 from ...core.strings import get_string
 from ...interfaces.protocols import IBrowserLauncher, IProfileManager, IProxyService
+from ...services.browser import chrome_prefetch
 from ..dialogs import open_confirm_dialog, open_profile_dialog
 
 
@@ -62,6 +63,8 @@ def add_profile(
     ) -> str | None:
         if pm.add_profile(name, proxy, os_type, timezone, locale, engine):
             log(get_string("created_profile", name=name))
+            if engine == "chrome":
+                chrome_prefetch.start(log)
             refresh()
             return None
         return get_string("profile_exists")
