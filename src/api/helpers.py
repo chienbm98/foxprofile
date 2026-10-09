@@ -12,12 +12,16 @@ from .schemas.profiles import ProfileResponse
 
 if TYPE_CHECKING:
     from ..interfaces import IBrowserLauncher, IProfileManager
+    from ..models.profile import Profile
 
 
-def require_profile(name: str, pm: IProfileManager) -> None:
-    """Raise 404 if the profile does not exist."""
-    if name not in pm.profiles:
+def require_profile(name: str, pm: IProfileManager) -> Profile:
+    """The profile, or 404. Use the returned object rather than indexing
+    pm.profiles again: a concurrent delete can remove it in between."""
+    profile = pm.profiles.get(name)
+    if profile is None:
         raise HTTPException(status_code=404, detail=f"Profile '{name}' not found")
+    return profile
 
 
 def build_profile_response(
@@ -26,8 +30,10 @@ def build_profile_response(
     bl: IBrowserLauncher,
 ) -> ProfileResponse:
     """Build a ProfileResponse DTO for the given profile name."""
-    profile = pm.profiles[name]
-    data_dir = os.path.join(os.getcwd(), DATA_DIR, name)
+    return profile_response(require_profile(name, pm), bl)
+
+
+def profile_response(profile: Profile, bl: IBrowserLauncher) -> ProfileResponse:
     return ProfileResponse(
         name=profile.name,
         proxy=profile.proxy,
@@ -35,6 +41,6 @@ def build_profile_response(
         timezone=profile.timezone,
         locale=profile.locale,
         engine=profile.engine,
-        data_dir=data_dir,
-        is_running=bl.is_running(name),
+        data_dir=os.path.join(os.getcwd(), DATA_DIR, profile.name),
+        is_running=bl.is_running(profile.name),
     )

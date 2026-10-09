@@ -116,3 +116,9 @@ def test_percent_encoded_blocked_schemes(url):
     """Percent-encoded disallowed schemes must be caught before scheme detection."""
     with pytest.raises(ControlError):
         _check_url(url)
+
+
+@pytest.mark.parametrize("url", ["[", "[]", "[::1", "http://[::1"])
+def test_malformed_url_is_a_control_error(url):
+    with pytest.raises(ControlError):
+        _check_url(url)

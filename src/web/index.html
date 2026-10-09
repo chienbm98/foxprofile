@@ -923,9 +923,13 @@ function openCookies(p) {
           : h("div", { class: "note calm" }, icon("fingerprint", true), h("span", {}, t("no_fp"))));
     };
     renderFp();
+    const actions = [];
     const run = async (fn) => {
+      if (actions.some((b) => b.disabled)) return;
+      actions.forEach((b) => (b.disabled = true));
       msg.className = "msg info"; msg.textContent = t("working");
       try { await fn(); msg.textContent = ""; } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+      finally { actions.forEach((b) => (b.disabled = false)); }
     };
     const exportAs = (format) => run(async () => {
       const res = await api("GET", `/profiles/${enc(p.name)}/cookies?format=${format}`, undefined, { raw: true });
@@ -940,7 +944,11 @@ function openCookies(p) {
       if (!r.success) throw new Error(r.error);
       toast(t("imported", { n: r.imported }));
     }) });
-    const choice = (iconName, title, sub, fn) => h("button", { type: "button", onclick: fn }, icon(iconName), h("div", {}, h("b", {}, title), h("span", {}, sub)));
+    const choice = (iconName, title, sub, fn) => {
+      const b = h("button", { type: "button", onclick: fn }, icon(iconName), h("div", {}, h("b", {}, title), h("span", {}, sub)));
+      actions.push(b);
+      return b;
+    };
     return h("div", {},
       modalHead(t("cookies"), `${p.name} · ${t("cookie_hint")}`, close),
       h("div", { class: "modal-body" },

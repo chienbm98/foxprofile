@@ -75,11 +75,9 @@ def launch_browser(
     bl: IBrowserLauncher = Depends(get_browser_launcher),
     bus: EventBus = Depends(get_event_bus),
 ) -> LaunchResponse:
-    require_profile(name, pm)
+    profile = require_profile(name, pm)
     if bl.is_running(name):
         raise HTTPException(status_code=409, detail="Browser already running")
-
-    profile = pm.profiles[name]
 
     def _on_ready() -> None:
         bus.emit()

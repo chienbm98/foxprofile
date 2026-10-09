@@ -30,12 +30,8 @@ _SCHEME = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]*):(.*)$", re.S)
 
 def _check_url(url: str) -> str:
     url = url.strip()
-    # Guard against percent-encoded scheme bypasses such as "%66ile:///C:/x"
-    # (decodes to "file:///C:/x") or "java%73cript:alert(1)" ("javascript:...").
-    # The _SCHEME regex only matches ASCII letters, so those inputs fall through
-    # to the "prepend https://" branch and sneak past the scheme check.
-    # Fix: if the token before the first ":" (and before any "/") contains "%",
-    # percent-decode it and reject disallowed schemes immediately.
+    # "%66ile:" or "java%73cript:" would miss _SCHEME and get https:// prepended;
+    # decode a percent-encoded scheme and check it like any other.
     colon = url.find(":")
     slash = url.find("/")
     if colon != -1 and "%" in url[:colon] and (slash == -1 or colon < slash):
@@ -47,7 +43,10 @@ def _check_url(url: str) -> str:
     # "localhost:8080/x" looks like a scheme but is host:port; bare hosts get https.
     if not match or re.match(r"\d+(/|$)", match.group(2)):
         url = "https://" + url
-    scheme = urlparse(url).scheme.lower()
+    try:
+        scheme = urlparse(url).scheme.lower()
+    except ValueError as e:  # e.g. an unclosed IPv6 bracket: "[::1"
+        raise ControlError(f"Malformed URL: {e}") from e
     if scheme not in ALLOWED_SCHEMES:
         # file:, view-source:, chrome: etc. would let a remote caller read
         # local files or browser internals through the snapshot.

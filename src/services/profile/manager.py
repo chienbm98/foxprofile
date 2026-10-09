@@ -4,6 +4,7 @@ import os
 import pathlib
 import shutil
 import threading
+import time
 
 from ...core.config import DATA_DIR, PROFILES_FILE
 from ...core.logging import get_logger
@@ -21,6 +22,19 @@ logger = get_logger("profile.manager")
 
 def _engine_or_default(value: object) -> str:
     return value if value in ENGINES else "camoufox"
+
+
+def _replace(src: pathlib.Path, dst: pathlib.Path, attempts: int = 10) -> None:
+    """os.replace, retried briefly: on Windows it fails with a sharing violation
+    while another process (antivirus, indexer, a reader) has the target open."""
+    for i in range(attempts):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if i == attempts - 1:
+                raise
+            time.sleep(0.02 * (i + 1))
 
 
 class ProfileManager:
@@ -80,7 +94,7 @@ class ProfileManager:
                 ),
                 encoding="utf-8",
             )
-            os.replace(tmp, path)
+            _replace(tmp, path)
             logger.debug("Profiles saved")
         except Exception as e:
             logger.exception("Error saving profiles: %s", e)
@@ -189,9 +203,10 @@ class ProfileManager:
                 return False
             del self.profiles[name]
             self.save_profiles()
-            data_path = self._data_path(name)
-        # rmtree outside the lock to avoid holding it during slow I/O
-        shutil.rmtree(data_path, ignore_errors=True)
+            # Inside the lock: a profile re-created under the same (or, on a
+            # case-insensitive file system, a case-variant) name must not have
+            # its fresh data dir removed by this delete.
+            shutil.rmtree(self._data_path(name), ignore_errors=True)
         logger.info("Deleted profile: %s", name)
         return True
 

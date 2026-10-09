@@ -393,3 +393,39 @@ class TestCaseInsensitiveUniqueness:
         pm, _ = manager_in_tmp
         assert pm.add_profile("alpha", "", "windows") is True
         assert pm.add_profile("beta", "", "windows") is True
+
+
+class TestDeleteRace:
+    def test_rmtree_runs_under_the_lock(self, manager_in_tmp, monkeypatch):
+        """A concurrent add of the same name must wait until the old data dir
+        is gone, or the delete removes the new profile's directory."""
+        pm, _ = manager_in_tmp
+        pm.add_profile("racer", "", "windows")
+        import src.services.profile.manager as mgr_mod
+
+        real_rmtree = mgr_mod.shutil.rmtree
+        held = []
+
+        def rmtree(path, ignore_errors=False):
+            t = threading.Thread(target=lambda: held.append(not pm._lock.acquire(timeout=0)))
+            t.start()
+            t.join()
+            real_rmtree(path, ignore_errors=ignore_errors)
+
+        monkeypatch.setattr(mgr_mod.shutil, "rmtree", rmtree)
+        assert pm.delete_profile("racer")
+        assert held == [True]
+
+
+class TestRequireProfile:
+    def test_returns_profile_or_404(self, manager_in_tmp):
+        from fastapi import HTTPException
+
+        from src.api.helpers import require_profile
+
+        pm, _ = manager_in_tmp
+        pm.add_profile("here", "", "windows")
+        assert require_profile("here", pm).name == "here"
+        with pytest.raises(HTTPException) as e:
+            require_profile("gone", pm)
+        assert e.value.status_code == 404
