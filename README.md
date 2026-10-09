@@ -42,6 +42,7 @@ FoxProfile quản lý các profile trình duyệt chống phát hiện: mỗi pr
 - [Đóng góp](#đóng-góp)
 - [Lưu ý sử dụng](#lưu-ý-sử-dụng)
 - [Giấy phép](#giấy-phép)
+- [Ghi công](#ghi-công)
 
 ## Tính năng
 
@@ -51,7 +52,7 @@ FoxProfile quản lý các profile trình duyệt chống phát hiện: mỗi pr
 - **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, kể cả dạng `host:port:user:pass`, có nút kiểm tra proxy.
 - **Timezone và locale** tự khớp theo IP hoặc đặt cố định cho từng profile. Nút **Kiểm tra IP** đối chiếu IP ra với Cloudflare, ipinfo, ip-api và cảnh báo khi lệch quốc gia/timezone hoặc IP bị gắn datacenter.
 - **Xuất/nhập cookie** dạng JSON Cookie-Editor / EditThisCookie (GoLogin, GPM, Multilogin, extension Cookie-Editor) và `cookies.txt` Netscape (yt-dlp, curl, wget).
-- **Xuất/nhập cả profile** ra file ZIP để chuyển sang máy khác, có hoặc không kèm dữ liệu trình duyệt. Vân tay luôn đi kèm.
+- **Xuất/nhập cả profile** ra file ZIP để chuyển sang máy khác, có hoặc không kèm dữ liệu trình duyệt. Fingerprint luôn đi kèm.
 - **Bảng profile dễ quét**: mỗi dòng cho thấy engine, thiết bị đang giả lập, proxy (đã ẩn mật khẩu), timezone/locale và trạng thái. Trạng thái phân biệt bằng cả hình lẫn màu: dấu tím viền kép kèm giờ mở là đang chạy, viền xám là đang mở, dấu đỏ gạch ngang là mở lỗi.
 - **Lọc và tìm kiếm**: lọc theo đang chạy, có/không proxy, engine Chrome (kèm số đếm); tìm theo tên hoặc proxy.
 - **Thao tác hàng loạt**: chọn nhiều profile để mở, dừng hoặc xóa cùng lúc.
@@ -104,14 +105,14 @@ Trong hộp thoại tạo/sửa profile có hai ô **Timezone** (tên IANA, ví 
 
 ## Chế độ server và web panel
 
-Không cần cửa sổ desktop: chỉ chạy API và web panel, trình duyệt chạy ẩn. Phù hợp để chạy trên VPS.
+Không cần cửa sổ desktop: chỉ chạy API và web panel, trình duyệt chạy headless. Phù hợp để chạy trên VPS.
 
 ```bash
 python -m src.server                     # http://127.0.0.1:8000
 python -m src.server --host 0.0.0.0      # mở ra mạng: BẮT BUỘC đặt token
 ```
 
-Mở `http://<địa-chỉ>:8000/` để vào **web panel**: cùng bảng profile, bộ lọc và thao tác hàng loạt như app desktop; tạo, sửa, mở/dừng profile, xuất/nhập cookie và **xem màn hình từ xa**. Bạn có thể bấm thẳng lên ảnh màn hình và gõ phím để tự đăng nhập hay giải captcha, kể cả khi trình duyệt đang chạy ẩn trên server.
+Mở `http://<địa-chỉ>:8000/` để vào **web panel**: cùng bảng profile, bộ lọc và thao tác hàng loạt như app desktop; tạo, sửa, mở/dừng profile, xuất/nhập cookie và **xem màn hình từ xa**. Bạn có thể bấm thẳng lên ảnh màn hình và gõ phím để tự đăng nhập hay giải captcha, kể cả khi trình duyệt đang chạy headless trên server.
 
 | Web panel | Xem màn hình từ xa |
 | --- | --- |
@@ -173,7 +174,7 @@ Nên chọn đúng hệ điều hành của máy đang chạy FoxProfile: person
 
 ![Cookie & fingerprint](docs/images/cookies.png)
 
-Bấm nút cookie trên dòng profile để mở hộp thoại **Cookie & fingerprint**. **Trình duyệt của profile phải đang tắt**, vì FoxProfile mở profile ở chế độ ẩn để đọc và ghi cookie.
+Bấm nút cookie trên dòng profile để mở hộp thoại **Cookie & fingerprint**. **Trình duyệt của profile phải đang tắt**, vì FoxProfile mở profile ở chế độ headless để đọc và ghi cookie.
 
 - Cookie phiên (session) khi nhập vào sẽ được đặt hạn 1 năm. Nếu không, trình duyệt sẽ xóa chúng ngay khi đóng.
 - "Tạo fingerprint mới" xóa fingerprint đã lưu; lần mở sau profile sẽ là một thiết bị khác. Đổi hệ điều hành của profile cũng tự sinh fingerprint mới.
@@ -233,7 +234,7 @@ Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang ch
 | `GET` | `/profiles/{name}/ip-check` | Kiểm tra IP ra của profile: quốc gia, timezone theo Cloudflare/ipinfo/ip-api, cảnh báo lệch |
 | `GET` | `/browser` | Danh sách profile đang chạy |
 | `GET` | `/browser/{name}/status` | Profile có đang chạy không |
-| `POST` | `/browser/{name}/launch` | Mở trình duyệt, chờ đến khi mở xong hoặc lỗi (409 nếu đang chạy) |
+| `POST` | `/browser/{name}/launch` | Mở trình duyệt, chờ đến khi mở xong hoặc lỗi (409 nếu đang chạy hoặc đang bận) |
 | `POST` | `/browser/{name}/stop` | Đóng trình duyệt |
 | `POST` | `/proxy/check` | Kiểm tra proxy |
 | `POST` | `/proxy/geo-check` | Như `ip-check` cho tổ hợp `{proxy, timezone, locale}` chưa lưu |
@@ -243,7 +244,8 @@ Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang ch
 | `POST` | `/browser/{name}/page/click-at` · `keyboard` | Click theo tọa độ, gõ vào ô đang chọn |
 | `GET` | `/browser/{name}/page/screenshot` | Ảnh PNG của tab (`?format=json` để nhận base64) |
 | `POST` | `/browser/{name}/page/evaluate` | Chạy JavaScript |
-| `GET` / `POST` / `DELETE` | `/browser/{name}/page/tabs` | Quản lý tab |
+| `GET` / `POST` | `/browser/{name}/page/tabs` | Liệt kê / mở tab mới |
+| `POST` / `DELETE` | `/browser/{name}/page/tabs/{index}/select` · `/page/tabs/{index}` | Chọn / đóng tab |
 | `GET` | `/mcp/setup?base_url=...` | Cấu hình MCP cho từng ứng dụng AI (dùng bởi hộp thoại Kết nối AI) |
 
 Khi có `FOXPROFILE_API_TOKEN`, mọi request (trừ `/health` và `/info`) phải gửi header `Authorization: Bearer <token>`.

@@ -42,6 +42,7 @@ FoxProfile manages anti-detect browser profiles: each profile is a separate iden
 - [Contributing](#contributing)
 - [Responsible use](#responsible-use)
 - [License](#license)
+- [Acknowledgements](#acknowledgements)
 
 ## Features
 
@@ -233,7 +234,7 @@ Prefix `/api/v1`. The full reference is at `/docs` while the app is running.
 | `GET` | `/profiles/{name}/ip-check` | Where Cloudflare/ipinfo/ip-api place the profile's exit IP, with mismatch warnings |
 | `GET` | `/browser` | Running profiles |
 | `GET` | `/browser/{name}/status` | Whether the profile is running |
-| `POST` | `/browser/{name}/launch` | Launch and wait until ready or failed (409 if already running) |
+| `POST` | `/browser/{name}/launch` | Launch and wait until ready or failed (409 if already running or busy) |
 | `POST` | `/browser/{name}/stop` | Stop |
 | `POST` | `/proxy/check` | Check a proxy |
 | `POST` | `/proxy/geo-check` | Same as `ip-check` for an unsaved `{proxy, timezone, locale}` |
@@ -243,7 +244,8 @@ Prefix `/api/v1`. The full reference is at `/docs` while the app is running.
 | `POST` | `/browser/{name}/page/click-at` · `keyboard` | Click at coordinates, type into the focused element |
 | `GET` | `/browser/{name}/page/screenshot` | PNG of the tab (`?format=json` for base64) |
 | `POST` | `/browser/{name}/page/evaluate` | Run JavaScript |
-| `GET` / `POST` / `DELETE` | `/browser/{name}/page/tabs` | Manage tabs |
+| `GET` / `POST` | `/browser/{name}/page/tabs` | List tabs / open a new tab |
+| `POST` / `DELETE` | `/browser/{name}/page/tabs/{index}/select` · `/page/tabs/{index}` | Select / close a tab |
 | `GET` | `/mcp/setup?base_url=...` | MCP configs for each AI app (used by the Connect AI dialog) |
 
 With `FOXPROFILE_API_TOKEN` set, every request except `/health` and `/info` needs `Authorization: Bearer <token>`.
