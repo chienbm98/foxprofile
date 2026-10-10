@@ -8,6 +8,8 @@ stdout as "CONTROL:<port>:<token>" so the launcher can forward API calls.
 from __future__ import annotations
 
 import base64
+import os
+import pathlib
 import re
 import secrets
 from typing import Any
@@ -15,10 +17,18 @@ from urllib.parse import unquote, urlparse
 
 from aiohttp import web
 
+from ...core.config import UPLOAD_DIR
+
 ALLOWED_SCHEMES = ("http", "https", "about")
 MAX_FULL_PAGE_HEIGHT = 16_384
 MAX_TEXT = 40_000
 TOKEN_HEADER = "X-Control-Token"
+ALLOWED_UPLOAD_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".mov", ".webm"}
+MAX_UPLOAD_BYTES = 512 * 1024 * 1024
+# Roles an agent can act on; `snapshot(interactive_only=True)` keeps only these lines.
+_INTERACTIVE = re.compile(
+    r"^\s*- (button|link|textbox|searchbox|combobox|checkbox|radio|switch|tab|menuitem|option|slider)\b",
+)
 
 
 class ControlError(Exception):
@@ -60,6 +70,30 @@ def _check_url(url: str) -> str:
         # about:config, about:logins etc. expose or change browser internals.
         raise ControlError("Only about:blank is allowed among about: pages")
     return url
+
+
+def _check_upload(paths: list[str]) -> list[str]:
+    """Resolve upload paths, refusing anything outside the upload directory.
+
+    A page can ask an agent to "attach" a file; confining uploads to one folder
+    keeps cookies and other private files out of reach.
+    """
+    if not paths:
+        raise ControlError("Give at least one file to upload")
+    root = pathlib.Path(os.getcwd(), UPLOAD_DIR).resolve()
+    resolved = []
+    for raw in paths:
+        path = pathlib.Path(os.getcwd(), raw).resolve()
+        if not path.is_relative_to(root):
+            raise ControlError(f"'{raw}' is outside the upload directory {UPLOAD_DIR}")
+        if not path.is_file():
+            raise ControlError(f"'{raw}' not found")
+        if path.suffix.lower() not in ALLOWED_UPLOAD_EXT:
+            raise ControlError(f"File type '{path.suffix}' is not allowed for upload")
+        if path.stat().st_size > MAX_UPLOAD_BYTES:
+            raise ControlError(f"'{raw}' is larger than {MAX_UPLOAD_BYTES // (1024 * 1024)} MB")
+        resolved.append(str(path))
+    return resolved
 
 
 def _truncate(text: str, limit: int) -> tuple[str, bool]:
@@ -105,10 +139,18 @@ class PageController:
         await page.go_back()
         return await self._describe(page)
 
-    async def snapshot(self, max_chars: int = MAX_TEXT) -> dict[str, Any]:
-        """Accessibility tree of the page: roles, names and text, compact."""
+    async def snapshot(
+        self, max_chars: int = MAX_TEXT, interactive_only: bool = False
+    ) -> dict[str, Any]:
+        """Accessibility tree of the page: roles, names and text, compact.
+
+        `interactive_only` keeps just the controls an agent can act on, which is
+        usually a fraction of the tokens of the full tree.
+        """
         page = await self._page()
         aria = await page.locator("body").aria_snapshot()
+        if interactive_only:
+            aria = "\n".join(line for line in aria.splitlines() if _INTERACTIVE.match(line))
         aria, truncated = _truncate(aria, max_chars)
         return {**await self._describe(page), "snapshot": aria, "truncated": truncated}
 
@@ -165,6 +207,39 @@ class PageController:
         page = await self._page()
         await page.locator(selector).first.wait_for(timeout=timeout)
         return await self._describe(page)
+
+    async def wait_for_url(self, pattern: str, timeout: int = 15_000) -> dict[str, Any]:
+        """Wait until the active tab's URL contains `pattern`."""
+        page = await self._page()
+        await page.wait_for_url(f"**{pattern}**", timeout=timeout)
+        return await self._describe(page)
+
+    async def wait_for_text(self, text: str, timeout: int = 15_000) -> dict[str, Any]:
+        page = await self._page()
+        await page.get_by_text(text).first.wait_for(timeout=timeout)
+        return await self._describe(page)
+
+    async def scroll(self, dy: int = 600, to: str | None = None) -> dict[str, Any]:
+        """Scroll by `dy` pixels with the mouse wheel, or jump `to` the top or bottom."""
+        page = await self._page()
+        if to == "top":
+            await page.evaluate("window.scrollTo(0, 0)")
+        elif to == "bottom":
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        elif to is None:
+            await page.mouse.wheel(0, dy)
+        else:
+            raise ControlError("Scroll 'to' must be 'top' or 'bottom'")
+        return await self._describe(page)
+
+    async def upload(
+        self, selector: str, paths: list[str], timeout: int = 15_000
+    ) -> dict[str, Any]:
+        """Set files on a file input, hidden ones included; files must be in the upload directory."""
+        files = _check_upload(paths)
+        page = await self._page()
+        await page.locator(selector).first.set_input_files(files, timeout=timeout)
+        return {**await self._describe(page), "uploaded": len(files)}
 
     async def screenshot(self, full_page: bool = False) -> dict[str, Any]:
         page = await self._page()
@@ -228,6 +303,10 @@ class PageController:
         "click_at",
         "keyboard_type",
         "wait_for",
+        "wait_for_url",
+        "wait_for_text",
+        "scroll",
+        "upload",
         "screenshot",
         "evaluate",
         "tabs",

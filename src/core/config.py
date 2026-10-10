@@ -15,6 +15,9 @@ def _env(key: str, default: str) -> str:
 
 PROFILES_FILE = _env("PROFILES_FILE", "profiles.json")
 DATA_DIR = _env("DATA_DIR", "camoufox_data")
+# Page uploads may only read files from here, so a page cannot trick an agent into
+# uploading cookies or other private files.
+UPLOAD_DIR = os.getenv("TQD_UPLOAD_DIR", "media_outbox")
 LOG_DIR = _env("LOG_DIR", "logs")
 LOG_LEVEL = _env("LOG_LEVEL", "INFO")
 PROXY_CHECK_TIMEOUT = int(_env("PROXY_TIMEOUT", "10"))

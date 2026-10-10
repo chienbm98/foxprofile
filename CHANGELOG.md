@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### Thêm
+- Điều khiển trang: upload file vào ô chọn file (kể cả ô ẩn) qua `POST /page/upload` và MCP `browser_upload`; chỉ nhận file nằm trong thư mục `media_outbox` (đổi bằng `TQD_UPLOAD_DIR`), từ chối file ngoài thư mục, file thiếu và định dạng không phải ảnh/video.
+- Chờ URL hoặc chữ xuất hiện (`/page/wait-url`, `/page/wait-text`, MCP `browser_wait_for_url`, `browser_wait_for_text`) và cuộn trang (`/page/scroll`, MCP `browser_scroll`).
+- Snapshot gọn: `interactive_only=true` chỉ giữ nút, link và ô nhập, giúp agent tốn ít token hơn.
+
 ### Sửa
 - App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
 - Proxy dạng `host:port:user:pass` có `@` hoặc `:` trong mật khẩu không còn bị bỏ qua (trước đây profile mở mà không qua proxy). Chấp nhận proxy IPv6 dạng `[2001:db8::1]`; host proxy tối đa 253 ký tự.

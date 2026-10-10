@@ -190,3 +190,7 @@ e2e-output/
 .impeccable/decision/
 .impeccable/questions/
 .impeccable/mocks/
+
+# tqd-browser automation: private data, generated media, evidence
+automation_data/
+media_outbox/

@@ -51,3 +51,32 @@ class EvaluateRequest(BaseModel):
 
 class TabNewRequest(BaseModel):
     url: str | None = None
+
+
+class UploadRequest(BaseModel):
+    selector: str = Field(
+        description="File input to fill, e.g. input[type=file]; hidden inputs work"
+    )
+    paths: list[str] = Field(
+        min_length=1,
+        max_length=10,
+        description="Files inside the upload directory (TQD_UPLOAD_DIR, default media_outbox)",
+    )
+    timeout: int = Field(15_000, ge=100, le=120_000)
+
+
+class WaitUrlRequest(BaseModel):
+    pattern: str = Field(description="Text the URL must contain, e.g. /checkpoint or /me")
+    timeout: int = Field(15_000, ge=100, le=120_000)
+
+
+class WaitTextRequest(BaseModel):
+    text: str = Field(max_length=500)
+    timeout: int = Field(15_000, ge=100, le=120_000)
+
+
+class ScrollRequest(BaseModel):
+    dy: int = Field(600, ge=-20_000, le=20_000, description="Pixels to scroll down (negative: up)")
+    to: Literal["top", "bottom"] | None = Field(
+        None, description="Jump to the top or bottom instead"
+    )

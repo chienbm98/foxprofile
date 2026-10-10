@@ -17,9 +17,13 @@ from ..schemas.page import (
     KeyboardTypeRequest,
     NavigateRequest,
     PressRequest,
+    ScrollRequest,
     TabNewRequest,
     TypeRequest,
+    UploadRequest,
     WaitRequest,
+    WaitTextRequest,
+    WaitUrlRequest,
 )
 
 if TYPE_CHECKING:
@@ -58,9 +62,20 @@ def back(name: str, pm=_PM, bl=_BL) -> dict:
 
 
 @router.get("/snapshot")
-def snapshot(name: str, max_chars: int = Query(40_000, ge=500, le=200_000), pm=_PM, bl=_BL) -> dict:
-    """Accessibility tree of the active tab, the best view for choosing selectors."""
-    return _run(name, pm, bl, "snapshot", {"max_chars": max_chars})
+def snapshot(
+    name: str,
+    max_chars: int = Query(40_000, ge=500, le=200_000),
+    interactive_only: bool = False,
+    pm=_PM,
+    bl=_BL,
+) -> dict:
+    """Accessibility tree of the active tab, the best view for choosing selectors.
+
+    `interactive_only=true` keeps only buttons, links, inputs and similar controls.
+    """
+    return _run(
+        name, pm, bl, "snapshot", {"max_chars": max_chars, "interactive_only": interactive_only}
+    )
 
 
 @router.get("/text")
@@ -105,6 +120,29 @@ def keyboard_type(name: str, body: KeyboardTypeRequest, pm=_PM, bl=_BL) -> dict:
 @router.post("/wait")
 def wait_for(name: str, body: WaitRequest, pm=_PM, bl=_BL) -> dict:
     return _run(name, pm, bl, "wait_for", body.model_dump())
+
+
+@router.post("/wait-url")
+def wait_for_url(name: str, body: WaitUrlRequest, pm=_PM, bl=_BL) -> dict:
+    """Wait until the active tab's URL contains `pattern`."""
+    return _run(name, pm, bl, "wait_for_url", body.model_dump())
+
+
+@router.post("/wait-text")
+def wait_for_text(name: str, body: WaitTextRequest, pm=_PM, bl=_BL) -> dict:
+    """Wait until `text` is visible on the page."""
+    return _run(name, pm, bl, "wait_for_text", body.model_dump())
+
+
+@router.post("/scroll")
+def scroll(name: str, body: ScrollRequest, pm=_PM, bl=_BL) -> dict:
+    return _run(name, pm, bl, "scroll", body.model_dump())
+
+
+@router.post("/upload")
+def upload(name: str, body: UploadRequest, pm=_PM, bl=_BL) -> dict:
+    """Set files on a file input; files must be inside the upload directory."""
+    return _run(name, pm, bl, "upload", body.model_dump())
 
 
 @router.get("/screenshot", responses={200: {"content": {"image/png": {}}}})
