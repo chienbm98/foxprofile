@@ -1,7 +1,8 @@
 """Drive one profile's browser through the FoxProfile REST API.
 
-Reuses the MCP server's REST helpers instead of a second HTTP client. The API URL and token come
-from `FOXPROFILE_URL` / `FOXPROFILE_API_TOKEN`, read from `.env` when present.
+Reuses the MCP server's REST helpers instead of a second HTTP client. Inside the API process the
+MCP endpoint has already pointed them at the server; a standalone process (the CLI) calls
+`configure_from_env` first.
 """
 
 from __future__ import annotations
@@ -16,13 +17,17 @@ from dotenv import load_dotenv
 from src.mcp_server import server
 from src.mcp_server.server import FoxProfileError, _page, _quote
 
-load_dotenv()
-server.configure(
-    os.getenv("FOXPROFILE_URL", "http://127.0.0.1:8000"), os.getenv("FOXPROFILE_API_TOKEN", "")
-)
-
 READY_TIMEOUT = 90
 POLL_SECONDS = 2
+
+
+def configure_from_env() -> None:
+    """Use `FOXPROFILE_URL` / `FOXPROFILE_API_TOKEN`, read from `.env` when present."""
+    load_dotenv()
+    server.configure(
+        os.getenv("FOXPROFILE_URL", "http://127.0.0.1:8000"),
+        os.getenv("FOXPROFILE_API_TOKEN", ""),
+    )
 
 
 class Browser:

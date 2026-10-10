@@ -76,7 +76,7 @@ class Guards:
 
     def check(self, platform: str, profile: str, text: str) -> str | None:
         """Return why a post must not be sent now, or None when it may go."""
-        if os.getenv("TQD_AUTOMATION_DISABLED") == "1" or (self.dir / "KILL").exists():
+        if self.kill_switch():
             return "kill switch on"
         if self._lockout_file(platform, profile).exists():
             return (
@@ -86,23 +86,54 @@ class Guards:
         now = self._now().astimezone(TZ)
         sent = self._sent_posts(platform)
         mine = [p for p in sent if p["profile"] == profile]
-
-        cap = int(
-            os.getenv(f"TQD_{platform.upper()}_DAILY_CAP", DEFAULT_DAILY_CAPS.get(platform, 1))
-        )
-        if sum(p["ts"].date() == now.date() for p in mine) >= cap:
+        if sum(p["ts"].date() == now.date() for p in mine) >= _daily_cap(platform):
             return "daily cap reached"
-
-        interval = timedelta(
-            minutes=int(os.getenv("TQD_MIN_INTERVAL_MIN", DEFAULT_MIN_INTERVAL_MIN))
-        )
-        if any(now - p["ts"] < interval for p in mine):
+        if any(now - p["ts"] < _min_interval() for p in mine):
             return "too soon"
 
         digest = text_hash(text)
         if any(p["text_sha256"] == digest and now - p["ts"] < DUPLICATE_WINDOW for p in sent):
             return "duplicate text"
         return None
+
+    def kill_switch(self) -> bool:
+        return os.getenv("TQD_AUTOMATION_DISABLED") == "1" or (self.dir / "KILL").exists()
+
+    def accounts(self) -> list[tuple[str, str]]:
+        """Every (platform, profile) seen in the ledger or holding a lockout."""
+        found = {(line.get("platform"), line.get("profile")) for line in self._ledger_lines()}
+        if self.dir.is_dir():
+            for path in self.dir.glob("lockout_*"):
+                _, platform, profile = path.name.split("_", 2)
+                found.add((platform, profile))
+        return sorted(a for a in found if all(a))
+
+    def status(self, platform: str, profile: str) -> dict:
+        """What `check` would see for this account, minus the text-dependent duplicate rule."""
+        now = self._now().astimezone(TZ)
+        mine = [p for p in self._sent_posts(platform) if p["profile"] == profile]
+        sent_today = sum(p["ts"].date() == now.date() for p in mine)
+        cap = _daily_cap(platform)
+        waits = [p["ts"] + _min_interval() - now for p in mine]
+        if sent_today >= cap:
+            midnight = datetime.combine(now.date() + timedelta(days=1), datetime.min.time(), TZ)
+            waits.append(midnight - now)
+        wait = max([timedelta(0), *waits])
+        recent = [
+            line
+            for line in self._ledger_lines()
+            if (line.get("platform"), line.get("profile")) == (platform, profile)
+        ]
+        return {
+            "platform": platform,
+            "profile": profile,
+            "sent_today": sent_today,
+            "daily_cap": cap,
+            "next_allowed_in_min": -(-wait // timedelta(minutes=1)),  # rounded up
+            "locked_out": self._lockout_file(platform, profile).exists(),
+            "kill_switch": self.kill_switch(),
+            "recent": recent[-5:],
+        }
 
     def lockout(self, platform: str, profile: str, reason: str) -> None:
         path = self._lockout_file(platform, profile)
@@ -154,21 +185,26 @@ class Guards:
     def _lockout_file(self, platform: str, profile: str) -> Path:
         return self.dir / f"lockout_{platform}_{profile}"
 
-    def _sent_posts(self, platform: str) -> list[dict]:
-        """One entry per sent attempt on `platform`, timed by its first line."""
+    def _ledger_lines(self) -> list[dict]:
         path = self.dir / "post_ledger.jsonl"
         if not path.is_file():
             return []
-        attempts: dict[str, dict] = {}
+        lines = []
         for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
             try:
-                line = json.loads(raw)
+                lines.append(json.loads(raw))
             except ValueError:
                 continue  # a line cut short by a crash; it was written before any click
+        return lines
+
+    def _sent_posts(self, platform: str) -> list[dict]:
+        """One entry per sent attempt on `platform`, timed by its first line."""
+        attempts: dict[str, dict] = {}
+        for line in self._ledger_lines():
             if line.get("platform") != platform:
                 continue
             attempt = attempts.setdefault(
-                line.get("attempt_id") or raw,
+                line.get("attempt_id") or json.dumps(line),
                 {
                     "ts": datetime.fromisoformat(line["ts"]).astimezone(TZ),
                     "profile": line.get("profile"),
@@ -179,6 +215,14 @@ class Guards:
             if line.get("post_clicked") or line.get("status") == "published":
                 attempt["sent"] = True
         return [a for a in attempts.values() if a["sent"]]
+
+
+def _daily_cap(platform: str) -> int:
+    return int(os.getenv(f"TQD_{platform.upper()}_DAILY_CAP", DEFAULT_DAILY_CAPS.get(platform, 1)))
+
+
+def _min_interval() -> timedelta:
+    return timedelta(minutes=int(os.getenv("TQD_MIN_INTERVAL_MIN", DEFAULT_MIN_INTERVAL_MIN)))
 
 
 def _ends_with_newline(path: Path) -> bool:

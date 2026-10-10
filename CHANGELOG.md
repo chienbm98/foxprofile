@@ -12,6 +12,10 @@
 - Macro đăng Facebook cá nhân `tqd_automation.platforms.facebook.post(...)`: đăng chữ kèm ảnh trong một lần gọi, chọn được đối tượng "Chỉ mình tôi", chạy thử (`dry_run`) dừng trước nút Đăng, kiểm tra bài trên trang cá nhân và lưu ảnh chụp làm bằng chứng. Gặp checkpoint/captcha thì dừng và khoá; nút Đăng chỉ được bấm tối đa một lần mỗi lần gọi.
 - Macro đăng TikTok `tqd_automation.platforms.tiktok.post(...)` qua TikTok Studio: đăng ảnh (jpg/png/webp, tab Ảnh) hoặc một video kèm caption, chọn "Chỉ mình bạn", chạy thử dừng trước nút Đăng. Hộp thoại lạ sau khi bấm Đăng được báo lại, không bao giờ bấm tiếp. Phần dùng chung của các macro nằm trong `platforms/common.py`.
 - Macro đăng X `tqd_automation.platforms.x.post(...)`: chữ kèm tối đa 4 ảnh hoặc 1 video, chạy thử xoá nháp thay vì lưu, lấy link bài từ trang cá nhân. Kiểm tra độ dài theo cách X đếm (chữ tiếng Việt có dấu tính 2 ký tự); trang khoá tài khoản `/account/access` được coi là checkpoint.
+- CLI `python -m tqd_automation`: `post facebook|tiktok|x` (đọc nội dung từ file UTF-8 qua `--text-file`, in kết quả JSON; mã thoát 0 đã đăng/chạy thử/chờ duyệt, 2 bị chặn, 3 cần agent, 1 lỗi), `status` (số bài hôm nay, giới hạn, số phút tới lượt đăng kế tiếp, khoá, kill switch, 5 dòng ledger gần nhất) và `state` (Judge đánh giá trang đang mở).
+- MCP `post_facebook`, `post_tiktok`, `post_x`, `automation_status`, `page_state`. Không có tool nào gỡ khoá hay tắt kill switch; chỉ người dùng xoá các file đó.
+- `scripts/ensure-server.ps1`: bật server (`src.server --headed`, cổng 8000) nếu chưa chạy, ghi PID vào `automation_data/server.pid`, dùng lại server đang chạy thay vì mở cái thứ hai.
+- Mẫu brief nội dung `tqd_automation/content_brief.example.md` (bản dùng thật để ở `automation_data/content_brief.md`, không commit).
 
 ### Sửa
 - App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
