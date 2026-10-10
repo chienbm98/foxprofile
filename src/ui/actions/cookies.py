@@ -10,7 +10,7 @@ from ...core.strings import get_string
 from ...interfaces.protocols import IBrowserLauncher, IProfileManager
 from ...services.browser import cookies, fingerprint
 from ...services.browser.launcher import ProfileBusyError
-from ..dialogs import open_cookie_dialog
+from ..dialogs import open_confirm_dialog, open_cookie_dialog
 
 _EXTENSIONS = {"json": "json", "netscape": "txt"}
 
@@ -72,8 +72,18 @@ def manage_cookies(
         log(get_string("cookie_imported", name=name, count=count))
 
     def on_reset_fingerprint() -> None:
-        fingerprint.reset(profile_dir)
-        log(get_string("fingerprint_was_reset", name=name))
+        def _do_reset() -> None:
+            fingerprint.reset(profile_dir)
+            log(get_string("fingerprint_was_reset", name=name))
+
+        open_confirm_dialog(
+            page,
+            name,
+            _do_reset,
+            title=get_string("confirm_reset_fingerprint", name=name),
+            action_label=get_string("fingerprint_reset"),
+            action_icon=ft.Icons.FINGERPRINT,
+        )
 
     info = fingerprint.summary(profile_dir)
     fingerprint_line = (

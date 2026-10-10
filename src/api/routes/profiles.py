@@ -20,7 +20,7 @@ from ...utils.validation import (
     validate_timezone,
 )
 from ..dependencies import get_browser_launcher, get_event_bus, get_profile_manager
-from ..helpers import build_profile_response, require_profile
+from ..helpers import build_profile_response, profile_response, require_profile
 from ..schemas.common import ErrorResponse, SuccessResponse
 from ..schemas.profiles import (
     CookieImportRequest,
@@ -79,7 +79,7 @@ def list_profiles(
     pm: IProfileManager = Depends(get_profile_manager),
     bl: IBrowserLauncher = Depends(get_browser_launcher),
 ) -> ProfileListResponse:
-    profiles = [build_profile_response(p.name, pm, bl) for p in pm.list_profiles()]
+    profiles = [profile_response(p, bl) for p in pm.list_profiles()]
     return ProfileListResponse(profiles=profiles, total=len(profiles))
 
 
@@ -150,9 +150,8 @@ def update_profile(
     bl: IBrowserLauncher = Depends(get_browser_launcher),
     bus: EventBus = Depends(get_event_bus),
 ) -> ProfileResponse:
-    require_profile(name, pm)
+    profile = require_profile(name, pm)
     supplied = body.model_dump(exclude_unset=True)
-    profile = pm.profiles[name]
 
     new_name = supplied.get("name", name)
     new_proxy = supplied.get("proxy", profile.proxy)
@@ -302,13 +301,11 @@ def export_cookies(
     bl: IBrowserLauncher = Depends(get_browser_launcher),
 ) -> PlainTextResponse:
     """Export cookies as Cookie-Editor JSON or Netscape cookies.txt."""
-    require_profile(name, pm)
+    profile = require_profile(name, pm)
     _require_stopped(name, bl, "exporting cookies")
     try:
         with bl.exclusive(name):
-            text, count = cookies.export_cookies(
-                name, pm.profiles[name].os_type, format, pm.profiles[name].engine
-            )
+            text, count = cookies.export_cookies(name, profile.os_type, format, profile.engine)
     except ProfileBusyError as e:
         raise HTTPException(status_code=409, detail=_BUSY_DETAIL) from e
     except cookies.CookieError as e:
@@ -329,13 +326,11 @@ def import_cookies(
     bl: IBrowserLauncher = Depends(get_browser_launcher),
 ) -> CookieImportResponse:
     """Import cookies from JSON or Netscape text into a stopped profile."""
-    require_profile(name, pm)
+    profile = require_profile(name, pm)
     _require_stopped(name, bl, "importing cookies")
     try:
         with bl.exclusive(name):
-            count = cookies.import_cookies(
-                name, pm.profiles[name].os_type, body.content, pm.profiles[name].engine
-            )
+            count = cookies.import_cookies(name, profile.os_type, body.content, profile.engine)
     except ProfileBusyError as e:
         raise HTTPException(status_code=409, detail=_BUSY_DETAIL) from e
     except cookies.CookieError as e:
@@ -392,6 +387,5 @@ def check_profile_ip(
 
     Goes out through the profile's proxy to Cloudflare, ipinfo and ip-api (~10s).
     """
-    require_profile(name, pm)
-    profile = pm.profiles[name]
+    profile = require_profile(name, pm)
     return GeoCheckResponse.from_result(check_geo(profile.proxy, profile.timezone, profile.locale))

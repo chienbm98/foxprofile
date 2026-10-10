@@ -97,3 +97,28 @@ def test_tabs_select_and_close():
         run(c.dispatch("tab_close", {"index": 0}))
     with pytest.raises(ControlError, match="No tab"):
         run(c.dispatch("tab_select", {"index": 5}))
+
+
+# ---------------------------------------------------------------------------
+# Percent-encoded scheme bypass (fix 3)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "%66ile:///C:/Windows/win.ini",  # decodes to file:///...
+        "java%73cript:alert(1)",  # decodes to javascript:...
+        "%76iew-source:https://a.com",  # decodes to view-source:...
+    ],
+)
+def test_percent_encoded_blocked_schemes(url):
+    """Percent-encoded disallowed schemes must be caught before scheme detection."""
+    with pytest.raises(ControlError):
+        _check_url(url)
+
+
+@pytest.mark.parametrize("url", ["[", "[]", "[::1", "http://[::1"])
+def test_malformed_url_is_a_control_error(url):
+    with pytest.raises(ControlError):
+        _check_url(url)

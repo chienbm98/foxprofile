@@ -64,3 +64,34 @@ def test_parse_proxy_defaults_to_http():
 
 def test_parse_proxy_empty():
     assert parse_proxy("") is None
+
+
+# ---------------------------------------------------------------------------
+# Proxy host-length and port-range bounds (fix 2)
+# ---------------------------------------------------------------------------
+
+
+def test_proxy_host_exactly_253_chars_valid():
+    host = "a" * 63 + "." + "b" * 63 + "." + "c" * 63 + "." + "d" * 61  # 253 chars
+    assert len(host) == 253
+    ok, _ = validate_proxy_format(f"{host}:8080")
+    assert ok
+
+
+def test_proxy_host_254_chars_rejected():
+    host = "a" * 63 + "." + "b" * 63 + "." + "c" * 63 + "." + "d" * 62  # 254 chars
+    assert len(host) == 254
+    ok, _ = validate_proxy_format(f"{host}:8080")
+    assert not ok
+
+
+def test_proxy_host_9000_chars_rejected():
+    host = "x" * 9000
+    ok, _ = validate_proxy_format(f"{host}:8080")
+    assert not ok
+
+
+@pytest.mark.parametrize("port", ["0", "99999"])
+def test_proxy_port_out_of_range_rejected(port):
+    ok, _ = validate_proxy_format(f"192.0.2.1:{port}")
+    assert not ok

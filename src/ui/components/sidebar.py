@@ -104,7 +104,11 @@ def build_sidebar(
                         ),
                     ],
                 ),
-                ft.Container(height=22),
+                ft.Container(height=10),
+                stats_text,
+                ft.Container(height=2),
+                running_text,
+                ft.Container(height=10),
                 ft.Button(
                     get_string("new_profile"),
                     icon=ft.Icons.ADD,

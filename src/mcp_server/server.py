@@ -168,7 +168,13 @@ async def update_profile(
 ) -> dict:
     """Rename a profile or change its proxy / OS / timezone / locale.
     Changing the OS generates a new fingerprint. Pass timezone="" or locale="" to follow the IP again."""
-    body = {k: v for k, v in {"name": new_name, "proxy": proxy, "os_type": os_type}.items() if v}
+    # Use `is not None` so that proxy="" is included and clears the proxy on the
+    # API side (the previous `if v` filter silently dropped an empty string).
+    body = {
+        k: v
+        for k, v in {"name": new_name, "proxy": proxy, "os_type": os_type}.items()
+        if v is not None
+    }
     body.update(
         {k: v for k, v in {"timezone": timezone, "locale": locale}.items() if v is not None}
     )

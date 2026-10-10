@@ -11,7 +11,7 @@ import base64
 import re
 import secrets
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from aiohttp import web
 
@@ -30,11 +30,28 @@ _SCHEME = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]*):(.*)$", re.S)
 
 def _check_url(url: str) -> str:
     url = url.strip()
+    # "%66ile:" or "java%73cript:" would miss _SCHEME and get https:// prepended;
+    # decode a percent-encoded scheme and check it like any other.
+    colon = url.find(":")
+    slash = url.find("/")
+    if colon != -1 and "%" in url[:colon] and (slash == -1 or colon < slash):
+        decoded_scheme = unquote(url[:colon]).lower()
+        if decoded_scheme not in ALLOWED_SCHEMES:
+            raise ControlError(f"URL scheme '{decoded_scheme}' is not allowed")
+
     match = _SCHEME.match(url)
     # "localhost:8080/x" looks like a scheme but is host:port; bare hosts get https.
     if not match or re.match(r"\d+(/|$)", match.group(2)):
         url = "https://" + url
-    scheme = urlparse(url).scheme.lower()
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+    except ValueError as e:  # e.g. an unclosed IPv6 bracket: "[::1"
+        raise ControlError(f"Malformed URL: {e}") from e
+    scheme = parsed.scheme.lower()
+    if scheme in ("http", "https") and not host:
+        # Older Python versions parse "https://[]" without raising.
+        raise ControlError("Malformed URL: no host")
     if scheme not in ALLOWED_SCHEMES:
         # file:, view-source:, chrome: etc. would let a remote caller read
         # local files or browser internals through the snapshot.

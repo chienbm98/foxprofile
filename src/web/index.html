@@ -349,7 +349,7 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
       <div><h1 data-t="your_profiles"></h1><div class="counts" id="counts"></div></div>
       <label class="search"><svg class="i s" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" autocomplete="off"></label>
     </div>
-    <div class="sheet" id="sheet"></div>
+    <div class="sheet" id="sheet" role="table"></div>
   </main>
 </div>
 
@@ -430,6 +430,7 @@ const I18N = {
     geo_warn_locale_random: "Locale tự động được chọn lại ngẫu nhiên mỗi lần mở ({suggested} chỉ ~{share}% số lần); nên đặt cố định",
     go: "Đi", new_tab: "Tab mới", type: "Gõ", type_hint: "Gõ vào ô đang chọn (bấm lên ảnh để chọn ô)", working: "Đang xử lý...",
     back: "Quay lại", reload: "Tải lại",
+    retry: "Thử lại", boot_error: "Không thể kết nối với server",
   },
   en: {
     tagline: "Anti-detect profile manager", new_profile: "New profile", filters: "Filter",
@@ -481,6 +482,7 @@ const I18N = {
     geo_warn_locale_random: "Automatic locale is re-drawn on every launch ({suggested} only ~{share}% of the time); pin it",
     go: "Go", new_tab: "New tab", type: "Type", type_hint: "Type into the focused field (click the screen to focus one)", working: "Working...",
     back: "Back", reload: "Reload",
+    retry: "Retry", boot_error: "Cannot reach the server",
   },
 };
 
@@ -509,6 +511,7 @@ function applyI18n() {
   document.querySelectorAll("[data-title]").forEach((el) => { el.title = t(el.dataset.title); el.setAttribute("aria-label", t(el.dataset.title)); });
   $("search").placeholder = t("search");
   $("search").setAttribute("aria-label", t("search"));
+  $("sheet").setAttribute("aria-label", t("your_profiles"));
   $("v-text").placeholder = t("type_hint");
   document.querySelectorAll("[data-lang]").forEach((b) => b.classList.toggle("active", b.dataset.lang === lang));
 }
@@ -550,7 +553,11 @@ async function api(method, path, body, { raw = false } = {}) {
   if (res.status === 401) { showLogin(); throw new ApiError(401, t("bad_token")); }
   if (!res.ok) {
     let msg = res.statusText;
-    try { const j = await res.json(); msg = typeof j.detail === "string" ? j.detail : (j.message || JSON.stringify(j.detail)); } catch {}
+    try { const j = await res.json();
+      if (typeof j.detail === "string") msg = j.detail;
+      else if (Array.isArray(j.detail)) msg = j.detail.map((d) => { const f = d.loc && d.loc.length > 1 ? d.loc[d.loc.length - 1] + ": " : ""; return f + (d.msg || JSON.stringify(d)); }).join("; ");
+      else msg = j.message || JSON.stringify(j.detail);
+    } catch {}
     throw new ApiError(res.status, msg);
   }
   if (raw) return res;
@@ -650,9 +657,9 @@ function headRow(shown) {
   box.checked = all;
   box.indeterminate = !all && shown.some((p) => selected.has(p.name));
   return h("div", { class: "row head-row", role: "row" },
-    h("div", { class: "c-sel" }, box),
-    h("div", {}, t("col_profile")), h("div", {}, t("col_device")), h("div", {}, t("col_proxy")),
-    h("div", { class: "col-geo" }, t("col_geo")), h("div", {}, t("col_status")), h("div", {}));
+    h("div", { class: "c-sel", role: "columnheader" }, box),
+    h("div", { role: "columnheader" }, t("col_profile")), h("div", { role: "columnheader" }, t("col_device")), h("div", { role: "columnheader" }, t("col_proxy")),
+    h("div", { class: "col-geo", role: "columnheader" }, t("col_geo")), h("div", { role: "columnheader" }, t("col_status")), h("div", { role: "columnheader" }));
 }
 
 function stamp(p) {
@@ -683,21 +690,23 @@ function row(p) {
   const iconBtn = (name, label, fn, cls = "", disabled = false) =>
     h("button", { class: "icon-btn " + cls, title: label, "aria-label": `${label}: ${p.name}`, disabled, onclick: fn }, icon(name));
   return h("div", { class: "row body" + (on ? " live" : "") + (selected.has(p.name) ? " selected" : ""), role: "row" },
-    h("div", { class: "c-sel" }, box),
-    h("div", { class: "cell c-name" }, h("span", { class: "name", title: p.name }, p.name)),
-    h("div", { class: "c-device device" }, h("span", { class: "os", title: p.os_type }, os),
+    h("div", { class: "c-sel", role: "cell" }, box),
+    h("div", { class: "c-name stack", role: "cell" },
+      h("span", { class: "name", title: p.name }, p.name),
+      h("span", { class: "minor" }, engine)),
+    h("div", { class: "c-device device", role: "cell" }, h("span", { class: "os", title: p.os_type }, os),
       h("div", { class: "stack" }, h("span", { class: p.engine === "chrome" ? "engine chrome" : "engine" }, engine),
         fp && fp.exists ? h("span", { class: "data minor" }, [fp.screen, `${fp.hardware_concurrency || "?"} CPU`].filter(Boolean).join(" · "))
           : h("span", { class: "minor" }, t("no_fp_short")))),
-    h("div", { class: "c-proxy stack" }, proxy
+    h("div", { class: "c-proxy stack", role: "cell" }, proxy
       ? [h("span", { class: "data", title: proxy }, proxy.split("://")[1]), h("span", { class: "minor" }, proxy.split("://")[0].toUpperCase())]
       : [h("span", { class: "direct" }, t("direct")), h("span", { class: "minor" }, t("no_proxy_short"))],
       h("span", { class: "minor geo-inline data" }, `${p.timezone || t("follow_ip")} · ${p.locale || t("follow_ip")}`)),
-    h("div", { class: "col-geo stack" },
+    h("div", { class: "col-geo stack", role: "cell" },
       h("span", { class: p.timezone ? "data" : "muted" }, p.timezone || t("follow_ip")),
       h("span", { class: "minor" + (p.locale ? " data" : "") }, p.locale || t("follow_ip"))),
-    h("div", { class: "c-stamp" }, stamp(p)),
-    h("div", { class: "actions" }, main,
+    h("div", { class: "c-stamp", role: "cell" }, stamp(p)),
+    h("div", { class: "actions", role: "cell" }, main,
       iconBtn("monitor", t("view"), () => openViewer(p.name), "", !on || isBusy),
       iconBtn("cookie", t("cookies"), () => openCookies(p), "", on),
       iconBtn("edit", t("edit"), () => openEditor(p)),
@@ -740,6 +749,7 @@ async function toggle(p, { quiet = false } = {}) {
       await api("POST", `/browser/${enc(p.name)}/stop`);
       if (!quiet) toast(t("stopped", { name: p.name }));
     } else {
+      if (!quiet) toast(t("launching", { name: p.name }));
       const r = await api("POST", `/browser/${enc(p.name)}/launch`);
       delete fingerprints[p.name];
       liveSince.set(p.name, new Date());
@@ -757,16 +767,17 @@ async function toggle(p, { quiet = false } = {}) {
 function modal(build, { wide = false, onDismiss = null } = {}) {
   const root = $("modal-root");
   const opener = document.activeElement;
-  const close = () => { root.replaceChildren(); if (opener && opener.focus) opener.focus(); };
+  const close = () => { bg.remove(); if (opener && opener.isConnected && opener.focus) opener.focus(); };
   const dismiss = () => (onDismiss ? onDismiss() : close());
   const bg = h("div", { class: "modal-bg", onclick: (e) => { if (e.target === bg) dismiss(); } });
+  bg.dismiss = dismiss;
   const box = build(close);
   box.classList.add("modal");
   if (wide) box.classList.add("wide");
   box.setAttribute("role", "dialog");
   box.setAttribute("aria-modal", "true");
   bg.append(box);
-  root.replaceChildren(bg);
+  root.append(bg);
   const first = box.querySelector("input:not([type=checkbox]):not(:disabled), button.btn-act, button");
   if (first) first.focus();
   return close;
@@ -831,6 +842,8 @@ function openEditor(p) {
     return h("form", { onsubmit: async (e) => {
       e.preventDefault();
       say("", "");
+      const submitBtn = e.currentTarget.querySelector(".modal-foot .btn-act");
+      if (submitBtn) submitBtn.disabled = true;
       const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null,
         timezone: tz.value.trim(), locale: loc.value.trim() };
       if (!p) body.engine = engine.value;
@@ -839,6 +852,7 @@ function openEditor(p) {
         else { await api("POST", "/profiles", body); toast(t("created", { name: body.name })); }
         close(); refresh();
       } catch (ex) { say("err", ex.message); }
+      finally { if (submitBtn) submitBtn.disabled = false; }
     } },
       modalHead(p ? t("edit_title") : t("create"), p ? t("edit_sub", { name: p.name }) : t("create_sub"), close),
       h("div", { class: "modal-body" },
@@ -894,12 +908,28 @@ function download(filename, text, type) {
 
 function openCookies(p) {
   if (running.has(p.name)) return toast(t("stop_first"), true);
-  const fp = fingerprints[p.name];
   modal((close) => {
     const msg = h("div", { class: "msg", role: "status" });
+    const fpSection = h("div");
+    const renderFp = () => {
+      const fp = fingerprints[p.name];
+      fpSection.replaceChildren(
+        h("div", { class: "field" }, h("label", {}, t("fp_title"))),
+        fp && fp.exists
+          ? h("dl", { class: "fp-card" },
+              h("dt", {}, t("fp_platform")), h("dd", { class: "data" }, fp.platform || "?"),
+              h("dt", {}, t("fp_screen")), h("dd", { class: "data" }, fp.screen || "?"),
+              h("dt", {}, t("fp_cpu")), h("dd", { class: "data" }, String(fp.hardware_concurrency || "?")))
+          : h("div", { class: "note calm" }, icon("fingerprint", true), h("span", {}, t("no_fp"))));
+    };
+    renderFp();
+    const actions = [];
     const run = async (fn) => {
+      if (actions.some((b) => b.disabled)) return;
+      actions.forEach((b) => (b.disabled = true));
       msg.className = "msg info"; msg.textContent = t("working");
       try { await fn(); msg.textContent = ""; } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+      finally { actions.forEach((b) => (b.disabled = false)); }
     };
     const exportAs = (format) => run(async () => {
       const res = await api("GET", `/profiles/${enc(p.name)}/cookies?format=${format}`, undefined, { raw: true });
@@ -914,7 +944,11 @@ function openCookies(p) {
       if (!r.success) throw new Error(r.error);
       toast(t("imported", { n: r.imported }));
     }) });
-    const choice = (iconName, title, sub, fn) => h("button", { type: "button", onclick: fn }, icon(iconName), h("div", {}, h("b", {}, title), h("span", {}, sub)));
+    const choice = (iconName, title, sub, fn) => {
+      const b = h("button", { type: "button", onclick: fn }, icon(iconName), h("div", {}, h("b", {}, title), h("span", {}, sub)));
+      actions.push(b);
+      return b;
+    };
     return h("div", {},
       modalHead(t("cookies"), `${p.name} · ${t("cookie_hint")}`, close),
       h("div", { class: "modal-body" },
@@ -922,18 +956,15 @@ function openCookies(p) {
           choice("download", t("export_json"), t("export_json_hint"), () => exportAs("json")),
           choice("download", t("export_txt"), t("export_txt_hint"), () => exportAs("netscape")),
           choice("upload", t("import"), t("import_hint"), () => file.click())), file,
-        fp && fp.exists
-          ? h("dl", { class: "fp-card" },
-              h("dt", {}, t("fp_platform")), h("dd", { class: "data" }, fp.platform || "?"),
-              h("dt", {}, t("fp_screen")), h("dd", { class: "data" }, fp.screen || "?"),
-              h("dt", {}, t("fp_cpu")), h("dd", { class: "data" }, String(fp.hardware_concurrency || "?")))
-          : h("div", { class: "note calm" }, icon("fingerprint", true), h("span", {}, t("no_fp"))),
+        fpSection,
         h("div", { class: "choice" },
-          choice("fingerprint", t("reset_fp"), t("reset_fp_hint"), () => run(async () => {
+          choice("fingerprint", t("reset_fp"), t("reset_fp_hint"), async () => {
             if (!(await confirmDialog(t("confirm_reset", { name: p.name }), t("reset_fp"), true))) return;
-            await api("DELETE", `/profiles/${enc(p.name)}/fingerprint`);
-            delete fingerprints[p.name]; toast(t("fp_reset")); refresh();
-          }))),
+            await run(async () => {
+              await api("DELETE", `/profiles/${enc(p.name)}/fingerprint`);
+              fingerprints[p.name] = null; renderFp(); toast(t("fp_reset")); refresh();
+            });
+          })),
         msg),
       h("div", { class: "modal-foot" }, h("button", { type: "button", class: "btn btn-line", onclick: close }, t("close"))));
   });
@@ -1009,6 +1040,8 @@ async function openViewer(name) {
 }
 function closeViewer() {
   clearInterval(viewTimer); viewTimer = null; viewing = null;
+  if (shotUrl) { URL.revokeObjectURL(shotUrl); shotUrl = null; }
+  const img = $("v-screen"); if (img) img.src = "";
   $("viewer").classList.add("hidden");
   refresh();
 }
@@ -1076,7 +1109,7 @@ $("login-form").onsubmit = async (e) => {
   e.preventDefault();
   token = $("token").value.trim();
   try { await api("GET", "/profiles"); store.set("foxprofile.token", token); $("login-err").textContent = ""; showApp(true); }
-  catch { $("login-err").textContent = t("bad_token"); token = ""; }
+  catch (err) { $("login-err").textContent = err.status === 401 ? t("bad_token") : (err.message || t("bad_token")); token = ""; }
 };
 $("logout-btn").onclick = () => { token = ""; store.set("foxprofile.token", null); showLogin(); };
 $("new-btn").onclick = () => openEditor(null);
@@ -1084,15 +1117,30 @@ $("mcp-btn").onclick = openMcpGuide;
 $("search").oninput = render;
 document.querySelectorAll("[data-lang]").forEach((b) => { b.onclick = () => { lang = b.dataset.lang; store.set("foxprofile.lang", lang); applyI18n(); lastRender = ""; render(); }; });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && $("modal-root").firstChild) { const x = $("modal-root").querySelector(".modal-head .icon-btn"); if (x) x.click(); else $("modal-root").replaceChildren(); }
+  if (e.key === "Escape") {
+    if (!$("viewer").classList.contains("hidden")) { closeViewer(); return; }
+    const topBg = $("modal-root").lastElementChild;
+    if (topBg) topBg.dismiss();
+  }
   if (e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA" && !$("app").classList.contains("hidden")) { e.preventDefault(); $("search").focus(); }
 });
 
 (async () => {
   applyI18n();
-  const info = await (await fetch("/api/v1/info")).json();
-  if (info.auth_required && !token) return showLogin();
-  try { await showApp(info.auth_required); } catch { showLogin(); }
+  try {
+    const res = await fetch("/api/v1/info");
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    const info = await res.json();
+    if (info.auth_required && !token) return showLogin();
+    try { await showApp(info.auth_required); } catch { showLogin(); }
+  } catch (e) {
+    document.body.replaceChildren(
+      h("div", { style: "display:grid;place-items:center;min-height:100vh;padding:24px;text-align:center" },
+        h("div", {},
+          h("h2", { style: "margin:0 0 8px;font-size:18px" }, t("boot_error")),
+          h("p", { style: "margin:0 0 20px;color:var(--ink-2);font-size:13px" }, e.message || ""),
+          h("button", { class: "btn btn-act", onclick: () => location.reload() }, t("retry")))));
+  }
 })();
 </script>
 </body>

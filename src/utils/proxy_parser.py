@@ -1,20 +1,27 @@
-from urllib.parse import urlparse
+from urllib.parse import quote, unquote, urlparse
 
 
 def normalize_proxy(proxy_str: str) -> str:
     """Rewrite the provider format host:port:user:pass as user:pass@host:port.
 
     Anything else (including the URL form) is returned unchanged.
+    Passwords may contain '@' or ':'; they are percent-encoded so urlparse
+    can decode them correctly.
     """
     proxy_str = proxy_str.strip()
     scheme, sep, rest = proxy_str.rpartition("://")
+    parts = rest.split(":", 3)
+    # Detect host:port:user:pass: exactly 4 non-empty parts, port is all digits,
+    # and no '@' in the host (first) part.  Check this BEFORE the '@'-in-rest
+    # short-circuit so passwords containing '@' are handled correctly.
+    if len(parts) == 4 and parts[1].isdigit() and all(parts) and "@" not in parts[0]:
+        host, port, user, password = parts
+        quoted_user = quote(user, safe="")
+        quoted_pass = quote(password, safe="")
+        return f"{scheme}{sep}{quoted_user}:{quoted_pass}@{host}:{port}"
     if "@" in rest:
         return proxy_str
-    parts = rest.split(":", 3)
-    if len(parts) != 4 or not parts[1].isdigit() or not all(parts):
-        return proxy_str
-    host, port, user, password = parts
-    return f"{scheme}{sep}{user}:{password}@{host}:{port}"
+    return proxy_str
 
 
 def parse_proxy(proxy_str: str) -> dict | None:
@@ -27,11 +34,13 @@ def parse_proxy(proxy_str: str) -> dict | None:
         p = urlparse(proxy_str)
         if not p.hostname or not p.port:
             return None
-        cfg = {"server": f"{p.scheme}://{p.hostname}:{p.port}"}
+        # Preserve brackets for IPv6 addresses in the server URL
+        hostname = f"[{p.hostname}]" if ":" in p.hostname else p.hostname
+        cfg = {"server": f"{p.scheme}://{hostname}:{p.port}"}
         if p.username:
-            cfg["username"] = p.username
+            cfg["username"] = unquote(p.username)
         if p.password:
-            cfg["password"] = p.password
+            cfg["password"] = unquote(p.password)
         return cfg
     except Exception:
         return None

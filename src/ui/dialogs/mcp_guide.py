@@ -1,3 +1,4 @@
+import contextlib
 import threading
 import urllib.request
 
@@ -94,7 +95,8 @@ def open_mcp_guide(page: ft.Page, clipboard: ft.Clipboard) -> None:
         except OSError as e:
             health.value = get_string("mcp_status_down", error=e)
             health.color = COLORS["error"]
-        page.update()
+        with contextlib.suppress(Exception):
+            page.update()
 
     token_box = ft.Checkbox(
         label=get_string("mcp_show_token"),

@@ -249,7 +249,7 @@ def _stamp(is_loading: bool, is_running: bool, since: str, failed: bool = False)
             tooltip=get_string("stamp_failed"),
             content=ft.Text(
                 get_string("stamp_failed").upper(),
-                size=12,
+                size=10.5,
                 text_align=ft.TextAlign.CENTER,
                 font_family=FONT_DATA,
                 weight=ft.FontWeight.W_700,

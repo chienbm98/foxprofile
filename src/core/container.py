@@ -1,4 +1,6 @@
 import logging
+import threading
+from collections.abc import Callable
 
 from ..interfaces.protocols import IBrowserLauncher, IProfileManager, IProxyService
 from .config import LOG_DIR, LOG_LEVEL
@@ -10,33 +12,37 @@ class Container:
     def __init__(self) -> None:
         setup_logging(LOG_DIR, getattr(logging, LOG_LEVEL, logging.INFO))
         self._instances: dict = {}
+        # The first API requests arrive on several worker threads at once; each
+        # service must be built exactly once or they would hold separate state.
+        self._lock = threading.RLock()
+
+    def _get(self, key: str, build: Callable[[], object]):
+        instance = self._instances.get(key)
+        if instance is None:
+            with self._lock:
+                instance = self._instances.get(key)
+                if instance is None:
+                    instance = self._instances[key] = build()
+        return instance
 
     @property
     def event_bus(self) -> EventBus:
-        if "eb" not in self._instances:
-            self._instances["eb"] = EventBus()
-        return self._instances["eb"]
+        return self._get("eb", EventBus)
 
     @property
     def profile_manager(self) -> IProfileManager:
-        if "pm" not in self._instances:
-            from ..services.profile.manager import ProfileManager
+        from ..services.profile.manager import ProfileManager
 
-            self._instances["pm"] = ProfileManager()
-        return self._instances["pm"]
+        return self._get("pm", ProfileManager)
 
     @property
     def browser_launcher(self) -> IBrowserLauncher:
-        if "bl" not in self._instances:
-            from ..services.browser.launcher import BrowserLauncher
+        from ..services.browser.launcher import BrowserLauncher
 
-            self._instances["bl"] = BrowserLauncher()
-        return self._instances["bl"]
+        return self._get("bl", BrowserLauncher)
 
     @property
     def proxy_service(self) -> IProxyService:
-        if "ps" not in self._instances:
-            from ..services.proxy.service import ProxyService
+        from ..services.proxy.service import ProxyService
 
-            self._instances["ps"] = ProxyService()
-        return self._instances["ps"]
+        return self._get("ps", ProxyService)

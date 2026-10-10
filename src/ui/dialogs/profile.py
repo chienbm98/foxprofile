@@ -1,3 +1,4 @@
+import contextlib
 import threading
 from collections.abc import Callable
 
@@ -65,7 +66,12 @@ def open_profile_dialog(
             vertical_alignment=ft.CrossAxisAlignment.START,
             controls=[
                 ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, size=16, color=COLORS["warning"]),
-                ft.Text(get_string("engine_chrome_note"), size=12.5, color="#5E3E00", expand=True),
+                ft.Text(
+                    get_string("engine_chrome_note"),
+                    size=12.5,
+                    color=COLORS["warn_text"],
+                    expand=True,
+                ),
             ],
         ),
     )
@@ -248,7 +254,7 @@ def open_profile_dialog(
 
 
 _DATA = ft.TextStyle(font_family=FONT_DATA, size=13)
-_WARN_TINT = "#F6EEDB"
+_WARN_TINT = COLORS["warn_tint"]
 
 
 def _field(label: str, control: ft.Control, hint: str | None = None) -> ft.Column:
@@ -297,7 +303,8 @@ def _do_proxy_check(
         proxy_error.value = message
         proxy_error.color = COLORS["success"] if success else COLORS["error"]
         proxy_error.visible = True
-        page.update()
+        with contextlib.suppress(Exception):
+            page.update()
 
     threading.Thread(target=do_check, daemon=True).start()
 
@@ -346,7 +353,8 @@ def _do_ip_check(
         ip_btn.content = ft.Text(get_string("check_ip"))
         ip_btn.disabled = False
         geo_result.visible = True
-        page.update()
+        with contextlib.suppress(Exception):
+            page.update()
 
     threading.Thread(target=do_check, daemon=True).start()
 

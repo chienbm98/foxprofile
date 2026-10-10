@@ -305,5 +305,10 @@ def test_dead_proxy_reports_launch_failed(monkeypatch, tmp_path, capsys):
         raise InvalidIP("Failed to get IP address")
 
     runner, _ = _fake_launch(monkeypatch, tmp_path, public_ip)
-    assert asyncio.run(runner.run_browser("p", "socks5://1.2.3.4:1080", "windows")) == 1
-    assert "LAUNCH_FAILED: InvalidIP: Failed to get IP address" in capsys.readouterr().out
+    assert asyncio.run(runner.run_browser("p", "socks5://user:pass@1.2.3.4:1080", "windows")) == 1
+    out = capsys.readouterr().out
+    assert (
+        "LAUNCH_FAILED: ProxyUnreachable: no internet connection through proxy 1.2.3.4:1080" in out
+    )
+    assert "Failed to get IP address" in out  # the raw error is still logged
+    assert "user" not in out.split("LAUNCH_FAILED:", 1)[1]

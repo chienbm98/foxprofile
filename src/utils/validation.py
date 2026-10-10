@@ -18,7 +18,7 @@ _RESERVED_NAMES = {
 _PROXY_PATTERN = re.compile(
     r"^(?:(?P<scheme>https?|socks[45])://)?"
     r"(?:(?P<user>[^:@]+):(?P<pass>[^@]+)@)?"
-    r"(?P<host>[a-zA-Z0-9.-]+|\d{1,3}(?:\.\d{1,3}){3})"
+    r"(?P<host>[a-zA-Z0-9.-]+|\d{1,3}(?:\.\d{1,3}){3}|\[(?:[a-fA-F0-9:]+)\])"
     r":(?P<port>\d{1,5})$",
 )
 # language[-Script]-REGION, e.g. vi-VN, zh-Hant-TW, es-419
@@ -35,6 +35,11 @@ def validate_profile_name(name: str) -> tuple[bool, str]:
     found_invalid = [c for c in name if c in _INVALID_CHARS]
     if found_invalid:
         return False, get_string("validation_invalid_chars", chars=", ".join(found_invalid))
+
+    # Reject control characters (ASCII < 32 or DEL=127) — they cause mkdir to fail
+    found_control = [repr(c) for c in name if ord(c) < 32 or ord(c) == 127]
+    if found_control:
+        return False, get_string("validation_invalid_chars", chars=", ".join(found_control))
 
     if name != name.strip():
         return False, get_string("validation_name_spaces")
@@ -62,6 +67,12 @@ def validate_proxy_format(proxy_str: str) -> tuple[bool, str]:
     port = int(match.group("port"))
     if not 1 <= port <= 65535:
         return False, get_string("validation_invalid_port", port=port)
+
+    # RFC 1035/1123: a hostname must not exceed 253 characters.  Strip IPv6
+    # brackets before measuring so "[::1]" does not count as 5 chars.
+    host = match.group("host").strip("[]")
+    if len(host) > 253:
+        return False, get_string("validation_invalid_proxy")
 
     return True, ""
 
