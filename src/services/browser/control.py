@@ -44,9 +44,14 @@ def _check_url(url: str) -> str:
     if not match or re.match(r"\d+(/|$)", match.group(2)):
         url = "https://" + url
     try:
-        scheme = urlparse(url).scheme.lower()
+        parsed = urlparse(url)
+        host = parsed.hostname
     except ValueError as e:  # e.g. an unclosed IPv6 bracket: "[::1"
         raise ControlError(f"Malformed URL: {e}") from e
+    scheme = parsed.scheme.lower()
+    if scheme in ("http", "https") and not host:
+        # Older Python versions parse "https://[]" without raising.
+        raise ControlError("Malformed URL: no host")
     if scheme not in ALLOWED_SCHEMES:
         # file:, view-source:, chrome: etc. would let a remote caller read
         # local files or browser internals through the snapshot.
