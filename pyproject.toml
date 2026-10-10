@@ -28,7 +28,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["src", "tqd_automation"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "chrome_engine/tests"]
