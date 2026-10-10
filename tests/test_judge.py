@@ -220,3 +220,14 @@ def test_typesafe_errors_become_unknown():
     assert (v.label, v.confidence) == ("UNKNOWN", 0.0)
     assert "quota" in v.detail
     assert TypeSafeJudge(client).content_ok("facebook", "hi").label == "UNKNOWN"
+
+
+def test_x_counts_weighted_length():
+    from tqd_automation.judge import weighted_length
+
+    assert weighted_length("hello") == 5
+    assert weighted_length("Việt") == 5  # ệ counts 2
+    assert weighted_length("see https://example.com/a/very/long/path") == 4 + 23
+    judge = HeuristicJudge()
+    assert judge.content_ok("x", "a" * 280).label == "ok"
+    assert judge.content_ok("x", "ệ" * 141).label == "block"

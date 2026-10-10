@@ -9,6 +9,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
+import unicodedata
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
@@ -95,14 +97,29 @@ class HeuristicJudge:
     def content_ok(self, platform: str, text: str) -> Verdict:
         if not text.strip():
             return Verdict("block", 1.0, "heuristic", "empty text")
-        limit = rules.PLATFORMS.get(platform, {}).get("max_chars", 2200)
-        if len(text) > limit:
+        signals = rules.PLATFORMS.get(platform, {})
+        limit = signals.get("max_chars", 2200)
+        length = weighted_length(text) if signals.get("weighted") else len(text)
+        if length > limit:
             return Verdict("block", 1.0, "heuristic", f"text longer than {limit} characters")
         lowered = text.lower()
         for phrase in _blocked_phrases():
             if phrase in lowered:
                 return Verdict("block", 1.0, "heuristic", f"blocked phrase: {phrase}")
         return Verdict("ok", 1.0, "heuristic")
+
+
+# twitter-text v3: these code point ranges count 1, everything else 2; every URL counts 23.
+_LIGHT_RANGES = ((0, 4351), (8192, 8205), (8208, 8223), (8242, 8247))
+_URL = re.compile(r"https?://\S+")
+
+
+def weighted_length(text: str) -> int:
+    text = unicodedata.normalize("NFC", text)
+    urls = _URL.findall(text)
+    rest = _URL.sub("", text)
+    light = sum(1 for ch in rest if any(lo <= ord(ch) <= hi for lo, hi in _LIGHT_RANGES))
+    return 23 * len(urls) + light + 2 * (len(rest) - light)
 
 
 def _blocked_phrases() -> list[str]:

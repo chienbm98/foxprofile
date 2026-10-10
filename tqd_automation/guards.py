@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo
 from . import data_dir
 
 TZ = ZoneInfo("Asia/Ho_Chi_Minh")
-DEFAULT_DAILY_CAPS = {"facebook": 3, "tiktok": 2}
+DEFAULT_DAILY_CAPS = {"facebook": 3, "tiktok": 2, "x": 3}
 DEFAULT_MIN_INTERVAL_MIN = 90
 DUPLICATE_WINDOW = timedelta(days=30)
 # A run lock older than this was left by a crashed run; no posting run takes this long.
