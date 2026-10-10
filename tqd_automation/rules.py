@@ -12,7 +12,8 @@ PLATFORMS = {
     "facebook": {
         "max_chars": 5000,
         "published": ("your post is now published", "bài viết của bạn đã được đăng"),
-        "composer": ('dialog "create post"', 'dialog "tạo bài viết"'),
+        # The composer is an unnamed dialog holding a form named after the post.
+        "composer": ('form "bài viết"', 'form "post"', "text: tạo bài viết", "text: create post"),
         "ready": ("what's on your mind", "what’s on your mind", "bạn đang nghĩ gì"),
     },
     "tiktok": {

@@ -9,6 +9,7 @@
 - Chờ URL hoặc chữ xuất hiện (`/page/wait-url`, `/page/wait-text`, MCP `browser_wait_for_url`, `browser_wait_for_text`) và cuộn trang (`/page/scroll`, MCP `browser_scroll`).
 - Snapshot gọn: `interactive_only=true` chỉ giữ nút, link và ô nhập, giúp agent tốn ít token hơn.
 - Gói `tqd_automation`: client REST cho từng profile, Judge nhận diện trạng thái trang (checkpoint, captcha, chưa đăng nhập...) và kiểm tra nội dung trước khi đăng (heuristic, thêm TypeSafe khi có `TYPESAFE_API_KEY`; ghi cả hai kết quả vào `automation_data/judge_*.jsonl`), cùng các cổng an toàn: kill switch, khoá sau checkpoint, giới hạn số bài mỗi ngày, khoảng cách tối thiểu và chặn bài trùng. Bài đã bấm Đăng nhưng chưa xác nhận vẫn được tính, nên không bao giờ đăng lặp.
+- Macro đăng Facebook cá nhân `tqd_automation.platforms.facebook.post(...)`: đăng chữ kèm ảnh trong một lần gọi, chọn được đối tượng "Chỉ mình tôi", chạy thử (`dry_run`) dừng trước nút Đăng, kiểm tra bài trên trang cá nhân và lưu ảnh chụp làm bằng chứng. Gặp checkpoint/captcha thì dừng và khoá; nút Đăng chỉ được bấm tối đa một lần mỗi lần gọi.
 
 ### Sửa
 - App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.

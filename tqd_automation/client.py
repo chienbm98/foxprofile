@@ -66,6 +66,9 @@ class Browser:
     def keyboard_type(self, text: str) -> dict:
         return self._act("POST", "keyboard", {"text": text})
 
+    def press(self, key: str) -> dict:
+        return self._act("POST", "press", {"key": key})
+
     def upload(self, selector: str, paths: list[str]) -> dict:
         return self._act("POST", "upload", {"selector": selector, "paths": paths})
 
