@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [2.3.2] - 2026-10-10
+
 ### Sửa
 - App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
 - Proxy dạng `host:port:user:pass` có `@` hoặc `:` trong mật khẩu không còn bị bỏ qua (trước đây profile mở mà không qua proxy). Chấp nhận proxy IPv6 dạng `[2001:db8::1]`; host proxy tối đa 253 ký tự.
@@ -62,7 +64,8 @@
 
 Phát hành đầu tiên của FoxProfile: vân tay cố định theo profile, proxy riêng, xuất/nhập cookie (JSON và Netscape), REST API, giao diện tiếng Việt/tiếng Anh.
 
-[Unreleased]: https://github.com/chienbm98/foxprofile/compare/v2.3.1...HEAD
+[Unreleased]: https://github.com/chienbm98/foxprofile/compare/v2.3.2...HEAD
+[2.3.2]: https://github.com/chienbm98/foxprofile/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/chienbm98/foxprofile/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/chienbm98/foxprofile/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/chienbm98/foxprofile/compare/v2.1.0...v2.2.0

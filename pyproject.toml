@@ -1,6 +1,6 @@
 [project]
 name = "foxprofile"
-version = "2.3.1"
+version = "2.3.2"
 description = "Anti-detect browser profile manager for Camoufox"
 readme = "README.md"
 license = "MIT"
