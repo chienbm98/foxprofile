@@ -20,7 +20,7 @@ FoxProfile is a free, open-source, self-hosted manager for anti-detect browser p
 
 ## Positioning
 
-Open source (MIT), runs on the user's own machine or VPS, no account and no per-profile pricing. Two browser engines: Camoufox (Firefox patched at the engine level) and an experimental Chrome engine (fingerprint-chromium). Built-in REST API and MCP server so AI agents can drive the browsers.
+Open source (MIT), runs on the user's own machine or VPS, no account and no per-profile pricing. Two browser engines: Camoufox (Firefox patched at the engine level) and a Chrome engine (fingerprint-chromium). Built-in REST API and MCP server so AI agents can drive the browsers.
 
 ## Operating Context
 
@@ -54,4 +54,4 @@ Open source (MIT), runs on the user's own machine or VPS, no account and no per-
 2. State at a glance: whether a profile is running, which proxy/IP and device it presents, and anything that would leak (geo mismatch, datacenter IP) must be visible without opening it.
 3. Safety over convenience for destructive or leaking actions: deleting profiles, cookies and credentials needs a clear confirmation; credentials are never shown in full.
 4. One product, two surfaces: desktop and web panel offer the same tasks with the same vocabulary.
-5. Honest about limits: experimental features (Chrome engine) and failures are labeled plainly, not hidden.
+5. Honest about limits: known limitations (such as the Chrome engine's) and failures are labeled plainly, not hidden.

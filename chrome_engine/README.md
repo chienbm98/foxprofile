@@ -1,4 +1,4 @@
-# Chrome engine (thử nghiệm)
+# Chrome engine
 
 Engine trình duyệt thứ hai cho FoxProfile, chạy song song với Camoufox: một bản Chromium đã vá sẵn để giả fingerprint ngay trong C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), BSD-3, dựa trên ungoogled-chromium). Engine không tự build Chromium. Nó tải một bản build đã ghim checksum rồi thêm những phần mà fork chưa có.
 

@@ -13,7 +13,7 @@ class ProfileCreate(BaseModel):
     )
     engine: str = Field(
         "camoufox",
-        description="camoufox (Firefox) or chrome (experimental, fingerprint-chromium). "
+        description="camoufox (Firefox) or chrome (Chromium, fingerprint-chromium). "
         "Fixed once the profile is created",
     )
 

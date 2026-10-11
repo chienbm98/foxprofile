@@ -1,6 +1,6 @@
 """Chrome engine for FoxProfile, built on fingerprint-chromium.
 
-An experimental second browser engine next to Camoufox: a patched Chromium
+The second browser engine next to Camoufox: a patched Chromium
 whose fingerprint (navigator, client hints, WebGL, canvas, audio, fonts) is
 spoofed in C++ from a per-profile seed. See chrome_engine/README.md.
 """

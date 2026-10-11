@@ -64,3 +64,9 @@ def test_reset_and_summary(tmp_path, fake_generator):
     assert fingerprint.reset(str(tmp_path)) is True
     assert fingerprint.reset(str(tmp_path)) is False
     assert fingerprint.summary(str(tmp_path)) is None
+
+
+def test_reset_forgets_the_kept_locale(tmp_path):
+    (tmp_path / fingerprint.GEO_LOCALE_FILE).write_text("{}", encoding="utf-8")
+    assert fingerprint.reset(str(tmp_path)) is True
+    assert not (tmp_path / fingerprint.GEO_LOCALE_FILE).exists()

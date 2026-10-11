@@ -142,7 +142,7 @@ async def create_profile(
     """Create a profile. proxy format: [scheme://][user:pass@]host:port or host:port:user:pass
     (http, https, socks4, socks5). timezone (IANA, e.g. Asia/Ho_Chi_Minh) and locale (e.g. vi-VN)
     default to following the proxy's IP. engine: camoufox (Firefox, default) or chrome
-    (experimental Chromium); it cannot be changed later."""
+    (Chromium, fingerprint-chromium); it cannot be changed later."""
     return await _arequest(
         "POST",
         "/profiles",

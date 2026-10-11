@@ -106,8 +106,8 @@ def _exit_ip(proxy: str | None) -> str:
     return lookup(requests_proxy_url(proxy))
 
 
-def _camoufox_geo(ip: str) -> tuple[str, str, str, float]:
-    """(country, timezone, most likely locale, its share) from Camoufox's database."""
+def _camoufox_geo(ip: str) -> tuple[str, str, str]:
+    """(country, timezone, most likely locale) from Camoufox's database."""
     from camoufox.geolocation import get_geolocation
     from camoufox.locales import SELECTOR, normalize_locale
 
@@ -117,11 +117,9 @@ def _camoufox_geo(ip: str) -> tuple[str, str, str, float]:
         # Private API: the language shares Camoufox draws the automatic locale from.
         languages, probabilities = SELECTOR._load_territory_data(country)
     except Exception:
-        return country, geo.timezone, geo.locale.as_string, 1.0
-    top = int(probabilities.argmax())
-    language = str(languages[top]).replace("_", "-")
-    locale = normalize_locale(f"{language}-{country}").as_string
-    return country, geo.timezone, locale, float(probabilities[top])
+        return country, geo.timezone, geo.locale.as_string
+    language = str(languages[int(probabilities.argmax())]).replace("_", "-")
+    return country, geo.timezone, normalize_locale(f"{language}-{country}").as_string
 
 
 def _cloudflare(proxies: dict[str, str] | None) -> SourceResult:
@@ -234,8 +232,13 @@ def check_geo(
     proxy: str | None,
     timezone: str | None = None,
     locale: str | None = None,
+    profile_dir: str | None = None,
 ) -> GeoCheckResult:
-    """Look up the exit IP through `proxy` and compare GeoIP sources (blocking, <= ~20s)."""
+    """Look up the exit IP through `proxy` and compare GeoIP sources (blocking, <= ~20s).
+
+    With `profile_dir`, an automatic locale is the one that profile keeps for the
+    exit IP's country, when it has launched there before.
+    """
     proxies = _requests_proxies(proxy)
     pool = ThreadPoolExecutor(max_workers=len(_SOURCES) + 1)
     deadline = time.monotonic() + _DEADLINE
@@ -264,23 +267,20 @@ def check_geo(
         pool.shutdown(wait=False, cancel_futures=True)
 
     country = auto_timezone = suggested_locale = None
-    share = 0.0
     if exit_ip:
         try:
-            country, auto_timezone, suggested_locale, share = _camoufox_geo(exit_ip)
+            country, auto_timezone, suggested_locale = _camoufox_geo(exit_ip)
         except Exception as e:
             error = _short_error(e)
 
     effective_tz = timezone or auto_timezone
     warnings = compare(exit_ip, country, effective_tz, locale, bool(locale), sources)
-    if not locale and suggested_locale and share < 0.99:
-        # Automatic locale is redrawn at random on every launch, weighted by
-        # how many people in the country speak each language.
-        warnings.append(
-            GeoWarning(
-                "locale_random", {"suggested": suggested_locale, "share": round(share * 100)}
-            )
-        )
+    if not locale and profile_dir:
+        from chrome_engine.geo import kept_locale
+
+        kept = kept_locale(profile_dir, country)
+    else:
+        kept = None
     return GeoCheckResult(
         exit_ip=exit_ip,
         country=country,
@@ -288,7 +288,7 @@ def check_geo(
         suggested_locale=suggested_locale,
         timezone=effective_tz,
         timezone_pinned=bool(timezone),
-        locale=locale or None,
+        locale=locale or kept,
         locale_pinned=bool(locale),
         sources=sources,
         warnings=warnings,

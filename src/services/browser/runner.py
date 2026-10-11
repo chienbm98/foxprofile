@@ -141,6 +141,34 @@ class ProxyUnreachable(RuntimeError):
     pass
 
 
+def stable_locale(profile_dir: str, ip: str) -> str:
+    """The locale for `ip`, kept per profile while the IP stays in one country.
+
+    Left to geoip, Camoufox would pick a new locale for the country on every launch.
+    """
+    from camoufox.geolocation import get_geolocation
+
+    from chrome_engine.geo import remembered_locale
+
+    locale = get_geolocation(ip).locale
+    return remembered_locale(profile_dir, locale.region, locale.as_string)
+
+
+def pin_geoip_locale(locale: str) -> None:
+    """Make Camoufox's geoip draw `locale` instead of a random one for the IP's country.
+
+    Passing `locale=` is not enough: geoip still draws at random and fills the
+    locale keys with setdefault, and `locale=` only overwrites the script when
+    its own locale has one. Keeping zh-HK after a draw of en-Latn-HK would
+    present zh-Latn-HK. This runner is one process per profile, so the patch
+    only affects this launch.
+    """
+    from camoufox.locales import SELECTOR, normalize_locale
+
+    pinned = normalize_locale(locale)
+    SELECTOR.from_region = lambda region: pinned
+
+
 async def run_browser(
     profile_name: str,
     proxy_str: str,
@@ -175,7 +203,11 @@ async def run_browser(
     try:
         # Blocking (up to ~30 s over a slow proxy), so off the event loop; inside
         # the try so a dead proxy reports LAUNCH_FAILED like any launch error.
-        launch_config["geoip"] = await asyncio.to_thread(exit_ip, proxy_str)
+        ip = await asyncio.to_thread(exit_ip, proxy_str)
+        launch_config["geoip"] = ip
+        if not locale:
+            launch_config["locale"] = await asyncio.to_thread(stable_locale, profile_dir, ip)
+        pin_geoip_locale(launch_config["locale"])
         if HEADLESS == "virtual":
             await asyncio.to_thread(xvfb.sweep_stale)
             display = VirtualDisplay()

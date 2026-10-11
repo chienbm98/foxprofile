@@ -388,4 +388,7 @@ def check_profile_ip(
     Goes out through the profile's proxy to Cloudflare, ipinfo and ip-api (~10s).
     """
     profile = require_profile(name, pm)
-    return GeoCheckResponse.from_result(check_geo(profile.proxy, profile.timezone, profile.locale))
+    data_dir = os.path.join(os.getcwd(), DATA_DIR, profile.name)
+    return GeoCheckResponse.from_result(
+        check_geo(profile.proxy, profile.timezone, profile.locale, data_dir)
+    )
