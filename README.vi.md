@@ -268,6 +268,18 @@ curl -X POST http://127.0.0.1:8000/api/v1/browser/tiktok-us-02/launch
 curl "http://127.0.0.1:8000/api/v1/profiles/tiktok-us-02/cookies?format=netscape" -o cookies.txt
 ```
 
+## Bộ cài (macOS .dmg, Windows Setup)
+
+Tag `v*` (hoặc chạy tay workflow **Release**) sẽ build `FoxProfile-Setup-<version>.exe` cho Windows và `.dmg` cho macOS (Apple Silicon). Trình duyệt Camoufox không đóng gói sẵn: lần mở đầu app tự tải ở nền (tiến trình trong `logs/camoufox_fetch.log`). Dữ liệu người dùng (`profiles.json`, `camoufox_data/`, `logs/`, `.api_token`, `.env`) nằm ở `~/Library/Application Support/FoxProfile` (macOS) hoặc `%APPDATA%\FoxProfile` (Windows); đặt `FOXPROFILE_HOME` để đổi chỗ. Bản macOS chỉ ký ad-hoc, chưa notarize: mở lần đầu bằng chuột phải, Open.
+
+Build tại máy (dùng venv):
+
+```bash
+pip install -r requirements.lock -r requirements-build.txt
+bash packaging/build_macos.sh             # dist/FoxProfile.app + dist/FoxProfile-<version>.dmg
+bash packaging/pack.sh --icon src/assets/icon.ico   # Windows: dist/FoxProfile/, sau đó iscc packaging/windows/foxprofile.iss
+```
+
 ## Phát triển
 
 ```bash

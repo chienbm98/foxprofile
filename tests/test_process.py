@@ -119,6 +119,21 @@ def test_runners_share_the_launcher_session(monkeypatch):
     assert not captured.get("start_new_session")
 
 
+def test_packaged_app_reenters_itself_for_helpers(monkeypatch):
+    # Frozen, sys.executable is the app binary, so helpers go through --fp-run.
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    camoufox = process.runner_command(Profile(name="a", os_type="linux"))
+    chrome = process.runner_command(Profile(name="b", os_type="linux", engine="chrome"))
+    assert camoufox[:3] == [sys.executable, "--fp-run", "runner"]
+    assert chrome[:3] == [sys.executable, "--fp-run", "chrome_runner"]
+    assert camoufox[3:] == ["a", "None", "linux", "", ""]
+    assert process.helper_command("cookie_tool", "x.py") == [
+        sys.executable,
+        "--fp-run",
+        "cookie_tool",
+    ]
+
+
 # --- display records: platform independent ---------------------------------------------
 
 

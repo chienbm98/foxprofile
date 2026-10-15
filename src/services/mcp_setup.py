@@ -90,11 +90,13 @@ def build_configs(
         env = {"FOXPROFILE_URL": api_url or mcp_url.rsplit("/mcp", 1)[0]}
         if token:
             env["FOXPROFILE_API_TOKEN"] = token
-        server = {
-            "command": python or sys.executable,
-            "args": [str(MCP_SCRIPT)],
-            "env": env,
-        }
+        command = python or sys.executable
+        args = [str(MCP_SCRIPT)]
+        if getattr(
+            sys, "frozen", False
+        ):  # the packaged app re-runs itself (process.helper_command)
+            command, args = sys.executable, ["--fp-run", "mcp"]
+        server = {"command": command, "args": args, "env": env}
     else:
         # Claude Desktop's config file only starts local (stdio) servers;
         # mcp-remote bridges it to the HTTP endpoint.

@@ -1,0 +1,78 @@
+name: Release
+
+# Builds the desktop installers (Windows Setup .exe, macOS .dmg). The Camoufox browser is
+# not bundled: the app downloads it on first start (see README, "Installers").
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write # attach the installer to the tag's release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Install dependencies
+        shell: bash
+        # requirements.lock is a macOS/py3.14 freeze: drop the packages that have no Windows
+        # wheels (pyobjc-*, uvloop); requirements.txt adds the Windows-only tzdata.
+        run: |
+          grep -v -i -E '^(pyobjc|uvloop)' requirements.lock > requirements.win.lock
+          python -m pip install -r requirements.win.lock -r requirements.txt -r requirements-build.txt
+      - name: Build app (PyInstaller via flet pack)
+        shell: bash
+        run: bash packaging/pack.sh --icon src/assets/icon.ico
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $version = python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+          }
+          & $iscc "/DAppVersion=$version" packaging\windows\foxprofile.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FoxProfile-Setup-windows
+          path: dist/FoxProfile-Setup-*.exe
+          if-no-files-found: error
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/FoxProfile-Setup-*.exe
+
+  macos:
+    runs-on: macos-latest # Apple Silicon (arm64)
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: python -m pip install -r requirements.lock -r requirements-build.txt
+      - run: bash packaging/build_macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FoxProfile-dmg-macos-arm64
+          path: dist/FoxProfile-*.dmg
+          if-no-files-found: error
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/FoxProfile-*.dmg

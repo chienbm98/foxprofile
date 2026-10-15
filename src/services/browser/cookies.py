@@ -11,11 +11,11 @@ import json
 import os
 import pathlib
 import subprocess
-import sys
 import time
 from typing import Any
 
 from ...core.logging import get_logger
+from . import process
 
 logger = get_logger("browser.cookies")
 
@@ -52,7 +52,7 @@ def _call_tool(
     )
     try:
         proc = subprocess.run(
-            [sys.executable, _TOOL, action, profile_name, os_type, engine],
+            [*process.helper_command("cookie_tool", _TOOL), action, profile_name, os_type, engine],
             input=stdin,
             capture_output=True,
             text=True,

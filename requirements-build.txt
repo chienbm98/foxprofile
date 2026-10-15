@@ -1,0 +1,4 @@
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.8
+flet-cli==1.0.4
+flet-desktop==1.0.4

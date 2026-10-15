@@ -14,14 +14,22 @@ logger = get_logger("browser.process")
 _PROJECT_ROOT = str(pathlib.Path(__file__).parents[3])
 
 
+def helper_command(kind: str, *source: str) -> list[str]:
+    """argv prefix that starts a helper process: `python <source...>` from source,
+    or, in the packaged app (where sys.executable is the app itself), the app's
+    `--fp-run <kind>` dispatch (packaging/foxprofile_app.py)."""
+    if getattr(sys, "frozen", False):
+        return [sys.executable, "--fp-run", kind]
+    return [sys.executable, *source]
+
+
 def runner_command(profile: Profile) -> list[str]:
     """The runner for the profile's engine; both speak the same stdout protocol."""
     if profile.engine == "chrome":
-        runner = ["-m", "chrome_engine.runner"]
+        runner = helper_command("chrome_runner", "-m", "chrome_engine.runner")
     else:
-        runner = [os.path.join(pathlib.Path(__file__).parent, "runner.py")]
+        runner = helper_command("runner", os.path.join(pathlib.Path(__file__).parent, "runner.py"))
     return [
-        sys.executable,
         *runner,
         profile.name,
         str(profile.proxy),

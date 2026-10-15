@@ -268,6 +268,18 @@ curl -X POST http://127.0.0.1:8000/api/v1/browser/tiktok-us-02/launch
 curl "http://127.0.0.1:8000/api/v1/profiles/tiktok-us-02/cookies?format=netscape" -o cookies.txt
 ```
 
+## Installers (macOS .dmg, Windows Setup)
+
+Tags `v*` (and manual runs of the **Release** workflow) build a Windows `FoxProfile-Setup-<version>.exe` and a macOS (Apple Silicon) `.dmg`. The Camoufox browser is not bundled: on first start the app downloads it in the background (progress in `logs/camoufox_fetch.log`). User data (`profiles.json`, `camoufox_data/`, `logs/`, `.api_token`, `.env`) lives in `~/Library/Application Support/FoxProfile` (macOS) or `%APPDATA%\FoxProfile` (Windows); set `FOXPROFILE_HOME` to move it. The macOS build is ad-hoc signed, not notarized: open it once with right-click, Open.
+
+To build locally (use a venv):
+
+```bash
+pip install -r requirements.lock -r requirements-build.txt
+bash packaging/build_macos.sh             # dist/FoxProfile.app + dist/FoxProfile-<version>.dmg
+bash packaging/pack.sh --icon src/assets/icon.ico   # Windows: dist/FoxProfile/, then iscc packaging/windows/foxprofile.iss
+```
+
 ## Development
 
 ```bash

@@ -193,3 +193,7 @@ e2e-output/
 
 # Auto-generated API token
 .api_token
+
+# Packaging output
+dist/
+packaging/.gen/
