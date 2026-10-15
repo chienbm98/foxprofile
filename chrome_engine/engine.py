@@ -28,6 +28,7 @@ from typing import Any
 
 from . import fetch
 from . import persona as personas
+from . import settings as fpmap
 from .geo import ExitGeo, lookup
 from .proxy_bridge import ProxyBridge, Upstream
 from .release import host_os
@@ -92,12 +93,13 @@ def playwright_disabled_features_arg() -> str | None:
 # - behind a proxy, no UDP at all: no candidate can reveal the real IP;
 # - without one, only the public address (the one sites already see) and never
 #   a LAN address. Fully blocked WebRTC is itself unusual.
-WEBRTC_POLICY_PROXY = "disable_non_proxied_udp"
-WEBRTC_POLICY_DIRECT = "default_public_interface_only"
+WEBRTC_POLICY_PROXY = fpmap.WEBRTC_PROXY
+WEBRTC_POLICY_DIRECT = fpmap.WEBRTC_DIRECT
 
 
-def set_webrtc_policy(profile_dir: Path, policy: str) -> None:
-    """Write webrtc.ip_handling_policy into the profile's Default/Preferences."""
+def set_prefs(profile_dir: Path, updates: dict[str, object]) -> None:
+    """Write dotted preference paths ("webrtc.ip_handling_policy") into the profile's
+    Default/Preferences; a None value removes the key. Rewrites only on a change."""
     path = profile_dir / "Default" / "Preferences"
     try:
         prefs = json.loads(path.read_text(encoding="utf-8"))
@@ -105,16 +107,33 @@ def set_webrtc_policy(profile_dir: Path, policy: str) -> None:
             prefs = {}
     except (OSError, ValueError):
         prefs = {}
-    webrtc = prefs.get("webrtc")
-    if not isinstance(webrtc, dict):
-        webrtc = prefs["webrtc"] = {}
-    if webrtc.get("ip_handling_policy") == policy:
+    changed = False
+    for dotted, new in updates.items():
+        *parents, leaf = dotted.split(".")
+        node = prefs
+        for key in parents:
+            child = node.get(key)
+            if not isinstance(child, dict):
+                if new is None:
+                    break
+                child = node[key] = {}
+            node = child
+        else:
+            if new is None:
+                changed |= node.pop(leaf, None) is not None
+            elif node.get(leaf) != new:
+                node[leaf] = new
+                changed = True
+    if not changed:
         return
-    webrtc["ip_handling_policy"] = policy
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name("Preferences.foxprofile-tmp")
     tmp.write_text(json.dumps(prefs), encoding="utf-8")
     tmp.replace(path)
+
+
+def set_webrtc_policy(profile_dir: Path, policy: str) -> None:
+    set_prefs(profile_dir, {"webrtc.ip_handling_policy": policy})
 
 
 class EngineError(RuntimeError):
@@ -174,6 +193,7 @@ class ChromeEngine:
         extra_args: tuple[str, ...] | list[str] = (),
         allow_unsupported: bool = False,
         sandbox: bool | None = None,
+        settings: dict | None = None,
     ) -> None:
         if headless not in (True, False, "offscreen"):
             raise ValueError("headless must be True, False or 'offscreen'")
@@ -188,6 +208,10 @@ class ChromeEngine:
         self._executable = executable
         self._version = version
         self._extra_args = tuple(extra_args)
+        # FoxProfile's fingerprint settings (see settings.py). When given they decide
+        # cores, timezone, language, WebRTC, geolocation etc. and win over `timezone`,
+        # `locale` and the saved persona; nothing of them is written to the persona file.
+        self._plan = fpmap.plan(settings, os.cpu_count() or 8) if settings is not None else None
         self._allow_unsupported = allow_unsupported
         self.sandbox = default_sandbox() if sandbox is None else sandbox
 
@@ -220,30 +244,54 @@ class ChromeEngine:
     async def _start(self) -> Any:
         executable = self._resolve_executable()
         persona = self._resolve_persona()
+        plan = self._plan
 
         upstream = Upstream.parse(self._proxy) if self._proxy else None
         if upstream:
             self.bridge = await ProxyBridge(upstream).start()
 
-        if upstream and self.geoip and not (persona.timezone and persona.locale):
-            self.geo = await self._lookup_geo()
-            persona = persona.with_geo(self.geo.timezone, self.geo.locale)
+        if plan is None:
+            if upstream and self.geoip and not (persona.timezone and persona.locale):
+                self.geo = await self._lookup_geo()
+                persona = persona.with_geo(self.geo.timezone, self.geo.locale)
+        elif plan.follow and self.geoip and (upstream or self._needs_own_position(plan)):
+            # Behind a proxy the exit IP places everything that follows it. Without
+            # one only the position needs the lookup: the host's own timezone and
+            # language are already right for its IP.
+            try:
+                self.geo = await self._lookup_geo()
+            except EngineError:
+                if upstream:
+                    raise
+                self.warnings.append("Could not place this machine's IP; geolocation is not masked")
+            else:
+                if upstream:
+                    persona = replace(
+                        persona,
+                        timezone=self.geo.timezone
+                        if "timezone" in plan.follow
+                        else persona.timezone,
+                        locale=self.geo.locale if "locale" in plan.follow else persona.locale,
+                    )
         self.persona = persona
 
         self.args = build_args(
             persona,
             proxy_url=self.bridge.url if self.bridge else None,
             headless=self.headless,
-            extra_args=self._extra_args,
+            extra_args=[*self._extra_args, *(plan.args() if plan else ())],
         )
 
         from playwright.async_api import async_playwright
 
         self._playwright = await async_playwright().start()
         self.profile_dir.mkdir(parents=True, exist_ok=True)
-        set_webrtc_policy(
-            self.profile_dir, WEBRTC_POLICY_PROXY if self.bridge else WEBRTC_POLICY_DIRECT
-        )
+        if plan is None:
+            set_webrtc_policy(
+                self.profile_dir, WEBRTC_POLICY_PROXY if self.bridge else WEBRTC_POLICY_DIRECT
+            )
+        else:
+            set_prefs(self.profile_dir, plan.prefs(proxied=self.bridge is not None))
         self.context = await self._playwright.chromium.launch_persistent_context(
             str(self.profile_dir),
             executable_path=str(executable),
@@ -254,11 +302,7 @@ class ChromeEngine:
             chromium_sandbox=self.sandbox,
             accept_downloads=True,
         )
-        if self.geo and self.geo.latitude is not None and self.geo.longitude is not None:
-            # Only the position is emulated; sites still have to ask for permission.
-            await self.context.set_geolocation(
-                {"latitude": self.geo.latitude, "longitude": self.geo.longitude, "accuracy": 50}
-            )
+        await self._apply_geolocation()
         for page in self.context.pages:
             self._watch(page)
         self.context.on("page", self._watch)
@@ -279,6 +323,34 @@ class ChromeEngine:
 
     # --- helpers ----------------------------------------------------------
 
+    @staticmethod
+    def _needs_own_position(plan: fpmap.Plan) -> bool:
+        return "geolocation" in plan.follow and plan.geo_permission != "block"
+
+    async def _apply_geolocation(self) -> None:
+        plan = self._plan
+        geo = self.geo
+        has_fix = bool(geo and geo.latitude is not None and geo.longitude is not None)
+        if plan is None:
+            # Only the position is emulated; sites still have to ask for permission.
+            if has_fix:
+                await self.context.set_geolocation(
+                    {"latitude": geo.latitude, "longitude": geo.longitude, "accuracy": 50}
+                )
+            return
+        position = plan.position
+        if position is None and "geolocation" in plan.follow and has_fix:
+            position = {"latitude": geo.latitude, "longitude": geo.longitude, "accuracy": 50}
+        if position is not None and plan.geo_permission != "block":
+            await self.context.set_geolocation(position)
+        masked = plan.position is not None or "geolocation" in plan.follow
+        if plan.geo_permission == "allow":
+            if masked and position is None:
+                # Granting now would hand sites this machine's real position.
+                self.warnings.append("Geolocation is not allowed: there is no position to give")
+            else:
+                await self.context.grant_permissions(["geolocation"])
+
     def _resolve_executable(self) -> Path:
         if self._executable:
             path = Path(self._executable)
@@ -293,6 +365,7 @@ class ChromeEngine:
         return installed
 
     def _resolve_persona(self) -> personas.Persona:
+        plan = self._plan
         if self._persona is not None:
             pinned = {
                 k: v or None
@@ -300,6 +373,8 @@ class ChromeEngine:
                 if v is not None
             }
             persona = replace(self._persona, **pinned)
+        elif plan is not None:
+            persona = personas.load_or_create(self.profile_dir, self._platform or host_os())
         else:
             persona = personas.load_or_create(
                 self.profile_dir,
@@ -307,6 +382,16 @@ class ChromeEngine:
                 timezone=self._timezone,
                 locale=self._locale,
             )
+        if plan is not None:
+            # In memory only: the settings can change at any launch, and mask / real
+            # must get the seed's cores and the exit IP's timezone back.
+            persona = replace(
+                persona,
+                hardware_concurrency=plan.cores or persona.hardware_concurrency,
+                timezone=plan.timezone,
+                locale=plan.locale,
+            )
+            personas.validate(persona)
         level, reason = personas.compatibility(host_os(), persona.platform)
         if level == personas.UNSUPPORTED and not self._allow_unsupported:
             raise EngineError(
@@ -318,10 +403,11 @@ class ChromeEngine:
         return persona
 
     async def _lookup_geo(self) -> ExitGeo:
-        assert self.bridge is not None
         loop = asyncio.get_running_loop()
         try:
-            return await loop.run_in_executor(None, lookup, self.bridge.url)
+            return await loop.run_in_executor(
+                None, lookup, self.bridge.url if self.bridge else None
+            )
         except Exception as e:
             # Launching anyway would show the host's timezone behind the proxy.
             raise EngineError(

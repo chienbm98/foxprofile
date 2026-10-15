@@ -78,12 +78,14 @@ def _require_geo(timezone: str | None, locale: str | None) -> None:
             raise HTTPException(status_code=400, detail=msg)
 
 
-def _settings_or_400(partial: object, os_type: str, current: dict | None = None) -> dict:
+def _settings_or_400(
+    partial: object, os_type: str, current: dict | None = None, engine: str = "camoufox"
+) -> dict:
     """Validated complete settings: `partial` items over `current`, or HTTP 400."""
     if not isinstance(partial, dict):
         raise HTTPException(status_code=400, detail="fingerprint settings must be an object")
     try:
-        return fpsettings.normalize({**(current or {}), **partial}, os_type)
+        return fpsettings.normalize({**(current or {}), **partial}, os_type, engine)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -125,7 +127,7 @@ def create_profile(
     _require_engine(body.engine)
     _require_geo(body.timezone, body.locale)
     partial = body.fingerprint or {}
-    _settings_or_400(partial, _custom_os(partial, body.os_type))
+    _settings_or_400(partial, _custom_os(partial, body.os_type), engine=body.engine)
 
     if body.proxy:
         valid, msg = validate_proxy_format(body.proxy)
@@ -210,7 +212,7 @@ def update_profile(
         if field in supplied and item not in partial:
             value = supplied[field]
             partial[item] = {"mode": "custom", "value": value} if value else {"mode": "mask"}
-    _settings_or_400(partial, new_os, profile.fingerprint)
+    _settings_or_400(partial, new_os, profile.fingerprint, profile.engine)
     if new_os != profile.os_type and bl.is_running(name):
         raise HTTPException(status_code=409, detail="Stop the browser before changing the OS")
 
@@ -382,8 +384,8 @@ def import_cookies(
 
 
 def _fingerprint_warnings(profile) -> list[str]:
-    if profile.engine != "camoufox":
-        return []
+    if profile.engine == "chrome":
+        return fpsettings.chrome_check(profile.fingerprint, bool(profile.proxy))
     device = fingerprint.load_saved(os.path.join(DATA_DIR, profile.name))
     os_type = fpsettings.launch_os(profile.fingerprint, profile.os_type)
     return fpsettings.check(profile.fingerprint, device, os_type, HOST_OS, bool(profile.proxy))
@@ -426,7 +428,7 @@ def update_fingerprint_settings(
     its old settings until it is relaunched."""
     profile = require_profile(name, pm)
     new_os = _custom_os(body, profile.os_type)
-    _settings_or_400(body, new_os, profile.fingerprint)
+    _settings_or_400(body, new_os, profile.fingerprint, profile.engine)
     running = bl.is_running(name)
     if new_os != profile.os_type and running:
         raise HTTPException(status_code=409, detail="Stop the browser before changing the OS")
@@ -470,10 +472,13 @@ def reset_fingerprint(
 
 
 @fingerprint_router.get("/options")
-def fingerprint_options(os: str = Query(HOST_OS)) -> dict:
-    """GPUs, screens and fonts available for an OS, and the modes of each setting."""
+def fingerprint_options(os: str = Query(HOST_OS), engine: str = Query("camoufox")) -> dict:
+    """GPUs, screens and fonts available for an OS, and the modes of each setting for an
+    engine (an item with no modes is not supported by that engine)."""
     _require_os(os)
-    return fpsettings.options(os)
+    if engine not in ENGINES:
+        raise HTTPException(status_code=400, detail=f"engine must be one of: {', '.join(ENGINES)}")
+    return fpsettings.options(os, engine)
 
 
 @router.get(

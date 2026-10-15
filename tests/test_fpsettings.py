@@ -663,7 +663,8 @@ def test_rest_options(client):
     r = client.get(f"{API}/fingerprint/options", params={"os": HOST_OS})
     assert r.status_code == 200
     body = r.json()
-    assert set(body) == {"gpus", "screens", "fonts", "items"}
+    assert set(body) == {"engine", "gpus", "screens", "fonts", "items"}
+    assert body["engine"] == "camoufox"
     assert body["items"]["canvas"]["modes"] == ["noise", "real"]
     assert client.get(f"{API}/fingerprint/options", params={"os": "beos"}).status_code == 400
 
@@ -736,3 +737,155 @@ def test_api_replies_stay_english_when_the_ui_is_chinese(client, monkeypatch):
     r = client.post(f"{API}/profiles", json={"name": "   ", "os_type": "windows"})
     assert r.status_code >= 400
     assert not any("一" <= c <= "鿿" for c in r.text), r.text
+
+
+# --- The Chrome engine ------------------------------------------------------------
+
+UNSUPPORTED = ("user_agent", "webgl_noise", "screen", "fonts", "media_devices", "voices")
+
+
+def test_chrome_items_offer_only_what_the_browser_honours():
+    items = fpsettings.CHROME_ITEMS
+    assert list(items) == list(fpsettings.ITEMS)  # same 18 rows, same order
+    for name in UNSUPPORTED:
+        assert items[name].modes == ()
+    assert items["os"].modes == ("custom",) and items["platform"].modes == ("mask",)
+    assert items["webrtc"].modes == ("mask", "off", "real")  # no custom IP
+    assert items["port_scan"].modes == ("mask", "real")
+    assert items["webgl_meta"].modes == ("mask", "real")
+    assert items["hardware_concurrency"].modes == ("mask", "custom", "real")
+
+
+def test_chrome_defaults_are_complete_and_safe():
+    d = fpsettings.defaults("macos", "chrome")
+    assert set(d) == set(fpsettings.ITEMS)
+    assert d["language"] == item("mask") and d["geo_permission"] == item("prompt")
+    assert d["os"] == item("custom", "macos")
+    assert fpsettings.normalize(d, "macos", "chrome") == d  # a full object validates
+
+
+def test_chrome_normalize_rejects_what_the_engine_cannot_do():
+    for bad in (
+        {"user_agent": item("custom", "Mozilla/5.0 (X11; Linux x86_64) Gecko")},
+        {"screen": item("custom", "1920x1080")},
+        {"fonts": item("real")},
+        {"webrtc": item("custom", "1.2.3.4")},
+        {"port_scan": item("custom", ["localhost"])},
+        {"webgl_meta": item("custom", {"vendor": "a", "renderer": "b"})},
+        {"os": item("real")},
+        {"hardware_concurrency": item("custom", 65)},
+    ):
+        with pytest.raises(ValueError):
+            fpsettings.normalize(bad, "macos", "chrome")
+    ok = fpsettings.normalize(
+        {"webrtc": item("off"), "hardware_concurrency": item("custom", 6)}, "macos", "chrome"
+    )
+    assert ok["webrtc"] == item("off") and ok["hardware_concurrency"] == item("custom", 6)
+    # Camoufox keeps its wider table.
+    assert fpsettings.normalize({"screen": item("custom", "1920x1080")}, "macos")["screen"]
+
+
+def test_chrome_tolerant_clamps_instead_of_raising():
+    raw = {
+        "fonts": item("real"),  # unsupported -> placeholder
+        "webrtc": item("custom", "1.2.3.4"),  # mode not offered -> default
+        "audio": item("real"),  # fine, kept
+    }
+    out = fpsettings.tolerant(raw, "macos", "chrome")
+    assert out["fonts"] == item("mask") and out["webrtc"] == item("mask")
+    assert out["audio"] == item("real")
+
+
+def test_untouched_camoufox_defaults_of_an_old_chrome_profile_become_chrome_defaults():
+    old = fpsettings.defaults("macos")  # what a Chrome profile stored before it had settings
+    assert old["language"] == item("custom", "en-US") and old["geo_permission"] == item("allow")
+    assert fpsettings.tolerant(old, "macos", "chrome") == fpsettings.defaults("macos", "chrome")
+    # Once the user changes anything the rest is kept (and clamped), not reset.
+    touched = {**old, "canvas": item("real")}
+    out = fpsettings.tolerant(touched, "macos", "chrome")
+    assert out["canvas"] == item("real") and out["geo_permission"] == item("allow")
+    # A pinned locale is a choice and survives.
+    stored = fpsettings.from_stored(old, "macos", None, "de-DE", "chrome")
+    assert stored["language"] == item("custom", "de-DE")
+
+
+def test_chrome_options_have_empty_pickers_and_no_modes_for_unsupported_items():
+    opts = fpsettings.options("macos", "chrome")
+    assert opts["engine"] == "chrome" and opts["gpus"] == opts["screens"] == opts["fonts"] == []
+    assert set(opts["items"]) == set(fpsettings.ITEMS)
+    assert all(opts["items"][n]["modes"] == [] for n in UNSUPPORTED)
+    assert opts["items"]["canvas"]["modes"] == ["real"]  # noise breaks measureText
+    assert fpsettings.options("macos")["engine"] == "camoufox"
+
+
+def test_chrome_warnings():
+    d = fpsettings.defaults("macos", "chrome")
+    assert fpsettings.chrome_check(d, proxy=True) == []
+    real = {**d, "webrtc": item("real"), "timezone": item("real"), "port_scan": item("real")}
+    assert len(fpsettings.chrome_check(real, proxy=True)) == 4
+
+
+@pytest.fixture
+def chrome_client(workdir, monkeypatch):
+    from src.services.browser import chrome_prefetch
+
+    monkeypatch.setattr(chrome_prefetch, "start", lambda log=None: False)
+    monkeypatch.setattr(chrome_prefetch, "unsupported_reason", lambda: None)
+    return TestClient(create_app(Container()), base_url="http://127.0.0.1")
+
+
+def test_rest_options_take_an_engine(client):
+    r = client.get(f"{API}/fingerprint/options", params={"os": HOST_OS, "engine": "chrome"})
+    assert r.status_code == 200 and r.json()["engine"] == "chrome"
+    assert r.json()["items"]["screen"]["modes"] == []
+    assert client.get(f"{API}/fingerprint/options", params={"engine": "ie"}).status_code == 400
+
+
+def test_rest_chrome_profile_settings(chrome_client):
+    c = chrome_client
+    r = c.post(f"{API}/profiles", json={"name": "c1", "engine": "chrome"})
+    assert r.status_code == 201
+    got = c.get(f"{API}/profiles/c1/fingerprint").json()
+    assert got["settings"] == fpsettings.defaults(HOST_OS, "chrome")
+    # Unsupported modes are 400, supported ones stick.
+    for bad in ({"screen": item("custom", "1920x1080")}, {"webrtc": item("custom", "1.2.3.4")}):
+        assert c.put(f"{API}/profiles/c1/fingerprint/settings", json=bad).status_code == 400
+    r = c.put(
+        f"{API}/profiles/c1/fingerprint/settings",
+        json={"webrtc": item("off"), "language": item("custom", "zh-CN")},
+    )
+    assert r.status_code == 200
+    assert c.get(f"{API}/profiles/c1").json()["locale"] == "zh-CN"
+    # Putting the complete current settings back (unsupported placeholders included) works.
+    full = c.get(f"{API}/profiles/c1/fingerprint").json()["settings"]
+    assert c.put(f"{API}/profiles/c1/fingerprint/settings", json=full).status_code == 200
+    # The create call is engine-aware too.
+    r = c.post(
+        f"{API}/profiles",
+        json={"name": "c2", "engine": "chrome", "fingerprint": {"fonts": item("real")}},
+    )
+    assert r.status_code == 400
+    # Regenerate works (no device yet -> nothing to remove) and settings stay.
+    assert c.post(f"{API}/profiles/c1/fingerprint/regenerate").status_code == 200
+    assert c.get(f"{API}/profiles/c1/fingerprint").json()["settings"]["webrtc"] == item("off")
+
+
+def test_chrome_profile_survives_reload_and_old_files_are_clamped(workdir):
+    (workdir / "profiles.json").write_text(
+        json.dumps(
+            {
+                "old": {
+                    "name": "old",
+                    "os_type": "macos",
+                    "engine": "chrome",
+                    "fingerprint": fpsettings.defaults("macos"),
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    pm = ProfileManager()
+    assert pm.profiles["old"].fingerprint == fpsettings.defaults("macos", "chrome")
+    pm.update_profile("old", "old", "", "macos", fingerprint={"canvas": item("real")})
+    assert ProfileManager().profiles["old"].fingerprint["canvas"] == item("real")
+    assert fpsettings.saved("old", "macos", engine="chrome")["canvas"] == item("real")

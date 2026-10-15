@@ -71,6 +71,7 @@ class ProfileManager:
                             "os_type",
                             p_data.get("config", {}).get("os", "windows"),
                         )
+                        engine = _engine_or_default(p_data.get("engine"))
                         timezone = valid_or_none(p_data.get("timezone"), validate_timezone)
                         locale = valid_or_none(p_data.get("locale"), validate_locale)
                         clean_data = {
@@ -79,9 +80,9 @@ class ProfileManager:
                             "os_type": os_type,
                             "timezone": timezone,
                             "locale": locale,
-                            "engine": _engine_or_default(p_data.get("engine")),
+                            "engine": engine,
                             "fingerprint": fpsettings.from_stored(
-                                p_data.get("fingerprint"), os_type, timezone, locale
+                                p_data.get("fingerprint"), os_type, timezone, locale, engine
                             ),
                         }
                         self.profiles[name] = Profile(**clean_data)
@@ -231,7 +232,7 @@ class ProfileManager:
                 settings[item] = {"mode": "custom", "value": value}
             elif old:
                 settings[item] = {"mode": "mask", "value": None}
-        merged = fpsettings.normalize({**settings, **partial}, profile.os_type)
+        merged = fpsettings.normalize({**settings, **partial}, profile.os_type, profile.engine)
         for field, value in fpsettings.geo_fields(merged, partial).items():
             setattr(profile, field, value)
         profile.fingerprint = merged

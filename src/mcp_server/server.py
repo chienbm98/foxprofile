@@ -217,17 +217,20 @@ async def get_fingerprint(name: str) -> dict:
 
 @mcp.tool(annotations=ToolAnnotations(destructiveHint=False, idempotentHint=True))
 async def update_fingerprint_settings(name: str, settings: dict) -> dict:
-    """Change fingerprint settings of a Camoufox profile. `settings` holds only the items to
+    """Change fingerprint settings of a profile (modes differ per engine). `settings` holds only the items to
     change, e.g. {"hardware_concurrency": {"mode": "custom", "value": 8}, "webrtc": {"mode": "off"}};
     see fingerprint_options for items, modes and values. Applies on the next launch."""
     return await _arequest("PUT", f"/profiles/{_quote(name)}/fingerprint/settings", settings)
 
 
 @mcp.tool(annotations=_READ)
-async def fingerprint_options(os: Literal["windows", "macos", "linux"] = "windows") -> dict:
-    """Fingerprint setting items with their modes and defaults, plus the GPUs, screens and
-    fonts that fit an OS."""
-    return await _arequest("GET", "/fingerprint/options", query={"os": os})
+async def fingerprint_options(
+    os: Literal["windows", "macos", "linux"] = "windows",
+    engine: Literal["camoufox", "chrome"] = "camoufox",
+) -> dict:
+    """Fingerprint setting items with their modes and defaults for an engine (an item with
+    no modes is not supported by it), plus the GPUs, screens and fonts that fit an OS."""
+    return await _arequest("GET", "/fingerprint/options", query={"os": os, "engine": engine})
 
 
 @mcp.tool(annotations=ToolAnnotations(destructiveHint=True))

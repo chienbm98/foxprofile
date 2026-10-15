@@ -111,10 +111,12 @@ class FingerprintPanel:
         self.engine = engine
         self.is_running = is_running
         self.proxy_set = proxy_set
-        self.opts = fpsettings.options(os_type)
+        self.opts = fpsettings.options(os_type, engine)
         self.settings: dict[str, dict] = {
             n: dict(s)
-            for n, s in (profile.fingerprint if profile else fpsettings.defaults(os_type)).items()
+            for n, s in (
+                profile.fingerprint if profile else fpsettings.defaults(os_type, engine)
+            ).items()
         }
         self.base = {n: dict(s) for n, s in self.settings.items()}
         self.profile_dir = os.path.join(DATA_DIR, profile.name) if profile else ""
@@ -123,13 +125,6 @@ class FingerprintPanel:
         self.warning_box = ft.Container(visible=False)
         self.device_box = ft.Column(spacing=4, tight=True)
         self.regen_row = ft.Row(spacing=8)
-        self.chrome_note = ft.Container(
-            visible=False,
-            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-            border_radius=8,
-            bgcolor=COLORS["paper_sunk"],
-            content=_text(get_string("fp_note_chrome"), 12.5, COLORS["text_sub"]),
-        )
         self.body = ft.Column(
             spacing=0,
             tight=True,
@@ -150,12 +145,11 @@ class FingerprintPanel:
             height=470,
             scroll=ft.ScrollMode.AUTO,
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
-            controls=[self.chrome_note, self.body],
+            controls=[self.body],
         )
         for n in ORDER:
             self._render_row(n)
         self.refresh_device()
-        self.set_engine(engine)
 
     # --- Values the dialog's other controls need ---------------------------------
 
@@ -178,16 +172,24 @@ class FingerprintPanel:
         self.language.value = value
 
     def set_engine(self, engine: str) -> None:
+        """The engines honour different modes: a new engine starts from its own defaults
+        (only a profile being created can change engine)."""
+        if engine == self.engine:
+            return
         self.engine = engine
-        chrome = engine == "chrome"
-        self.chrome_note.visible = chrome
-        self.body.visible = not chrome
+        self.opts = fpsettings.options(self.os_type, engine)
+        self.settings = fpsettings.defaults(self.os_type, engine)
+        self.base = {n: dict(s) for n, s in self.settings.items()}
+        for n in ORDER:
+            self._render_row(n)
+        self._render_regen()
+        self._render_warnings()
 
     def set_os(self, os_type: str) -> None:
         """A new OS has its own GPUs, screens, fonts and platform string."""
         was_default = (self.editors["platform"].value or "") == PLATFORM[self.os_type]
         self.os_type = os_type
-        self.opts = fpsettings.options(os_type)
+        self.opts = fpsettings.options(os_type, self.engine)
         if was_default:
             self.editors["platform"].value = PLATFORM[os_type]
         gpu = self._gpu_selected()
@@ -203,10 +205,13 @@ class FingerprintPanel:
 
     def _render_row(self, name: str) -> None:
         cur = self.settings[name]
-        modes = ["custom", "real"] if name == "os" else self.opts["items"][name]["modes"]
+        # The OS is always the machine's own: Camoufox's "mask" is not offered for it.
+        modes = [m for m in self.opts["items"][name]["modes"] if name != "os" or m != "mask"]
         hint = HINT.get(name) or (
             "fp_hint_geo_permission" if cur["mode"] == "prompt" and name == "geo_permission" else ""
         )
+        if not modes or self.engine == "chrome":  # the hints describe Camoufox's behaviour
+            hint = ""
         editor = self._editor_view(name) if cur["mode"] == "custom" else None
 
         def change(mode: str, name: str = name) -> None:
@@ -214,6 +219,18 @@ class FingerprintPanel:
             self._render_row(name)
             self.page.update()
 
+        label = ft.Text(
+            get_string(f"fp_item_{name}"),
+            size=13,
+            font_family=FONT_SEMIBOLD,
+            color=COLORS["text_sub"] if modes else COLORS["text_dim"],
+        )
+        # An item the engine cannot honour offers no mode: only the note.
+        control = (
+            segmented([(m, get_string(f"fp_mode_{m}")) for m in modes], cur["mode"], change)
+            if modes
+            else _text(get_string("fp_unsupported_chrome"))
+        )
         self.rows[name].content = ft.Column(
             spacing=6,
             tight=True,
@@ -224,17 +241,7 @@ class FingerprintPanel:
                     run_spacing=6,
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[
-                        ft.Text(
-                            get_string(f"fp_item_{name}"),
-                            size=13,
-                            font_family=FONT_SEMIBOLD,
-                            color=COLORS["text_sub"],
-                        ),
-                        segmented(
-                            [(m, get_string(f"fp_mode_{m}")) for m in modes], cur["mode"], change
-                        ),
-                    ],
+                    controls=[label, control],
                 ),
                 *([_text(get_string(hint))] if hint else []),
                 *([editor] if editor is not None else []),
@@ -437,7 +444,7 @@ class FingerprintPanel:
         self._render_warnings()
 
     def _render_regen(self, confirm: bool = False) -> None:
-        if self.profile is None or self.engine == "chrome":
+        if self.profile is None:
             self.regen_row.controls = []
             return
         if self.is_running():
@@ -478,7 +485,9 @@ class FingerprintPanel:
 
     def _render_warnings(self) -> None:
         warnings: list[str] = []
-        if self.profile is not None and self.engine == "camoufox":
+        if self.profile is not None and self.engine == "chrome":
+            warnings = fpsettings.chrome_check(self.settings, self.proxy_set())
+        elif self.profile is not None:
             with contextlib.suppress(Exception):
                 device = fingerprint.load_saved(self.profile_dir)
                 warnings = fpsettings.check(
@@ -543,8 +552,6 @@ class FingerprintPanel:
 
     def collect(self, os_type: str) -> dict[str, dict]:
         """The items that differ from what was loaded; raises ValueError with a message."""
-        if self.engine == "chrome":
-            return {}
         out: dict[str, dict] = {}
         for name in ORDER:
             cur, was = self.settings[name], self.base[name]

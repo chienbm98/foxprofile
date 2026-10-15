@@ -16,13 +16,13 @@ class Profile:
     locale: str | None = None
     engine: str = "camoufox"
     # Fingerprint settings {item: {"mode", "value"}} (services/browser/fpsettings.py);
-    # the Chrome runner ignores them.
+    # the modes each engine honours differ, so they are clamped per engine.
     fingerprint: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         from ..services.browser import fpsettings
 
-        self.fingerprint = fpsettings.tolerant(self.fingerprint, self.os_type)
+        self.fingerprint = fpsettings.tolerant(self.fingerprint, self.os_type, self.engine)
 
     def to_dict(self) -> dict:
         return asdict(self)

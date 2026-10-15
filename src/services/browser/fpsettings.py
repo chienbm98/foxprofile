@@ -1,7 +1,8 @@
-"""Per-profile fingerprint settings for the Camoufox engine.
+"""Per-profile fingerprint settings (Camoufox and Chrome engines).
 
 A profile's settings are {item: {"mode": str, "value": any}} for the items in
-ITEMS. The frozen "masked" device (fingerprint.py) is the base; `apply_modes`
+ITEMS (Camoufox) or CHROME_ITEMS (the Chrome engine honours fewer modes and some
+items not at all; chrome_engine/settings.py maps them onto the browser). The frozen "masked" device (fingerprint.py) is the base; `apply_modes`
 changes it per item: mask keeps the device value (or follows the exit IP for
 timezone / language / geolocation / WebRTC), custom overwrites it, real removes
 the key so the browser reports the host's own value, off / noise are
@@ -185,30 +186,74 @@ ITEMS: dict[str, Item] = {
 }
 
 
+# The Chrome engine (fingerprint-chromium) can honour fewer modes, verified against
+# the pinned build: an item with no modes is shown as "not supported" and keeps its
+# placeholder default. Where the browser cannot do a thing, no mode offers it:
+# - user_agent: must stay consistent with the client hints, which the persona drives;
+# - webgl_noise: one switch (canvas) covers 2D canvas and WebGL read-back noise, so
+#   it is the canvas item; webgl_meta has no custom GPU, only the seed's (mask) or
+#   the host's (real);
+# - screen: --fingerprint-screen-* is ignored and --screen-info only works headless;
+# - fonts, media_devices, voices: provided by the host;
+# - port_scan has no allow-list (Chromium's Local Network Access check is on/off).
+CHROME_ITEMS: dict[str, Item] = {
+    **{name: Item((), it.default, None, it.value) for name, it in ITEMS.items()},
+    "os": Item(("custom",), "custom", _os_value),  # always the host's OS
+    "platform": Item(("mask",), "mask"),  # read-only: the host's platform
+    "hardware_concurrency": Item(_MCR, "mask", _number(1, 64)),
+    "webgl_meta": Item(("mask", "real"), "mask"),
+    # Canvas noise in this build zeroes measureText() widths (fingerprint-chromium#96,
+    # 148 and 150), which breaks pages and is an obvious tell: canvas is always real.
+    "canvas": Item(("real",), "real"),
+    "audio": Item(("noise", "real"), "noise"),
+    "webrtc": Item(("mask", "off", "real"), "mask"),
+    "timezone": ITEMS["timezone"],
+    "geo_permission": Item(("prompt", "allow", "block"), "prompt"),
+    "geolocation": ITEMS["geolocation"],
+    "language": Item(_MCR, "mask", _language),
+    "port_scan": Item(("mask", "real"), "mask"),
+}
+
+
+def table(engine: str) -> dict[str, Item]:
+    return CHROME_ITEMS if engine == "chrome" else ITEMS
+
+
 # --- Normalizing ----------------------------------------------------------------
 
 
-def defaults(os: str) -> dict[str, dict]:
+def defaults(os: str, engine: str = "camoufox") -> dict[str, dict]:
     return {
         name: {"mode": it.default, "value": os if name == "os" else it.value}
-        for name, it in ITEMS.items()
+        for name, it in table(engine).items()
     }
 
 
-def normalize(raw: Any, os: str) -> dict[str, dict]:
+def normalize(raw: Any, os: str, engine: str = "camoufox") -> dict[str, dict]:
     """Complete, validated settings; missing items get their defaults.
 
-    Raises ValueError naming the item for an unknown item, mode or bad value.
+    Raises ValueError naming the item for an unknown item, mode or bad value. An item
+    the engine cannot honour accepts only its placeholder default (so a stored or
+    echoed full settings object still validates).
     """
     if raw is None:
         raw = {}
     if not isinstance(raw, dict):
         raise ValueError("fingerprint settings must be an object")
-    if unknown := sorted(set(raw) - set(ITEMS)):
+    items = table(engine)
+    if unknown := sorted(set(raw) - set(items)):
         raise ValueError(f"unknown fingerprint item(s): {', '.join(unknown)}")
-    out = defaults(os)
+    out = defaults(os, engine)
     for name, entry in raw.items():
-        item = ITEMS[name]
+        item = items[name]
+        if not item.modes:
+            if not (
+                isinstance(entry, dict)
+                and entry.get("mode") == item.default
+                and entry.get("value") is None
+            ):
+                raise ValueError(f"{name}: not supported by the {engine} engine")
+            continue
         if not isinstance(entry, dict) or entry.get("mode") not in item.modes:
             raise ValueError(f"{name}: mode must be one of: {', '.join(item.modes)}")
         mode, value = entry["mode"], None
@@ -224,27 +269,37 @@ def normalize(raw: Any, os: str) -> dict[str, dict]:
     return out
 
 
-def tolerant(raw: Any, os: str) -> dict[str, dict]:
-    """normalize(), but an invalid item falls back to its default instead of failing."""
+def tolerant(raw: Any, os: str, engine: str = "camoufox") -> dict[str, dict]:
+    """normalize(), but an invalid item falls back to its default instead of failing.
+
+    A Chrome profile created before the engine had settings stores the Camoufox
+    defaults (language en-US, geolocation permission allow), which nobody chose and
+    which would now change what it presents; those untouched defaults become the
+    Chrome defaults. Any other stored item is clamped to what the engine honours.
+    """
     if not isinstance(raw, dict):
-        return defaults(os)
+        return defaults(os, engine)
+    if engine != "camoufox" and tolerant(raw, os) == defaults(os):
+        return defaults(os, engine)
     good = {}
     for name, entry in raw.items():
         try:
-            normalize({name: entry}, os)
+            normalize({name: entry}, os, engine)
         except ValueError:
             continue
         good[name] = entry
-    return normalize(good, os)
+    return normalize(good, os, engine)
 
 
-def from_stored(raw: Any, os: str, timezone: str | None, locale: str | None) -> dict[str, dict]:
+def from_stored(
+    raw: Any, os: str, timezone: str | None, locale: str | None, engine: str = "camoufox"
+) -> dict[str, dict]:
     """Settings of a stored profile, with its timezone / locale fields mirrored in.
 
     A profile saved before settings existed (no `fingerprint`) followed the exit IP
     unless it pinned a locale, so its language is "mask", not the new en-US default.
     """
-    settings = tolerant(raw, os)
+    settings = tolerant(raw, os, engine)
     if not isinstance(raw, dict) and not locale:
         settings["language"] = {"mode": "mask", "value": None}
     if timezone:
@@ -264,7 +319,9 @@ def geo_fields(settings: dict, partial: dict) -> dict[str, str | None]:
     return out
 
 
-def saved(profile_name: str, os: str, timezone: str = "", locale: str = "") -> dict[str, dict]:
+def saved(
+    profile_name: str, os: str, timezone: str = "", locale: str = "", engine: str = "camoufox"
+) -> dict[str, dict]:
     """The settings of a profile as stored in profiles.json (for the subprocesses)."""
     try:
         data = json.loads(pathlib.Path(PROFILES_FILE).read_text(encoding="utf-8"))[profile_name]
@@ -272,7 +329,11 @@ def saved(profile_name: str, os: str, timezone: str = "", locale: str = "") -> d
     except (OSError, ValueError, KeyError, AttributeError):
         raw = None
     return from_stored(
-        raw, os, valid_or_none(timezone, validate_timezone), valid_or_none(locale, validate_locale)
+        raw,
+        os,
+        valid_or_none(timezone, validate_timezone),
+        valid_or_none(locale, validate_locale),
+        engine,
     )
 
 
@@ -708,19 +769,50 @@ def check(
     return out
 
 
-def options(os: str) -> dict:
-    """Choices for the settings UI: GPUs, screens and fonts of `os`, and the item table."""
+def chrome_check(settings: dict, proxy: bool = False) -> list[str]:
+    """Warnings for a Chrome profile's settings (a site could notice these)."""
+    mode = {name: s["mode"] for name, s in settings.items()}
+    out: list[str] = []
+    if mode["geo_permission"] == "prompt" and mode["geolocation"] == "real":
+        out.append("The real geolocation is offered to sites that ask and the user allows.")
+    if mode["geo_permission"] == "allow" and mode["geolocation"] == "real":
+        out.append(
+            "Geolocation is allowed for every site and real: your actual position is shared."
+        )
+    if mode["webrtc"] == "real":
+        out.append("Real WebRTC exposes this machine's local network address.")
+    if mode["port_scan"] == "real":
+        out.append("Pages can probe this machine and your local network.")
+    if proxy:
+        out += [
+            f"{name} is real while a proxy is set: it will not match the proxy's location."
+            for name in ("webrtc", "timezone", "language")
+            if mode[name] == "real"
+        ]
+    return out
+
+
+def options(os: str, engine: str = "camoufox") -> dict:
+    """Choices for the settings UI: GPUs, screens and fonts of `os`, and the item table.
+
+    For the Chrome engine the lists are empty (it offers no custom GPU, screen or
+    fonts) and an item with no modes is not supported.
+    """
+    items = {
+        name: {
+            "modes": list(it.modes),
+            "default": {"mode": it.default, "value": defaults(os, engine)[name]["value"]},
+        }
+        for name, it in table(engine).items()
+    }
+    if engine == "chrome":
+        return {"engine": engine, "gpus": [], "screens": [], "fonts": [], "items": items}
     from camoufox.fingerprints import _load_os_fonts
 
     return {
+        "engine": engine,
         "gpus": devices.gpus(os),
         "screens": devices.screens(os),
         "fonts": list(_load_os_fonts().get(_KEY[os], [])),
-        "items": {
-            name: {
-                "modes": list(it.modes),
-                "default": {"mode": it.default, "value": defaults(os)[name]["value"]},
-            }
-            for name, it in ITEMS.items()
-        },
+        "items": items,
     }

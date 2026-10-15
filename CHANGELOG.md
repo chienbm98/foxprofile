@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-16
+
+### Thêm
+- Engine Chrome dùng được các cài đặt fingerprint theo từng mục (tab Fingerprint của app desktop, web panel, REST, MCP), mỗi engine chỉ hiện những chế độ trình duyệt thật sự làm được. Hỗ trợ: số nhân CPU (masked/custom/real), WebGL GPU (masked/real), audio (noise/real), WebRTC (masked/off/real), timezone, ngôn ngữ, vị trí và quyền vị trí, chặn quét cổng nội bộ (masked/real). Canvas của Chrome luôn là real: noise canvas của bản fingerprint-chromium này làm `measureText()` trả về ~0 (fingerprint-chromium#96). Các mục Chrome không làm được (user agent, WebGL noise riêng, màn hình, font, thiết bị media, giọng đọc) vẫn hiện nhưng ghi "Not supported by the Chrome engine". `GET /fingerprint/options` và MCP `fingerprint_options` nhận tham số `engine`.
+- Profile Chrome cũ chưa từng chỉnh cài đặt được chuyển sang mặc định của Chrome (ngôn ngữ theo IP thoát, quyền vị trí "prompt") để hành vi không đổi.
+- Không dùng proxy, profile Chrome để vị trí ở chế độ masked sẽ tra IP của máy bạn một lần mỗi lần mở (như Camoufox khi dùng geoip) trừ khi quyền vị trí là "block".
+
 ## [2.4.0] - 2026-10-15
 
 ### Thêm

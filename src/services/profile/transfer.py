@@ -93,6 +93,9 @@ def import_from_zip(
             os_type = profile_data.get("os_type", "windows")
             timezone = valid_or_none(profile_data.get("timezone"), validate_timezone)
             locale = valid_or_none(profile_data.get("locale"), validate_locale)
+            engine = (
+                profile_data.get("engine") if profile_data.get("engine") in ENGINES else "camoufox"
+            )
             profile = Profile(
                 name=name,
                 proxy=profile_data.get("proxy"),
@@ -100,11 +103,9 @@ def import_from_zip(
                 timezone=timezone,
                 locale=locale,
                 fingerprint=fpsettings.from_stored(
-                    profile_data.get("fingerprint"), os_type, timezone, locale
+                    profile_data.get("fingerprint"), os_type, timezone, locale, engine
                 ),
-                engine=profile_data.get("engine")
-                if profile_data.get("engine") in ENGINES
-                else "camoufox",
+                engine=engine,
             )
 
             data_files = [f for f in zipf.namelist() if f.startswith("data/")]

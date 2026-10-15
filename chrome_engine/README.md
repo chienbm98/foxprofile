@@ -44,6 +44,24 @@ python -m chrome_engine.runner <tên> <proxy|None> <windows|macos|linux> [timezo
 | Persona OS khác host tự mâu thuẫn | Bảng tương thích; persona Linux trên host Windows hoặc macOS bị từ chối (WebGL vẫn báo GPU thật của máy) | `persona.py` |
 | Cần biết trang web thực sự thấy gì | Probe đọc từ window, worker, iframe, ServiceWorker, SharedWorker, header HTTP; `check()` liệt kê mọi chỗ lệch | `probe.py` |
 
+## Cài đặt fingerprint (tab Fingerprint)
+
+Runner đọc `fingerprint` của profile (`fpsettings.saved(..., "chrome")`) và `settings.py` chuyển thành switch, preferences và thao tác Playwright. Cài đặt luôn thắng `timezone`/`locale` truyền vào và `chrome_persona.json`; chúng chỉ áp dụng trong bộ nhớ, không ghi vào persona. Preferences (WebRTC, quyền vị trí, Local Network Access) được ghi lại ở mỗi lần mở. Đã kiểm bằng probe trên 148.0.7778.215, macOS:
+
+| Mục | Chế độ | Cách làm |
+|---|---|---|
+| hardware_concurrency | mask / custom / real | `--fingerprint-hardware-concurrency` (real = số nhân máy) |
+| webgl_meta | mask / real | real = `--disable-spoofing=gpu` (GPU của máy; mask = GPU theo seed) |
+| canvas | real (cố định) | luôn `--disable-spoofing=canvas`: noise canvas làm `measureText()` trả về ~0 (fingerprint-chromium#96, cả 148 và 150). Cũng tắt noise đọc pixel WebGL, nên không có `webgl_noise` riêng |
+| audio | noise / real | `--disable-spoofing=audio` |
+| webrtc | mask / off / real | mask: pref policy theo proxy; off: `disable_non_proxied_udp`; real: `--webrtc-ip-handling-policy=default` (lộ IP LAN). API `RTCPeerConnection` vẫn tồn tại ở chế độ off |
+| timezone, language | mask / custom / real | `--timezone`, `--lang`/`--accept-lang`; mask theo IP thoát (cần proxy), real để trình duyệt tự lấy theo máy |
+| geo_permission | prompt / allow / block | block: pref `geolocation=2`; allow: `grant_permissions`; prompt: pref `3` |
+| geolocation | mask / custom / real | `context.set_geolocation`; real không giả vị trí |
+| port_scan | mask / real | mask: pref `local_network_access`/`loopback_network` = block; real: `--disable-features=LocalNetworkAccessChecks`. Chặn cả `fetch` và `ws://localhost`, kể cả IP LAN; không có danh sách ngoại lệ |
+| os, platform | cố định | luôn là OS của máy |
+| user_agent, webgl_noise, screen, fonts, media_devices, voices | không hỗ trợ | UA phải khớp client hints; `--fingerprint-screen-*` không có tác dụng ở bản này và `--screen-info` chỉ chạy headless; font/thiết bị do máy cung cấp |
+
 ## Tương thích persona ↔ máy chủ
 
 | Máy chủ \ Persona | Windows | macOS | Linux |

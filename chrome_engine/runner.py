@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chrome_engine import fetch
 from chrome_engine.engine import ChromeEngine
 from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
-from src.services.browser import control, session
+from src.services.browser import control, fpsettings, session
 from src.services.browser.runner import restore_tabs, snapshot_tabs
 
 _shutdown = asyncio.Event()
@@ -70,6 +70,23 @@ def _headless() -> bool:
     return HEADLESS in (True, "virtual")
 
 
+def build_engine(
+    profile_name: str, proxy_str: str, os_type: str, timezone: str = "", locale: str = ""
+) -> ChromeEngine:
+    """The engine for a stored profile (also what the verification harness launches)."""
+    profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
+    proxy = proxy_str if proxy_str and proxy_str != "None" else None
+    return ChromeEngine(
+        profile_dir,
+        platform=os_type,
+        proxy=proxy,
+        headless=_headless(),
+        # The profile's fingerprint settings decide timezone and language (a pinned
+        # timezone / locale is already their "custom" value), cores, WebRTC, ...
+        settings=fpsettings.saved(profile_name, os_type, timezone, locale, "chrome"),
+    )
+
+
 async def run_browser(
     profile_name: str,
     proxy_str: str,
@@ -78,16 +95,7 @@ async def run_browser(
     locale: str = "",
 ) -> int:
     profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
-    proxy = proxy_str if proxy_str and proxy_str != "None" else None
-    engine = ChromeEngine(
-        profile_dir,
-        platform=os_type,
-        proxy=proxy,
-        headless=_headless(),
-        # "" keeps the timezone / locale following the proxy's exit IP.
-        timezone=timezone,
-        locale=locale,
-    )
+    engine = build_engine(profile_name, proxy_str, os_type, timezone, locale)
     _say(f"Starting Chrome engine for {profile_name}...")
     try:
         await ensure_installed()

@@ -206,6 +206,8 @@ main { min-width: 0; padding: 26px 32px 40px; }
 .fp-row { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--rule); }
 .fp-row:first-child { border-top: 0; }
 .fp-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.fp-row.na .fp-label { color: var(--ink-3); font-weight: 500; }
+.fp-row.na .hint { margin: 0; text-align: right; }
 .fp-wide { grid-column: 1 / -1; }
 .fp-row .hint { margin: 4px 0 0; }
 .fp-triple { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -548,7 +550,7 @@ const I18N = {
     boot_error: "无法连接到服务器",
     fp_tab_profile: "Profile",
     fp_tab: "指纹",
-    fp_note_chrome: "这些设置仅适用于 Camoufox (Firefox) 引擎。",
+    fp_unsupported_chrome: "Chrome 引擎不支持此项",
     fp_device_title: "当前设备",
     fp_device_none: "暂无设备，将在首次启动时创建。",
     fp_gpu: "GPU",
@@ -656,7 +658,7 @@ const I18N = {
     lang_label: "Ngôn ngữ",
     fp_tab_profile: "Profile",
     fp_tab: "Fingerprint",
-    fp_note_chrome: "Các cài đặt này chỉ áp dụng cho engine Camoufox (Firefox).",
+    fp_unsupported_chrome: "Engine Chrome không hỗ trợ mục này",
     fp_device_title: "Thiết bị hiện tại",
     fp_device_none: "Chưa có thiết bị. Sẽ tạo ở lần mở đầu.",
     fp_gpu: "GPU",
@@ -764,7 +766,7 @@ const I18N = {
     lang_label: "Language",
     fp_tab_profile: "Profile",
     fp_tab: "Fingerprint",
-    fp_note_chrome: "These settings apply to the Camoufox (Firefox) engine only.",
+    fp_unsupported_chrome: "Not supported by the Chrome engine",
     fp_device_title: "Current device",
     fp_device_none: "No device yet. It is created on the first launch.",
     fp_gpu: "GPU",
@@ -1148,7 +1150,7 @@ const FP_PLATFORM = { windows: "Win32", macos: "MacIntel", linux: "Linux x86_64"
 const FP_HINT = { os: "fp_hint_os", webgl_noise: "fp_hint_noise", canvas: "fp_hint_noise", audio: "fp_hint_audio" };
 const FP_NUMBERS = { geolocation: ["latitude", "longitude", "accuracy"], media_devices: ["micros", "webcams", "speakers"] };
 const FP_LABELS = { latitude: "fp_lat", longitude: "fp_lon", accuracy: "fp_acc", micros: "fp_micros", webcams: "fp_webcams", speakers: "fp_speakers" };
-const fpOptions = {};   // os -> /fingerprint/options, fetched once per OS
+const fpOptions = {};   // os:engine -> /fingerprint/options, fetched once each
 
 const FP_LANGUAGES = { "en-US": "English (en-US)", "zh-CN": "简体中文 (zh-CN)" };
 
@@ -1189,7 +1191,7 @@ function fpEditor(name, fp, osValue) {
   switch (name) {
     case "user_agent": return input({ placeholder: "Mozilla/5.0 (…) Gecko/20100101 Firefox/…" });
     case "platform": return input({ placeholder: FP_PLATFORM[osValue] });
-    case "hardware_concurrency": return input({ type: "number", min: 1, max: 128 });
+    case "hardware_concurrency": return input({ type: "number", min: 1, max: fp.opts.engine === "chrome" ? 64 : 128 });
     case "webrtc": return input({ placeholder: "203.0.113.7" });
     case "timezone": return input({ placeholder: t("tz_hint") });
     case "language": {
@@ -1231,11 +1233,14 @@ function fpEditor(name, fp, osValue) {
 // One row per item: label + segmented modes; "Custom" opens an inline editor.
 function fpRow(name, fp, osValue, onChange) {
   const cur = fp.settings[name];
-  const modes = name === "os" ? ["custom", "real"] : fp.opts.items[name].modes;
+  // Camoufox hides "mask" for the OS (it is always the machine's own); an item the
+  // engine cannot honour has no modes, so it gets a note instead of buttons.
+  const modes = name === "os" ? fp.opts.items[name].modes.filter((m) => m !== "mask") : fp.opts.items[name].modes;
+  if (!modes.length) return h("div", { class: "fp-row na" }, h("div", { class: "fp-label" }, t("fp_item_" + name)), h("div", { class: "hint" }, t("fp_unsupported_chrome")));
   const seg = h("div", { class: "mseg", role: "radiogroup", "aria-label": t("fp_item_" + name) }, modes.map((m) =>
     h("button", { type: "button", role: "radio", "aria-checked": cur.mode === m ? "true" : "false", class: cur.mode === m ? "active" : "",
       onclick: () => { cur.mode = m; onChange(name); } }, t("fp_mode_" + m))));
-  const hint = FP_HINT[name] ? t(FP_HINT[name]) : name === "geo_permission" && cur.mode === "prompt" ? t("fp_hint_geo_permission") : "";
+  const hint = fp.opts.engine === "chrome" ? "" : FP_HINT[name] ? t(FP_HINT[name]) : name === "geo_permission" && cur.mode === "prompt" ? t("fp_hint_geo_permission") : "";
   const editor = cur.mode === "custom" ? fpEditor(name, fp, osValue) : null;
   return h("div", { class: "fp-row" },
     h("div", { class: "fp-label" }, t("fp_item_" + name)), seg,
@@ -1282,7 +1287,6 @@ function openEditor(p) {
 
     const isChrome = () => (p ? p.engine : engine.value) === "chrome";
     const renderFp = () => {
-      if (isChrome()) return fpBody.replaceChildren(h("div", { class: "note calm" }, icon("fingerprint", true), h("span", {}, t("fp_note_chrome"))));
       if (fp.error) return fpBody.replaceChildren(h("div", { class: "msg err" }, fp.error));
       if (!fp.settings) return fpBody.replaceChildren(h("div", { class: "msg info" }, t("working")));
       const info = fp.info;
@@ -1308,12 +1312,13 @@ function openEditor(p) {
         h("div", { class: "fp-rows" }, FP_ORDER.map((item) => fpRow(item, fp, os.value, () => renderFp()))),
         h("div", { class: "hint", style: "margin-top:10px" }, t("fp_next_launch"))].filter(Boolean));
     };
+    const engineValue = () => (isChrome() ? "chrome" : "camoufox");
     const loadOptions = async (osValue) => {
-      if (!fpOptions[osValue]) fpOptions[osValue] = await api("GET", `/fingerprint/options?os=${osValue}`);
-      return fpOptions[osValue];
+      const key = `${osValue}:${engineValue()}`;
+      if (!fpOptions[key]) fpOptions[key] = await api("GET", `/fingerprint/options?os=${osValue}&engine=${engineValue()}`);
+      return fpOptions[key];
     };
     const initFp = async () => {
-      if (isChrome()) return renderFp();
       try {
         const [opts, cur] = await Promise.all([loadOptions(os.value), p ? api("GET", `/profiles/${enc(p.name)}/fingerprint`) : null]);
         fp.opts = opts;
@@ -1335,14 +1340,16 @@ function openEditor(p) {
         const wasDefault = fp.draft.platform === FP_PLATFORM[lastOs];
         fp.opts = opts; lastOs = os.value;
         if (wasDefault) fp.draft.platform = FP_PLATFORM[os.value];
-        if (!opts.gpus.some((g) => g.vendor === fp.draft.webgl_meta.vendor && g.renderer === fp.draft.webgl_meta.renderer)) fp.draft.webgl_meta = opts.gpus[0] || fp.draft.webgl_meta;
+        if (fp.draft.webgl_meta && !opts.gpus.some((g) => g.vendor === fp.draft.webgl_meta.vendor && g.renderer === fp.draft.webgl_meta.renderer)) fp.draft.webgl_meta = opts.gpus[0] || fp.draft.webgl_meta;
         if (!opts.screens.includes(fp.draft.screen) && fp.settings.screen.mode !== "custom") fp.draft.screen = opts.screens[0] || "";
         renderFp();
       } catch (e) { fp.error = t("fp_options_failed", { e: e.message }); renderFp(); }
     };
     const syncEngine = () => {
       engineNote.style.display = !p && engine.value === "chrome" ? "" : "none";
-      if (!fp.settings && !fp.error) initFp(); else renderFp();
+      // The engines honour different modes: start again from the new engine's defaults.
+      fp.settings = null; fp.error = ""; fp.draft = {};
+      renderFp(); initFp();
     };
     engine.onchange = syncEngine;
     engineNote.style.display = !p && engine.value === "chrome" ? "" : "none";
@@ -1350,7 +1357,7 @@ function openEditor(p) {
 
     // Only the items that differ from what was loaded (or from the defaults on create).
     const collect = () => {
-      if (!fp.settings || isChrome()) return {};
+      if (!fp.settings) return {};
       const out = {};
       for (const n of FP_ORDER) {
         const cur = fp.settings[n], was = fp.base[n];

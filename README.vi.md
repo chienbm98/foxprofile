@@ -170,7 +170,7 @@ MCP **không** có tool xóa profile, để AI không thể vô tình xóa cooki
 
 Ngoài Camoufox (Firefox), profile có thể chạy trên engine **Chrome**: một bản Chromium đã vá fingerprint ở tầng C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), giấy phép BSD-3). Chọn ở ô **Engine** khi tạo profile; không đổi được sau khi tạo. Bản trình duyệt (~140-190 MB tuỳ hệ điều hành, tải từ GitHub của fingerprint-chromium và kiểm tra SHA-256) được tự tải ở nền ngay khi tạo profile Chrome đầu tiên, hoặc lúc mở profile nếu chưa có; tiến độ hiện trong log. Muốn tải trước bằng tay: `python -m chrome_engine fetch`.
 
-Nên chọn đúng hệ điều hành của máy đang chạy FoxProfile: persona khác hệ điều hành sẽ lộ font của máy, và persona Linux trên Windows/macOS bị từ chối vì WebGL lộ GPU thật. Hỗ trợ Windows x64, macOS Apple Silicon và Linux x64 (chưa kiểm chứng). Chi tiết và kết quả kiểm thử: [chrome_engine/README.md](chrome_engine/README.md).
+Nên chọn đúng hệ điều hành của máy đang chạy FoxProfile: persona khác hệ điều hành sẽ lộ font của máy, và persona Linux trên Windows/macOS bị từ chối vì WebGL lộ GPU thật. Hỗ trợ Windows x64, macOS Apple Silicon và Linux x64 (chưa kiểm chứng). Tab Fingerprint cũng dùng được cho profile Chrome nhưng chỉ hiện các chế độ trình duyệt làm được (số nhân CPU, GPU, audio, WebRTC, timezone, ngôn ngữ, vị trí và chặn quét mạng nội bộ); mục không làm được như user agent, màn hình, font hiện là không hỗ trợ. Canvas của Chrome luôn là real: noise canvas của bản này làm `measureText()` trả về ~0 (fingerprint-chromium#96). Chi tiết và kết quả kiểm thử: [chrome_engine/README.md](chrome_engine/README.md).
 
 ## Cookie và fingerprint
 
