@@ -40,6 +40,7 @@ ORDER = (
     "port_scan",
 )
 PLATFORM = {"windows": "Win32", "macos": "MacIntel", "linux": "Linux x86_64"}
+LANGUAGES = {"en-US": "English (en-US)", "zh-CN": "简体中文 (zh-CN)"}
 HINT = {
     "os": "fp_hint_os",
     "webgl_noise": "fp_hint_noise",
@@ -166,8 +167,15 @@ class FingerprintPanel:
 
     def use_language(self, value: str) -> None:
         self.settings["language"]["mode"] = "custom"
-        self.editors["language"].value = value
+        self._set_language(value)
         self._render_row("language")
+
+    def _set_language(self, value: str) -> None:
+        # A stored or "Check IP"-suggested locale outside the list is kept as an extra option.
+        choices = dict(LANGUAGES)
+        choices.setdefault(value, value)
+        self.language.options = [ft.dropdown.Option(k, v) for k, v in choices.items()]
+        self.language.value = value
 
     def set_engine(self, engine: str) -> None:
         self.engine = engine
@@ -245,7 +253,15 @@ class FingerprintPanel:
         if name == "platform":
             return _field(value=value or PLATFORM[self.os_type], hint_text=PLATFORM[self.os_type])
         if name == "language":
-            return _field(value=value or "en-US", hint_text="en-US")
+            self.language = ft.Dropdown(
+                text_size=13,
+                bgcolor=COLORS["input_bg"],
+                color=COLORS["text_main"],
+                border_color=COLORS["rule_strong"],
+                border_radius=8,
+            )
+            self._set_language(value or "en-US")
+            return self.language
         if name == "hardware_concurrency":
             return _field(
                 value=str(value or ""),
@@ -352,7 +368,6 @@ class FingerprintPanel:
                 ],
             )
         notes = {
-            "language": "fp_hint_language",
             "screen": "fp_hint_screen",
             "port_scan": "fp_hint_port_scan",
         }
