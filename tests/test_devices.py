@@ -55,3 +55,10 @@ def test_launch_options_accepts_a_record(os_name):
     )
     cfg = json.loads("".join(env[k] for k in names))
     assert cfg["webGl:renderer"] == rec["webgl"]["unmaskedRenderer"]
+
+
+def test_pick_fits_a_real_panel_at_the_host_scale(monkeypatch):
+    monkeypatch.setattr(devices, "host_dpr", lambda: 2.0)
+    for seed in range(50):
+        rec = devices.pick("windows", random.Random(seed))
+        assert rec["screen"]["width"] * 2 <= 3840 and rec["screen"]["height"] * 2 <= 2160

@@ -430,6 +430,12 @@ def test_check_real_values_on_another_os():
     assert len(warnings_for(real, os="linux")) == 5
 
 
+def test_check_custom_screen_against_host_scale(monkeypatch):
+    monkeypatch.setattr(devices, "host_dpr", lambda: 2.0)
+    assert "panel" in warnings_for({"screen": item("custom", "2560x1440")})[0]
+    assert not any("panel" in w for w in warnings_for({"screen": item("custom", "1920x1080")}))
+
+
 def test_check_misc():
     assert any(
         "cores" in w

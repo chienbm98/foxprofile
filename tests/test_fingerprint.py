@@ -18,7 +18,6 @@ def fake_freeze(monkeypatch):
             "screen.width": 1920,
             "screen.height": 1080,
             "webGl:renderer": "Test GPU",
-            "window.devicePixelRatio": 1.5,
         }
         return f"rec-{len(calls)}", device
 
@@ -40,13 +39,13 @@ def test_second_load_reuses_saved(tmp_path, fake_freeze):
     assert fake_freeze == ["windows"]
 
 
-def test_old_device_without_dpr_gets_a_common_one(tmp_path, fake_freeze):
+def test_saved_js_only_dpr_is_dropped(tmp_path, fake_freeze):
     fingerprint.load_or_create(str(tmp_path), "windows")
     path = tmp_path / "fingerprint.json"
     data = json.loads(path.read_text())
-    del data["device"]["window.devicePixelRatio"]
+    data["device"]["window.devicePixelRatio"] = 1
     path.write_text(json.dumps(data))
-    assert fingerprint.load_or_create(str(tmp_path), "windows")["window.devicePixelRatio"] == 1
+    assert "window.devicePixelRatio" not in fingerprint.load_or_create(str(tmp_path), "windows")
 
 
 def test_os_change_regenerates(tmp_path, fake_freeze):

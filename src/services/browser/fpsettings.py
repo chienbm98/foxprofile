@@ -681,6 +681,14 @@ def check(
             "such as Segoe UI. For a full font set use a macOS identity on this Mac, or run "
             f"the {os} identity on a {os} machine."
         )
+    if mode["screen"] == "custom":
+        w, h = map(int, value["screen"].split("x"))
+        if not devices.fits_panel(os, w, h):
+            dpr = devices.host_dpr()
+            out.append(
+                f"At this machine's display scale ({dpr:g}x) a {w}x{h} screen means a "
+                f"{w * dpr:g}x{h * dpr:g} panel, which no real {os} machine has."
+            )
     if mode["hardware_concurrency"] == "custom" and host_os == "macos":
         out.append(
             "macOS cannot pin CPU cores: a custom core count is not backed by real parallelism."

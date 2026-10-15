@@ -64,9 +64,6 @@ def _freeze(os_type: str) -> tuple[str, dict[str, Any]]:
     # keep the record's, or every profile on one host shows the same count.
     if cores := record["navigator"].get("hardwareConcurrency"):
         device["navigator.hardwareConcurrency"] = cores
-    # Camoufox puts the record's DPR only into Playwright context options, which a
-    # persistent launch ignores, so the page would see this machine's (2 on Retina).
-    device["window.devicePixelRatio"] = record["screen"]["devicePixelRatio"]
     # The window was drawn apart from the preset's screen; keep it inside it.
     clamp_window_dimensions(device)
     clamp_window_position(device)
@@ -98,8 +95,8 @@ def load_or_create(profile_dir: str, os_type: str) -> dict[str, Any]:
                 and data.get("os") == os_type
                 and isinstance(data.get("device"), dict)
             ):
-                # Devices frozen before DPR was kept: the commonest ratio, not this host's.
-                data["device"].setdefault("window.devicePixelRatio", 2 if os_type == "macos" else 1)
+                # Briefly frozen: JS-only DPR that media queries contradict.
+                data["device"].pop("window.devicePixelRatio", None)
                 return data["device"]
             logger.info("Fingerprint outdated or for another OS in %s, regenerating", profile_dir)
         except (OSError, ValueError) as e:
