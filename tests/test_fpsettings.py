@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
+from src.core.config import HOST_OS
 from src.core.container import Container
 from src.services.browser import devices, fingerprint, fpsettings
 from src.services.profile.manager import ProfileManager
@@ -580,14 +581,13 @@ API = "/api/v1"
 
 
 def test_rest_round_trip(client, workdir):
-    r = client.post(f"{API}/profiles", json={"name": "r1", "os_type": "windows"})
+    r = client.post(f"{API}/profiles", json={"name": "r1", "os_type": HOST_OS})
     assert r.status_code == 201 and r.json()["engine"] == "camoufox"
 
     r = client.get(f"{API}/profiles/r1/fingerprint")
     assert r.status_code == 200
     body = r.json()
     assert body["exists"] is False
-    assert all("fonts" in w for w in body["warnings"])  # only the cross-OS font note on a Mac
     assert body["settings"]["canvas"] == item("noise")
 
     r = client.put(
@@ -639,11 +639,13 @@ def test_rest_create_and_patch_carry_settings(client):
     assert r.status_code == 400
 
 
-def test_rest_os_setting_changes_the_profile_os(client):
-    client.post(f"{API}/profiles", json={"name": "r5", "os_type": "windows"})
-    r = client.put(f"{API}/profiles/r5/fingerprint/settings", json={"os": item("custom", "linux")})
-    assert r.status_code == 200 and r.json()["settings"]["os"] == item("custom", "linux")
-    assert client.get(f"{API}/profiles/r5").json()["os_type"] == "linux"
+def test_rest_pins_profiles_to_the_host_os(client):
+    other = "linux" if HOST_OS != "linux" else "windows"
+    assert client.post(f"{API}/profiles", json={"name": "r5", "os_type": other}).status_code == 400
+    assert client.post(f"{API}/profiles", json={"name": "r5"}).json()["os_type"] == HOST_OS
+    r = client.put(f"{API}/profiles/r5/fingerprint/settings", json={"os": item("custom", other)})
+    assert r.status_code == 400
+    assert client.patch(f"{API}/profiles/r5", json={"os_type": other}).status_code == 400
 
 
 def test_rest_regenerate_removes_the_device_and_keeps_settings(client, workdir):

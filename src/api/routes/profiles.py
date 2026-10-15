@@ -52,10 +52,12 @@ _OS_TYPES = ("windows", "macos", "linux")
 
 
 def _require_os(os_type: str) -> None:
-    if os_type not in _OS_TYPES:
+    # Profiles are pinned to the host OS: another OS's identity leaks this machine's fonts
+    # and rendering, which no browser can fully hide.
+    if os_type != HOST_OS:
         raise HTTPException(
             status_code=400,
-            detail=f"os_type must be one of: {', '.join(_OS_TYPES)}",
+            detail=f"os_type must be this machine's OS ({HOST_OS})",
         )
 
 
@@ -198,7 +200,7 @@ def update_profile(
             status_code=400,
             detail="A profile's engine cannot be changed; create a new profile instead",
         )
-    if "os_type" in supplied:
+    if new_os != profile.os_type:
         _require_os(new_os)
     _require_geo(supplied.get("timezone"), supplied.get("locale"))
     partial = dict(supplied.get("fingerprint") or {})

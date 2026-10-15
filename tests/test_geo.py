@@ -156,9 +156,7 @@ def test_api_create_and_clear_geo(client):
     assert (r.json()["timezone"], r.json()["locale"]) == ("Europe/Paris", "fr-FR")
 
     # Unrelated updates keep the pinned values; "" switches back to automatic.
-    assert (
-        client.patch("/profiles/p", json={"os_type": "linux"}).json()["timezone"] == "Europe/Paris"
-    )
+    assert client.patch("/profiles/p", json={"proxy": ""}).json()["timezone"] == "Europe/Paris"
     r = client.patch("/profiles/p", json={"timezone": "", "locale": ""})
     assert (r.json()["timezone"], r.json()["locale"]) == (None, None)
 

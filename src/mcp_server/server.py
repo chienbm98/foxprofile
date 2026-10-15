@@ -151,7 +151,6 @@ async def get_profile(name: str) -> dict:
 @mcp.tool()
 async def create_profile(
     name: str,
-    os_type: Literal["windows", "macos", "linux"] | None = None,
     proxy: str | None = None,
     timezone: str | None = None,
     locale: str | None = None,
@@ -159,10 +158,11 @@ async def create_profile(
 ) -> dict:
     """Create a profile. proxy format: [scheme://][user:pass@]host:port or host:port:user:pass
     (http, https, socks4, socks5). timezone (IANA, e.g. Asia/Ho_Chi_Minh) and locale (e.g. vi-VN)
-    default to following the proxy's IP. os_type defaults to the host's OS. engine: camoufox
+    default to following the proxy's IP. The OS is always the host's. engine: camoufox
     (Firefox, default) or chrome; it cannot be changed later."""
     body = {"name": name, "proxy": proxy, "timezone": timezone, "locale": locale}
-    body.update({k: v for k, v in {"os_type": os_type, "engine": engine}.items() if v is not None})
+    if engine is not None:
+        body["engine"] = engine
     return _masked(await _arequest("POST", "/profiles", body))
 
 
@@ -171,19 +171,13 @@ async def update_profile(
     name: str,
     new_name: str | None = None,
     proxy: str | None = None,
-    os_type: Literal["windows", "macos", "linux"] | None = None,
     timezone: str | None = None,
     locale: str | None = None,
 ) -> dict:
-    """Rename a profile or change its proxy / OS / timezone / locale.
-    Changing the OS generates a new fingerprint. Pass timezone="" or locale="" to follow the IP again."""
+    """Rename a profile or change its proxy / timezone / locale. Pass timezone="" or locale="" to follow the IP again."""
     # Use `is not None` so that proxy="" is included and clears the proxy on the
     # API side (the previous `if v` filter silently dropped an empty string).
-    body = {
-        k: v
-        for k, v in {"name": new_name, "proxy": proxy, "os_type": os_type}.items()
-        if v is not None
-    }
+    body = {k: v for k, v in {"name": new_name, "proxy": proxy}.items() if v is not None}
     body.update(
         {k: v for k, v in {"timezone": timezone, "locale": locale}.items() if v is not None}
     )

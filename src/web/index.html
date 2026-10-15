@@ -466,7 +466,7 @@ const I18N = {
     engine_camoufox: "Camoufox (Firefox)",
     engine_chrome: "Chrome",
     engine_locked: "创建后无法更改引擎。",
-    engine_note: "实验性 Chromium 引擎，首次使用时会自动下载到运行 FoxProfile 的电脑（约 150 MB）。请选择那台电脑的操作系统：其他系统会泄露其字体。创建后无法更改引擎。",
+    engine_note: "实验性 Chromium 引擎，首次使用时会自动下载到运行 FoxProfile 的电脑（约 150 MB）。创建后无法更改引擎。",
     proxy_label: "代理",
     proxy_hint: "user:pass@host:port、host:port:user:pass 或 socks5://...。留空 = 直接连接。",
     check_proxy: "检测代理",
@@ -620,7 +620,7 @@ const I18N = {
     bad_token: "Token không đúng", create: "Tạo profile", edit_title: "Sửa profile", edit_sub: "Đang sửa {name}", create_sub: "Một profile là một danh tính: thiết bị, proxy và vị trí riêng.",
     name: "Tên profile", os: "Hệ điều hành", engine: "Engine",
     engine_camoufox: "Camoufox (Firefox)", engine_chrome: "Chrome (thử nghiệm)", engine_locked: "Engine không đổi được sau khi tạo.",
-    engine_note: "Engine Chromium đang thử nghiệm. Lần đầu dùng sẽ tự tải về máy chạy FoxProfile (~150 MB). Nên chọn đúng hệ điều hành của máy đó, chọn hệ khác sẽ lộ font. Không đổi được engine sau khi tạo.",
+    engine_note: "Engine Chromium đang thử nghiệm. Lần đầu dùng sẽ tự tải về máy chạy FoxProfile (~150 MB). Không đổi được engine sau khi tạo.",
     proxy_label: "Proxy", proxy_hint: "user:pass@host:port, host:port:user:pass, hoặc socks5://... Để trống = kết nối trực tiếp.",
     check_proxy: "Kiểm tra proxy", cancel: "Huỷ", save: "Lưu thay đổi", checking: "Đang kiểm tra...",
     confirm_delete: "Xoá profile “{name}”? Cookie và dữ liệu của profile sẽ mất vĩnh viễn.", confirm_title: "Xác nhận", stop_first: "Hãy dừng trình duyệt trước",
@@ -728,7 +728,7 @@ const I18N = {
     bad_token: "Invalid token", create: "Create profile", edit_title: "Edit profile", edit_sub: "Editing {name}", create_sub: "A profile is an identity: its own device, proxy and location.",
     name: "Profile name", os: "Operating system", engine: "Engine",
     engine_camoufox: "Camoufox (Firefox)", engine_chrome: "Chrome", engine_locked: "The engine cannot be changed after creation.",
-    engine_note: "Experimental Chromium engine. It is downloaded automatically to the FoxProfile machine the first time (~150 MB). Pick that machine's OS: other OSes leak its fonts. The engine cannot be changed later.",
+    engine_note: "Experimental Chromium engine. It is downloaded automatically to the FoxProfile machine the first time (~150 MB). The engine cannot be changed later.",
     proxy_label: "Proxy", proxy_hint: "user:pass@host:port, host:port:user:pass, or socks5://... Blank = direct connection.",
     check_proxy: "Check proxy", cancel: "Cancel", save: "Save changes", checking: "Checking...",
     confirm_delete: "Delete profile “{name}”? Its cookies and data are removed permanently.", confirm_title: "Confirm", stop_first: "Stop the browser first",
@@ -1246,7 +1246,7 @@ function fpRow(name, fp, osValue, onChange) {
 function openEditor(p) {
   modal((close) => {
     const name = h("input", { id: "f-name", value: p ? p.name : "", required: true, maxlength: 64, autocomplete: "off" });
-    const os = h("select", { id: "f-os" }, [["windows", "Windows"], ["macos", "macOS"], ["linux", "Linux"]].map(([v, label]) =>
+    const os = h("select", { id: "f-os", disabled: true }, [["windows", "Windows"], ["macos", "macOS"], ["linux", "Linux"]].map(([v, label]) =>
       h("option", { value: v, selected: (p ? p.os_type : defaults.host_os) === v }, label)));
     // The engine is fixed once a profile exists: the two keep incompatible browser data.
     const engine = h("select", { id: "f-engine", disabled: !!p },

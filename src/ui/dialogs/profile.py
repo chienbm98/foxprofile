@@ -53,6 +53,7 @@ def open_profile_dialog(
         profile.os_type if profile is not None else HOST_OS,
     )
     os_dropdown.expand = 2
+    os_dropdown.disabled = True  # pinned to the host OS (see api.routes.profiles._require_os)
     # Fixed once created: the engines keep incompatible browser data.
     engine_dropdown = build_engine_dropdown(
         profile.engine if profile is not None else DEFAULT_ENGINE,
