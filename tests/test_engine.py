@@ -66,7 +66,7 @@ def test_api_creates_and_reports_the_engine(client):
     assert r.status_code == 201
     assert r.json()["engine"] == "chrome"
     assert client.get("/api/v1/profiles/c1").json()["engine"] == "chrome"
-    assert client.post("/api/v1/profiles", json={"name": "f1"}).json()["engine"] == "chrome"
+    assert client.post("/api/v1/profiles", json={"name": "f1"}).json()["engine"] == "camoufox"
 
 
 def test_api_rejects_unknown_engine(client):

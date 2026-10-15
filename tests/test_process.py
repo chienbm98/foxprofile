@@ -51,7 +51,12 @@ def _patch_launch(monkeypatch, tmp_path, headless):
     monkeypatch.setattr(runner, "HEADLESS", headless)
     monkeypatch.setattr(runner, "VirtualDisplay", FakeDisplay)
     monkeypatch.setattr(runner, "AsyncCamoufox", failing_camoufox)
-    monkeypatch.setattr(runner, "load_or_create", lambda *_: {})
+
+    def build_launch(_profile_dir, _settings, _os_type, **kwargs):
+        seen["config"].update(kwargs)
+        return {}
+
+    monkeypatch.setattr(runner.fpsettings, "build_launch", build_launch)
     # No network: the exit-IP lookup (when present) is not under test here.
     monkeypatch.setattr(runner, "exit_ip", lambda *_: "5.6.7.8", raising=False)
     monkeypatch.setattr(runner.xvfb, "sweep_stale", lambda: seen["records"].append("sweep"))
@@ -101,7 +106,7 @@ def test_no_virtual_display_outside_virtual_mode(monkeypatch, tmp_path):
 
     assert FakeDisplay.instances == []
     assert seen["config"]["headless"] is True
-    assert "virtual_display" not in seen["config"]
+    assert seen["config"]["virtual_display"] is None
     assert seen["records"] == []
 
 

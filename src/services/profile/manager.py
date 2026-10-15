@@ -15,6 +15,7 @@ from ...utils.validation import (
     validate_profile_name,
     validate_timezone,
 )
+from ..browser import fpsettings
 from .transfer import export_to_zip, import_from_zip, read_profile_meta
 
 logger = get_logger("profile.manager")
@@ -66,16 +67,22 @@ class ProfileManager:
                         if not validate_profile_name(name)[0] or p_data.get("name") != name:
                             logger.warning("Skipping profile with unsafe name: %r", name)
                             continue
+                        os_type = p_data.get(
+                            "os_type",
+                            p_data.get("config", {}).get("os", "windows"),
+                        )
+                        timezone = valid_or_none(p_data.get("timezone"), validate_timezone)
+                        locale = valid_or_none(p_data.get("locale"), validate_locale)
                         clean_data = {
                             "name": p_data.get("name"),
                             "proxy": p_data.get("proxy"),
-                            "os_type": p_data.get(
-                                "os_type",
-                                p_data.get("config", {}).get("os", "windows"),
-                            ),
-                            "timezone": valid_or_none(p_data.get("timezone"), validate_timezone),
-                            "locale": valid_or_none(p_data.get("locale"), validate_locale),
+                            "os_type": os_type,
+                            "timezone": timezone,
+                            "locale": locale,
                             "engine": _engine_or_default(p_data.get("engine")),
+                            "fingerprint": fpsettings.from_stored(
+                                p_data.get("fingerprint"), os_type, timezone, locale
+                            ),
                         }
                         self.profiles[name] = Profile(**clean_data)
                 logger.info("Loaded %d profiles", len(self.profiles))
@@ -109,6 +116,7 @@ class ProfileManager:
         timezone: str | None = None,
         locale: str | None = None,
         engine: str = DEFAULT_ENGINE,
+        fingerprint: dict | None = None,
     ) -> bool:
         with self._lock:
             if self._find_by_casefold(name) is not None:
@@ -128,6 +136,7 @@ class ProfileManager:
                 locale=locale or None,
                 engine=engine,
             )
+            self._set_settings(self.profiles[name], fingerprint or {})
             self.save_profiles()
             logger.info("Created profile: %s", name)
             return True
@@ -140,8 +149,12 @@ class ProfileManager:
         new_os: str,
         new_timezone: str | None = None,
         new_locale: str | None = None,
+        fingerprint: dict | None = None,
     ) -> bool:
-        """Replace every field; a None/empty timezone or locale means automatic."""
+        """Replace every field; a None/empty timezone or locale means automatic.
+
+        `fingerprint` holds the settings items to change (the others are kept).
+        """
         with self._lock:
             if original_name not in self.profiles:
                 return False
@@ -183,11 +196,13 @@ class ProfileManager:
                         return False
 
             profile = self.profiles[original_name]
+            old_timezone, old_locale = profile.timezone, profile.locale
             profile.name = new_name
             profile.proxy = new_proxy or None
             profile.os_type = new_os
             profile.timezone = new_timezone or None
             profile.locale = new_locale or None
+            self._set_settings(profile, fingerprint or {}, previous=(old_timezone, old_locale))
 
             if new_name != original_name:
                 del self.profiles[original_name]
@@ -196,6 +211,30 @@ class ProfileManager:
             self.save_profiles()
             logger.info("Updated profile: %s -> %s", original_name, new_name)
             return True
+
+    @staticmethod
+    def _set_settings(
+        profile: Profile, partial: dict, previous: tuple[str | None, str | None] = (None, None)
+    ) -> None:
+        """Apply the settings items in `partial` and keep timezone / locale in step.
+
+        A timezone / locale now set becomes the custom value; one just cleared turns
+        its item back to mask (follow the IP). Items in `partial` win over both, and
+        their custom values are mirrored into the profile fields.
+        """
+        settings = profile.fingerprint
+        for field, item, old in (
+            ("timezone", "timezone", previous[0]),
+            ("locale", "language", previous[1]),
+        ):
+            if value := getattr(profile, field):
+                settings[item] = {"mode": "custom", "value": value}
+            elif old:
+                settings[item] = {"mode": "mask", "value": None}
+        merged = fpsettings.normalize({**settings, **partial}, profile.os_type)
+        for field, value in fpsettings.geo_fields(merged, partial).items():
+            setattr(profile, field, value)
+        profile.fingerprint = merged
 
     def delete_profile(self, name: str) -> bool:
         with self._lock:

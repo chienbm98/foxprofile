@@ -4,13 +4,13 @@ import os
 import pathlib
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 
-from ...core.config import DATA_DIR
+from ...core.config import DATA_DIR, HOST_OS
 from ...core.logging import get_logger
 from ...models.profile import ENGINES
-from ...services.browser import chrome_prefetch, cookies, fingerprint
+from ...services.browser import chrome_prefetch, cookies, fingerprint, fpsettings
 from ...services.browser.launcher import ProfileBusyError
 from ...services.proxy.geo_check import check_geo
 from ...utils.validation import (
@@ -29,6 +29,7 @@ from ..schemas.profiles import (
     ExportRequest,
     ExportResponse,
     FingerprintResponse,
+    FingerprintSettingsResponse,
     ImportRequest,
     ImportResponse,
     ProfileCreate,
@@ -45,6 +46,7 @@ if TYPE_CHECKING:
 logger = get_logger("api.profiles")
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
+fingerprint_router = APIRouter(prefix="/fingerprint", tags=["fingerprint"])
 
 _OS_TYPES = ("windows", "macos", "linux")
 
@@ -74,6 +76,25 @@ def _require_geo(timezone: str | None, locale: str | None) -> None:
             raise HTTPException(status_code=400, detail=msg)
 
 
+def _settings_or_400(partial: object, os_type: str, current: dict | None = None) -> dict:
+    """Validated complete settings: `partial` items over `current`, or HTTP 400."""
+    if not isinstance(partial, dict):
+        raise HTTPException(status_code=400, detail="fingerprint settings must be an object")
+    try:
+        return fpsettings.normalize({**(current or {}), **partial}, os_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+def _custom_os(partial: dict, os_type: str) -> str:
+    """The OS a settings item set to custom asks for, else the current one."""
+    item = partial.get("os")
+    if isinstance(item, dict) and item.get("mode") == "custom" and item.get("value"):
+        _require_os(item["value"])
+        return item["value"]
+    return os_type
+
+
 @router.get("", response_model=ProfileListResponse)
 def list_profiles(
     pm: IProfileManager = Depends(get_profile_manager),
@@ -101,6 +122,8 @@ def create_profile(
     _require_os(body.os_type)
     _require_engine(body.engine)
     _require_geo(body.timezone, body.locale)
+    partial = body.fingerprint or {}
+    _settings_or_400(partial, _custom_os(partial, body.os_type))
 
     if body.proxy:
         valid, msg = validate_proxy_format(body.proxy)
@@ -110,10 +133,11 @@ def create_profile(
     if not pm.add_profile(
         body.name,
         body.proxy or "",
-        body.os_type,
+        _custom_os(partial, body.os_type),
         body.timezone or None,
         body.locale or None,
         body.engine,
+        partial,
     ):
         raise HTTPException(status_code=409, detail="Profile already exists")
 
@@ -177,6 +201,16 @@ def update_profile(
     if "os_type" in supplied:
         _require_os(new_os)
     _require_geo(supplied.get("timezone"), supplied.get("locale"))
+    partial = dict(supplied.get("fingerprint") or {})
+    new_os = _custom_os(partial, new_os)
+    # An explicit timezone / locale (also "" = automatic) sets its settings item too.
+    for field, item in (("timezone", "timezone"), ("locale", "language")):
+        if field in supplied and item not in partial:
+            value = supplied[field]
+            partial[item] = {"mode": "custom", "value": value} if value else {"mode": "mask"}
+    _settings_or_400(partial, new_os, profile.fingerprint)
+    if new_os != profile.os_type and bl.is_running(name):
+        raise HTTPException(status_code=409, detail="Stop the browser before changing the OS")
 
     if "proxy" in supplied and new_proxy:
         valid, msg = validate_proxy_format(new_proxy)
@@ -184,7 +218,13 @@ def update_profile(
             raise HTTPException(status_code=400, detail=msg)
 
     if not pm.update_profile(
-        name, new_name, new_proxy or "", new_os, new_timezone or None, new_locale or None
+        name,
+        new_name,
+        new_proxy or "",
+        new_os,
+        new_timezone or None,
+        new_locale or None,
+        partial,
     ):
         raise HTTPException(status_code=409, detail="Update failed (name conflict?)")
 
@@ -339,6 +379,14 @@ def import_cookies(
     return CookieImportResponse(success=True, imported=count)
 
 
+def _fingerprint_warnings(profile) -> list[str]:
+    if profile.engine != "camoufox":
+        return []
+    device = fingerprint.load_saved(os.path.join(DATA_DIR, profile.name))
+    os_type = fpsettings.launch_os(profile.fingerprint, profile.os_type)
+    return fpsettings.check(profile.fingerprint, device, os_type, HOST_OS, bool(profile.proxy))
+
+
 @router.get(
     "/{name}/fingerprint",
     response_model=FingerprintResponse,
@@ -348,14 +396,57 @@ def get_fingerprint(
     name: str,
     pm: IProfileManager = Depends(get_profile_manager),
 ) -> FingerprintResponse:
-    """Show the fingerprint the profile presents on every launch."""
-    require_profile(name, pm)
+    """Show the fingerprint the profile presents on every launch, its settings and warnings."""
+    profile = require_profile(name, pm)
     info = fingerprint.summary(os.path.join(DATA_DIR, name))
-    if info is None:
-        return FingerprintResponse(name=name, exists=False)
-    return FingerprintResponse(name=name, exists=True, **info)
+    return FingerprintResponse(
+        name=name,
+        exists=info is not None,
+        settings=profile.fingerprint,
+        warnings=_fingerprint_warnings(profile),
+        **(info or {}),
+    )
 
 
+@router.put(
+    "/{name}/fingerprint/settings",
+    response_model=FingerprintSettingsResponse,
+    responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
+)
+def update_fingerprint_settings(
+    name: str,
+    body: dict = Body(..., description='Items to change: {item: {"mode": ..., "value": ...}}'),
+    pm: IProfileManager = Depends(get_profile_manager),
+    bl: IBrowserLauncher = Depends(get_browser_launcher),
+    bus: EventBus = Depends(get_event_bus),
+) -> FingerprintSettingsResponse:
+    """Change fingerprint settings items; the others are kept. A running browser keeps
+    its old settings until it is relaunched."""
+    profile = require_profile(name, pm)
+    new_os = _custom_os(body, profile.os_type)
+    _settings_or_400(body, new_os, profile.fingerprint)
+    running = bl.is_running(name)
+    if new_os != profile.os_type and running:
+        raise HTTPException(status_code=409, detail="Stop the browser before changing the OS")
+    if not pm.update_profile(
+        name, name, profile.proxy or "", new_os, profile.timezone, profile.locale, body
+    ):
+        raise HTTPException(status_code=409, detail="Update failed")
+    logger.info("API updated fingerprint settings for %s", name)
+    bus.emit()
+    return FingerprintSettingsResponse(
+        name=name,
+        settings=profile.fingerprint,
+        warnings=_fingerprint_warnings(profile),
+        applies_on_next_launch=running,
+    )
+
+
+@router.post(
+    "/{name}/fingerprint/regenerate",
+    response_model=SuccessResponse,
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+)
 @router.delete(
     "/{name}/fingerprint",
     response_model=SuccessResponse,
@@ -365,13 +456,22 @@ def reset_fingerprint(
     name: str,
     pm: IProfileManager = Depends(get_profile_manager),
     bl: IBrowserLauncher = Depends(get_browser_launcher),
+    bus: EventBus = Depends(get_event_bus),
 ) -> SuccessResponse:
-    """Discard the saved fingerprint; the next launch generates a new device."""
+    """Discard the saved device; the next launch draws a new one. Settings are kept."""
     require_profile(name, pm)
     _require_stopped(name, bl, "resetting the fingerprint")
     removed = fingerprint.reset(os.path.join(DATA_DIR, name))
     logger.info("API reset fingerprint for %s (existed=%s)", name, removed)
+    bus.emit()
     return SuccessResponse(message=f"Fingerprint reset for '{name}'")
+
+
+@fingerprint_router.get("/options")
+def fingerprint_options(os: str = Query(HOST_OS)) -> dict:
+    """GPUs, screens and fonts available for an OS, and the modes of each setting."""
+    _require_os(os)
+    return fpsettings.options(os)
 
 
 @router.get(

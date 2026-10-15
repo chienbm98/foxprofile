@@ -1,9 +1,11 @@
 """Per-profile fingerprint persistence.
 
-Camoufox generates a fresh fingerprint on every launch unless one is passed
-in. A profile that keeps its cookies but changes screen, GPU and fonts on each
-launch looks like a spoofed browser, so the first launch generates a
-fingerprint and every later launch reuses it from the profile's data dir.
+Camoufox draws a fresh device on every launch unless one is passed in. A
+profile that keeps its cookies but changes screen, GPU and fonts on each launch
+looks like a spoofed browser, so the first launch draws one real-device record
+from the local library (devices.py), resolves it through Camoufox once, and
+saves the result as fingerprint.json (v2). Every later launch starts from that
+frozen "masked device"; fpsettings.py applies the profile's per-item modes on top.
 """
 
 import json
@@ -13,36 +15,99 @@ from typing import Any
 
 from ...core.config import FINGERPRINT_FILE
 from ...core.logging import get_logger
+from . import devices
 
 logger = get_logger("browser.fingerprint")
+
+VERSION = 2
+# Config keys that belong to one launch (geo, WebRTC, add-ons, switches), not to the device.
+_PER_LAUNCH_PREFIXES = ("locale:", "geolocation:", "webrtc:", "humanize", "certificate")
+_PER_LAUNCH_KEYS = ("timezone", "addons", "debug", "allowMainWorld", "allowAddonNewtab")
 
 
 def fingerprint_path(profile_dir: str) -> str:
     return os.path.join(profile_dir, FINGERPRINT_FILE)
 
 
+def decode_config(env: dict) -> dict[str, Any]:
+    """The Camoufox config carried by the CAMOU_CONFIG_<n> chunks of a launch env."""
+    chunks = sorted(
+        (int(k.rsplit("_", 1)[1]), v) for k, v in env.items() if k.startswith("CAMOU_CONFIG_")
+    )
+    return json.loads("".join(v for _, v in chunks))
+
+
+def _device_keys(config: dict) -> dict[str, Any]:
+    return {
+        k: v
+        for k, v in config.items()
+        if k not in _PER_LAUNCH_KEYS and not k.startswith(_PER_LAUNCH_PREFIXES)
+    }
+
+
+def _freeze(os_type: str) -> tuple[str, dict[str, Any]]:
+    """Draw a library record and resolve it into a Camoufox device config."""
+    from camoufox.fingerprints import clamp_window_dimensions, clamp_window_position
+    from camoufox.utils import launch_options
+
+    record = devices.pick(os_type)
+    common = {"os": os_type, "headless": True, "i_know_what_im_doing": True}
+    first = _device_keys(decode_config(launch_options(fingerprint_preset=record, **common)["env"]))
+    # A preset has no window geometry; the second pass makes Camoufox draw it, and it
+    # is kept too, or every launch would open with a different window.
+    device = _device_keys(decode_config(launch_options(config=dict(first), **common)["env"]))
+    # Camoufox draws these only some of the time; unset they would be redrawn each launch.
+    for key in ("screen.availLeft", "screen.availTop", "window.screenX"):
+        device.setdefault(key, 0)
+    device.setdefault("window.screenY", device["screen.availTop"])
+    # Camoufox swaps in this machine's core count when it cannot pin cores (macOS);
+    # keep the record's, or every profile on one host shows the same count.
+    if cores := record["navigator"].get("hardwareConcurrency"):
+        device["navigator.hardwareConcurrency"] = cores
+    # The window was drawn apart from the preset's screen; keep it inside it.
+    clamp_window_dimensions(device)
+    clamp_window_position(device)
+    return record["id"], device
+
+
+def load_saved(profile_dir: str) -> dict[str, Any] | None:
+    """The saved device config (v2 file), or None. Never draws a device."""
+    try:
+        data = json.loads(pathlib.Path(fingerprint_path(profile_dir)).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if data.get("version") == VERSION and isinstance(data.get("device"), dict):
+        return data["device"]
+    return None
+
+
 def load_or_create(profile_dir: str, os_type: str) -> dict[str, Any]:
-    """Return the profile's saved fingerprint, generating it on first use."""
+    """Return the profile's frozen device config, drawing it on first use.
+
+    A v1 file (fpgen fingerprint) or one for another OS is replaced.
+    """
     path = pathlib.Path(fingerprint_path(profile_dir))
     if path.exists():
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-            if data.get("os") == os_type and isinstance(data.get("fingerprint"), dict):
-                return data["fingerprint"]
-            logger.info("Fingerprint OS changed for %s, regenerating", profile_dir)
+            if (
+                data.get("version") == VERSION
+                and data.get("os") == os_type
+                and isinstance(data.get("device"), dict)
+            ):
+                return data["device"]
+            logger.info("Fingerprint outdated or for another OS in %s, regenerating", profile_dir)
         except (OSError, ValueError) as e:
             logger.warning("Unreadable fingerprint in %s (%s), regenerating", path, e)
 
-    from camoufox.fingerprints import generate_fingerprint
-
-    fingerprint = generate_fingerprint(os=os_type)
+    source, device = _freeze(os_type)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps({"os": os_type, "fingerprint": fingerprint}),
+        json.dumps({"version": VERSION, "os": os_type, "source": source, "device": device}),
         encoding="utf-8",
     )
-    logger.info("Generated fingerprint for %s (%s)", profile_dir, os_type)
-    return fingerprint
+    logger.info("Froze device %s for %s (%s)", source, profile_dir, os_type)
+    return device
 
 
 # The Chrome engine's equivalent of fingerprint.json (chrome_engine/persona.py).
@@ -93,16 +158,17 @@ def _read_summary(path: pathlib.Path) -> dict[str, Any] | None:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    fp = data.get("fingerprint", {})
-    navigator = fp.get("navigator", {}) or {}
-    screen = fp.get("screen", {}) or {}
-    # The stored userAgent carries the generator's Firefox version; Camoufox
-    # rewrites it to the installed version at launch, so it is not reported.
+    device = data.get("device")
+    if data.get("version") != VERSION or not isinstance(device, dict):
+        return None
+    width = device.get("screen.width")
     return {
         "os": data.get("os"),
-        "platform": navigator.get("platform"),
-        "screen": f"{screen.get('width')}x{screen.get('height')}" if screen.get("width") else None,
-        "hardware_concurrency": navigator.get("hardwareConcurrency"),
+        "platform": device.get("navigator.platform"),
+        "screen": f"{width}x{device.get('screen.height')}" if width else None,
+        "hardware_concurrency": device.get("navigator.hardwareConcurrency"),
+        "webgl_renderer": device.get("webGl:renderer"),
+        "source": data.get("source"),
     }
 
 

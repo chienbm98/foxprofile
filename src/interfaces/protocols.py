@@ -16,6 +16,7 @@ class IProfileManager(Protocol):
         timezone: str | None = None,
         locale: str | None = None,
         engine: str = "camoufox",
+        fingerprint: dict | None = None,
     ) -> bool: ...
 
     def update_profile(
@@ -26,6 +27,7 @@ class IProfileManager(Protocol):
         new_os: str,
         new_timezone: str | None = None,
         new_locale: str | None = None,
+        fingerprint: dict | None = None,
     ) -> bool: ...
 
     def delete_profile(self, name: str) -> bool: ...

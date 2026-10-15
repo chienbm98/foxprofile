@@ -13,6 +13,7 @@ from ...utils.validation import (
     validate_profile_name,
     validate_timezone,
 )
+from ..browser import fpsettings
 from ..browser.fingerprint import CHROME_PERSONA_FILE
 
 logger = get_logger("profile.transfer")
@@ -89,12 +90,18 @@ def import_from_zip(
             if not valid:
                 return False, f"Invalid profile name in archive: {msg}"
 
+            os_type = profile_data.get("os_type", "windows")
+            timezone = valid_or_none(profile_data.get("timezone"), validate_timezone)
+            locale = valid_or_none(profile_data.get("locale"), validate_locale)
             profile = Profile(
                 name=name,
                 proxy=profile_data.get("proxy"),
-                os_type=profile_data.get("os_type", "windows"),
-                timezone=valid_or_none(profile_data.get("timezone"), validate_timezone),
-                locale=valid_or_none(profile_data.get("locale"), validate_locale),
+                os_type=os_type,
+                timezone=timezone,
+                locale=locale,
+                fingerprint=fpsettings.from_stored(
+                    profile_data.get("fingerprint"), os_type, timezone, locale
+                ),
                 engine=profile_data.get("engine")
                 if profile_data.get("engine") in ENGINES
                 else "camoufox",

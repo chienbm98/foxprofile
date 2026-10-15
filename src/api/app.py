@@ -15,6 +15,7 @@ from .auth import require_token
 from .guard import LocalOnlyGuard
 from .routes import (
     browser_router,
+    fingerprint_router,
     mcp_setup_router,
     page_router,
     profiles_router,
@@ -67,6 +68,7 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
 
     protected = [Depends(require_token)]
     app.include_router(profiles_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(fingerprint_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(browser_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(page_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(proxy_router, prefix=API_PREFIX, dependencies=protected)

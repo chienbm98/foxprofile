@@ -66,7 +66,7 @@ def _load_or_create_token() -> str:
 
 API_TOKEN = _env("API_TOKEN", "") or _load_or_create_token()
 
-# New profiles default to the Chrome engine and to this machine's OS: the Chrome
-# engine shows the host's fonts, so another OS persona is inconsistent.
+# New profiles default to the Camoufox (Firefox) engine and to this machine's OS.
+# The Chrome engine shows the host's fonts, so another OS persona is inconsistent there.
 HOST_OS = {"darwin": "macos", "win32": "windows"}.get(sys.platform, "linux")
-DEFAULT_ENGINE = "chrome"
+DEFAULT_ENGINE = "camoufox"

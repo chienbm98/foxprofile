@@ -16,6 +16,7 @@
 - App desktop: hỏi xác nhận trước khi tạo fingerprint mới; ô chọn ở tiêu đề bảng không còn bỏ chọn các profile ở trang khác; rail hiện số profile và số trình duyệt đang chạy; hộp thoại xoá nói rõ cookie và dữ liệu sẽ mất vĩnh viễn.
 
 ### Thay đổi
+- Engine mặc định của profile mới là Camoufox (Firefox). Mỗi profile Camoufox có 18 thiết lập fingerprint (`fingerprint` trong `profiles.json`; REST `PUT /profiles/{name}/fingerprint/settings`, `GET /fingerprint/options`, `POST /profiles/{name}/fingerprint/regenerate`; MCP `update_fingerprint_settings`, `fingerprint_options`). Thiết bị được chọn một lần từ thư viện thiết bị thật rồi đóng băng trong `fingerprint.json` (v2); file v1 được tạo lại ở lần mở sau.
 - Ngôn ngữ giao diện mặc định của app desktop và web panel là English; đặt `FOXPROFILE_LANG=vi` (hoặc bấm "Tiếng Việt" trong app) để dùng tiếng Việt.
 
 ## [2.3.1] - 2026-10-09

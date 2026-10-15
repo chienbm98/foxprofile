@@ -15,8 +15,12 @@ class ProfileCreate(BaseModel):
     )
     engine: str = Field(
         DEFAULT_ENGINE,
-        description="chrome (fingerprint-chromium, default) or camoufox (Firefox). "
+        description="camoufox (Firefox, default) or chrome (fingerprint-chromium). "
         "Fixed once the profile is created",
+    )
+    fingerprint: dict | None = Field(
+        None,
+        description='Fingerprint settings {item: {"mode": ..., "value": ...}}; see /fingerprint/options',
     )
 
 
@@ -29,6 +33,9 @@ class ProfileUpdate(BaseModel):
     timezone: str | None = Field(None, description='"" switches back to automatic')
     locale: str | None = Field(None, description='"" switches back to automatic')
     engine: str | None = Field(None, description="Cannot be changed; only the current value")
+    fingerprint: dict | None = Field(
+        None, description="Fingerprint settings items to change; the others are kept"
+    )
 
 
 class ProfileResponse(BaseModel):
@@ -94,3 +101,16 @@ class FingerprintResponse(BaseModel):
     platform: str | None = None
     screen: str | None = None
     hardware_concurrency: int | None = None
+    webgl_renderer: str | None = None
+    source: str | None = None
+    settings: dict | None = None
+    warnings: list[str] = []
+
+
+class FingerprintSettingsResponse(BaseModel):
+    name: str
+    settings: dict
+    warnings: list[str]
+    applies_on_next_launch: bool = Field(
+        description="True while the browser is running: it keeps the old settings until relaunched"
+    )

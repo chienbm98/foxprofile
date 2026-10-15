@@ -25,7 +25,7 @@ from camoufox.async_api import AsyncCamoufox
 
 from src.core.config import DATA_DIR
 from src.models.profile import ENGINES
-from src.services.browser.fingerprint import load_or_create
+from src.services.browser import fpsettings
 from src.utils.validation import validate_profile_name
 
 
@@ -35,13 +35,11 @@ def _open(profile_dir: str, os_type: str, engine: str) -> Any:
 
         # No proxy: cookies need no network, and no exit-IP lookup is made.
         return ChromeEngine(profile_dir, platform=os_type, headless=True)
-    return AsyncCamoufox(
-        headless=True,
-        os=os_type,
-        fingerprint=load_or_create(profile_dir, os_type),
-        user_data_dir=profile_dir,
-        persistent_context=True,
+    settings = fpsettings.saved(os.path.basename(profile_dir), os_type)
+    options = fpsettings.build_launch(
+        profile_dir, settings, os_type, log=lambda m: print(m, file=sys.stderr)
     )
+    return AsyncCamoufox(from_options=options, persistent_context=True)
 
 
 async def _run(

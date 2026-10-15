@@ -34,14 +34,6 @@ def test_invalid_locales(value):
     assert not validate_locale(value)[0]
 
 
-def test_runner_overrides_only_what_is_pinned():
-    from src.services.browser.runner import geo_overrides
-
-    assert geo_overrides("", "") == {}
-    assert geo_overrides("Asia/Ho_Chi_Minh", "") == {"config": {"timezone": "Asia/Ho_Chi_Minh"}}
-    assert geo_overrides("", "vi-VN") == {"locale": "vi-VN"}
-
-
 def test_manager_persists_timezone_and_locale(tmp_path, monkeypatch):
     monkeypatch.setattr(manager_module, "PROFILES_FILE", str(tmp_path / "profiles.json"))
     monkeypatch.setattr(manager_module, "DATA_DIR", str(tmp_path / "data"))
@@ -280,7 +272,9 @@ def _fake_launch(monkeypatch, tmp_path, public_ip):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(ip, "public_ip", public_ip)
     monkeypatch.setattr(runner, "AsyncCamoufox", camoufox)
-    monkeypatch.setattr(runner, "load_or_create", lambda *_: {})
+    monkeypatch.setattr(
+        runner.fpsettings, "build_launch", lambda *_args, **kwargs: seen.update(kwargs) or {}
+    )
     # A deploy's .env may set HEADLESS=virtual; these tests must not start Xvfb.
     monkeypatch.setattr(runner, "HEADLESS", False)
     return runner, seen
@@ -294,8 +288,25 @@ def test_runner_passes_the_looked_up_exit_ip_as_geoip(monkeypatch, tmp_path):
     # spawn_browser passes str(None) for a profile without a proxy.
     asyncio.run(runner.run_browser("p", "None", "windows"))
     asyncio.run(runner.run_browser("p", "socks5://1.2.3.4:1080", "windows"))
-    assert seen["geoip"] == "5.6.7.8"
+    assert seen["ip"] == "5.6.7.8"
     assert asked == [None, "socks5h://1.2.3.4:1080"]
+
+
+def test_runner_skips_the_lookup_when_nothing_follows_the_ip(monkeypatch, tmp_path):
+    from src.services.profile.manager import ProfileManager
+
+    asked = []
+    runner, seen = _fake_launch(monkeypatch, tmp_path, lambda proxy=None: asked.append(proxy))
+    ProfileManager().add_profile(
+        "p",
+        "",
+        "windows",
+        fingerprint={
+            n: {"mode": "real"} for n in ("webrtc", "timezone", "geolocation", "language")
+        },
+    )
+    asyncio.run(runner.run_browser("p", "None", "windows"))
+    assert asked == [] and seen["ip"] is None
 
 
 def test_dead_proxy_reports_launch_failed(monkeypatch, tmp_path, capsys):

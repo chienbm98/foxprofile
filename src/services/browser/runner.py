@@ -13,9 +13,8 @@ from camoufox.async_api import AsyncCamoufox
 from camoufox.virtdisplay import VirtualDisplay
 
 from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
-from src.services.browser import control, session
+from src.services.browser import control, fpsettings, session
 from src.services.browser import display as xvfb
-from src.services.browser.fingerprint import load_or_create
 from src.services.proxy.geo_check import requests_proxy_url
 from src.utils.proxy_parser import parse_proxy
 
@@ -100,21 +99,6 @@ async def snapshot_tabs(context: object, profile_dir: str, stop: asyncio.Event) 
             last = urls
 
 
-def geo_overrides(timezone: str, locale: str) -> dict:
-    """Launch options that pin the timezone / locale instead of following the IP.
-
-    Camoufox's geoip only fills in the timezone and locale when they are unset
-    (setdefault for the config key, and `locale=` is applied after geoip), so the
-    pinned values win while geolocation and the WebRTC IP still follow the proxy.
-    """
-    options: dict = {}
-    if timezone:
-        options["config"] = {"timezone": timezone}
-    if locale:
-        options["locale"] = locale
-    return options
-
-
 def exit_ip(proxy_str: str) -> str:
     """The exit IP Camoufox's geoip should use, looked up with DNS through the proxy.
 
@@ -149,21 +133,8 @@ async def run_browser(
     locale: str = "",
 ) -> int:
     profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
-
-    launch_config = {
-        "headless": HEADLESS,
-        "os": os_type,
-        "fingerprint": load_or_create(profile_dir, os_type),
-        "humanize": True,
-        "block_images": False,
-        "user_data_dir": profile_dir,
-        "persistent_context": True,
-        **geo_overrides(timezone, locale),
-    }
-
+    settings = fpsettings.saved(profile_name, os_type, timezone, locale)
     proxy_config = parse_proxy(proxy_str)
-    if proxy_config:
-        launch_config["proxy"] = proxy_config
 
     _safe_print(f"Starting browser for {profile_name}...")
 
@@ -175,14 +146,25 @@ async def run_browser(
     try:
         # Blocking (up to ~30 s over a slow proxy), so off the event loop; inside
         # the try so a dead proxy reports LAUNCH_FAILED like any launch error.
-        launch_config["geoip"] = await asyncio.to_thread(exit_ip, proxy_str)
+        ip = await asyncio.to_thread(exit_ip, proxy_str) if fpsettings.needs_ip(settings) else None
+        headless, virtual_display = HEADLESS, None
         if HEADLESS == "virtual":
             await asyncio.to_thread(xvfb.sweep_stale)
             display = VirtualDisplay()
-            launch_config["headless"] = False
-            launch_config["virtual_display"] = display.get()
-            xvfb.record(display.proc.pid, launch_config["virtual_display"])
-        async with AsyncCamoufox(**launch_config) as context:
+            headless, virtual_display = False, display.get()
+            xvfb.record(display.proc.pid, virtual_display)
+        options = await asyncio.to_thread(
+            fpsettings.build_launch,
+            profile_dir,
+            settings,
+            os_type,
+            proxy=proxy_config,
+            headless=headless,
+            ip=ip,
+            virtual_display=virtual_display,
+            log=_safe_print,
+        )
+        async with AsyncCamoufox(from_options=options, persistent_context=True) as context:
             if not context.pages:
                 await context.new_page()
             if RESTORE_TABS:
