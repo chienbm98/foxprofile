@@ -3,6 +3,8 @@ import tempfile
 
 # Keep the auto-generated token out of the checkout.
 os.environ.setdefault("FOXPROFILE_TOKEN_FILE", os.path.join(tempfile.mkdtemp(), ".api_token"))
+# Messages are asserted in English whatever the developer machine speaks.
+os.environ.setdefault("FOXPROFILE_LANG", "en")
 
 import pytest  # noqa: E402
 

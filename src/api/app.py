@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 
 from ..core.config import API_PORT, API_TOKEN, DEFAULT_ENGINE, HEADLESS, HOST_OS
 from ..core.logging import get_logger
+from ..core.strings import FIXED_LANGUAGE
 from . import mcp_http
 from .auth import require_token
 from .guard import LocalOnlyGuard
@@ -34,6 +35,20 @@ _PANEL = pathlib.Path(__file__).resolve().parents[1] / "web" / "index.html"
 _FONTS = pathlib.Path(__file__).resolve().parents[1] / "assets" / "fonts"
 # Served to the panel without a token: it needs them before login.
 _FONT_FILES = {f.name: f for f in _FONTS.glob("*.ttf")}
+
+
+class EnglishReplies:
+    """REST and MCP replies stay English; only the desktop/web UI is translated."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        token = FIXED_LANGUAGE.set("en")
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            FIXED_LANGUAGE.reset(token)
 
 
 def create_app(container: Container, self_url: str | None = None) -> FastAPI:
@@ -62,6 +77,7 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
         version=VERSION,
     )
     app.state.container = container
+    app.add_middleware(EnglishReplies)
     if not API_TOKEN:
         # Token-less means local-only: block CSRF and DNS rebinding from websites.
         app.add_middleware(LocalOnlyGuard)

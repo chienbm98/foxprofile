@@ -1,4 +1,13 @@
-from .config import LANGUAGE
+import contextlib
+import contextvars
+import json
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+from .config import LANGUAGE, PROFILES_FILE
 
 STRINGS: dict[str, dict[str, str]] = {
     "en": {
@@ -497,23 +506,340 @@ STRINGS: dict[str, dict[str, str]] = {
         "fp_screen": "Màn hình",
         "fp_cpu": "CPU",
     },
+    "zh-CN": {
+        "app_name": "FoxProfile",
+        "app_subtitle": "反检测 Profile 管理器",
+        "filter_title": "筛选",
+        "filter_all": "全部",
+        "filter_running": "运行中",
+        "filter_proxy": "有代理",
+        "filter_direct": "无代理",
+        "filter_chrome": "Chrome 引擎",
+        "col_profile": "Profile",
+        "col_device": "设备",
+        "col_proxy": "代理",
+        "col_geo": "时区 · 区域",
+        "col_status": "状态",
+        "direct_short": "直连",
+        "follows_ip": "跟随 IP",
+        "stamp_live": "运行中",
+        "stamp_starting": "启动中",
+        "stamp_idle": "已停止",
+        "stamp_failed": "失败",
+        "bulk_skip_running": "已跳过 {count} 个运行中的 Profile；请先停止再删除",
+        "chrome_engine_unsupported": "此电脑无法运行 Chrome 引擎：{reason}",
+        "engine_locked": "创建后无法更改引擎。",
+        "proxy_format_hint": "user:pass@host:port、host:port:user:pass 或 socks5://...。留空 = 直接连接。",
+        "geo_follow_hint": "设为“掩蔽”的时区和语言会跟随代理的 IP。",
+        "no_fingerprint_short": "暂无指纹",
+        "no_proxy_short": "无代理",
+        "profiles_none_running": "没有运行中的",
+        "no_filter_results": "此筛选下没有 Profile",
+        "clear_filters": "清除筛选",
+        "mcp_button": "连接 AI (MCP)",
+        "mcp_title": "连接 AI 智能体 (MCP)",
+        "mcp_intro": "让 Claude、Cursor 或 VS Code 替你管理 Profile 并浏览网页：打开页面、读取内容、点击、输入和截图。",
+        "mcp_endpoint": "MCP 地址：{url}",
+        "mcp_status_ok": "● FoxProfile API 正在运行",
+        "mcp_status_down": "● 无法连接 API：{error}",
+        "mcp_pick_client": "1. 选择你的 AI 应用",
+        "mcp_paste_into": "2. 粘贴到：{where}",
+        "mcp_copy": "复制",
+        "mcp_copied": "已复制到剪贴板",
+        "mcp_show_token": "包含真实的 API token（否则使用占位符）",
+        "mcp_restart": "3. 重启 AI 应用，保持 FoxProfile 运行，然后试试：",
+        "mcp_example_prompt": "打开 Profile shop-facebook-01，访问 facebook.com 并给我发一张截图。",
+        "mcp_desktop_note": "Claude Desktop 使用这台电脑的 Python 启动 FoxProfile 的 MCP 桥接，因此此配置只能在本机使用。",
+        "mcp_security_note": "网页内容不可信：AI 被告知绝不遵循网页中的指令。无法通过 MCP 删除 Profile。",
+        "window_title": "FoxProfile",
+        "your_profiles": "Profile",
+        "search_hint": "按名称或代理搜索",
+        "no_search_results": "没有 Profile 匹配“{query}”",
+        "no_profiles_yet": "还没有 Profile",
+        "create_profile_hint": "新建一个 Profile 开始使用",
+        "new_profile": "新建 Profile",
+        "import": "导入",
+        "export": "导出",
+        "total_profiles": "Profile 总数：{count}",
+        "create_new_profile": "新建 Profile",
+        "edit_profile": "编辑 Profile",
+        "editing_profile": "正在编辑：{name}",
+        "configure_identity": "配置你的浏览器身份",
+        "add_profile": "添加 Profile",
+        "profile_name": "Profile 名称",
+        "enter_profile_name": "输入 Profile 名称",
+        "proxy_optional": "代理",
+        "proxy_hint": "user:pass@ip:port",
+        "profile_busy": "“{name}”正忙（正在启动或处理 Cookie），请稍后再试",
+        "operating_system": "操作系统",
+        "browser_engine": "引擎",
+        "engine_camoufox": "Camoufox (Firefox)",
+        "engine_chrome": "Chrome",
+        "engine_chrome_short": "Chrome",
+        "engine_chrome_note": "实验性 Chromium 引擎，首次使用时自动下载（约 150 MB）。请选择本机的操作系统：其他系统会泄露本机字体。创建后无法更改引擎。",
+        "chrome_engine_downloading": "正在后台下载 Chrome 引擎（约 150 MB）...",
+        "chrome_engine_ready": "Chrome 引擎已就绪",
+        "chrome_engine_download_failed": "Chrome 引擎下载失败：{error}",
+        "create_profile_btn": "创建 Profile",
+        "save_changes": "保存更改",
+        "cancel": "取消",
+        "close_btn": "关闭",
+        "delete": "删除",
+        "check_proxy": "检测代理",
+        "enter_proxy_to_check": "请输入要检测的代理",
+        "launch": "启动",
+        "stop": "停止",
+        "loading": "加载中...",
+        "previous": "上一页",
+        "next": "下一页",
+        "page_of": "第 {current} 页，共 {total} 页",
+        "activity_log": "活动日志",
+        "status_running": "运行中",
+        "proxy_active": "代理已启用",
+        "direct_connection": "直接连接",
+        "tooltip_edit": "编辑 Profile",
+        "tooltip_delete": "删除 Profile",
+        "tooltip_select": "选择 Profile",
+        "tooltip_cookies": "Cookie 与指纹",
+        "confirm_delete_msg": "删除 Profile“{name}”？其 Cookie 和数据将被永久移除。",
+        "confirm_bulk_delete": "删除 {count} 个 Profile？",
+        "cannot_undo": "此操作无法撤销。",
+        "confirm_reset_fingerprint": "为“{name}”创建新指纹？网站将看到另一台设备。",
+        "log_no_activity": "暂无活动。",
+        "log_entries": "{count} 条记录",
+        "profiles_configured": "Profile：{count}",
+        "profiles_running_suffix": "运行中",
+        "browsers_running": "●  {count} 个浏览器运行中",
+        "no_active_sessions": "○  没有活动会话",
+        "selected_count": "已选 {count} 个",
+        "select_page": "选择本页",
+        "deselect_page": "取消选择本页",
+        "clear": "清除",
+        "error": "错误",
+        "profile_exists": "Profile 已存在！",
+        "update_failed": "无法更新 Profile（名称可能已存在）",
+        "stop_before_rename": "重命名前请先停止浏览器",
+        "created_profile": "已创建：{name}",
+        "deleted_profile": "已删除：{name}",
+        "updated_profile": "已更新：{old} -> {new}",
+        "launching_profile": "正在启动 {name}...",
+        "stopping_profile": "正在停止 {name}...",
+        "starting_profile": "正在启动 {name}（{os}）...",
+        "browser_started": "浏览器已启动！",
+        "session_ended": "会话已结束：{name}",
+        "error_starting": "启动进程出错：{error}",
+        "export_profile": "导出 Profile",
+        "export_profiles": "导出 Profile",
+        "choose_profiles_to_export": "选择要导出的 Profile",
+        "select_all": "全选",
+        "include_browser_data": "包含浏览器数据",
+        "select_export_dir": "选择导出目录",
+        "import_profile": "导入 Profile",
+        "export_success": "Profile 导出成功",
+        "import_success": "Profile 导入成功",
+        "export_error": "导出 Profile 出错：{error}",
+        "import_error": "导入 Profile 出错：{error}",
+        "validation_empty_name": "Profile 名称不能为空",
+        "validation_name_too_long": "Profile 名称不能超过 64 个字符",
+        "validation_invalid_chars": "名称包含无效字符：{chars}",
+        "validation_name_spaces": "名称不能以空格开头或结尾",
+        "validation_trailing_dot": "名称不能以点号结尾",
+        "validation_reserved_name": "“{name}”是系统保留名称",
+        "validation_invalid_proxy": "代理格式无效。请使用：[scheme://][user:pass@]host:port 或 host:port:user:pass",
+        "validation_invalid_port": "端口必须在 1 到 65535 之间，当前为 {port}",
+        "proxy_checking": "正在检测代理...",
+        "proxy_check_success": "代理可用。IP：{ip}",
+        "proxy_check_failed": "代理检测失败：{reason}",
+        "proxy_check_skipped": "已跳过代理检测（未安装 aiohttp）",
+        "cookie_dialog_title": "Cookie 与指纹",
+        "cookie_dialog_hint": "Profile：{name}。浏览器必须处于停止状态。",
+        "cookie_export_json": "导出 JSON",
+        "cookie_export_json_hint": "Cookie-Editor / EditThisCookie 格式（GoLogin、GPM、Multilogin）",
+        "cookie_export_netscape": "导出 cookies.txt",
+        "cookie_export_netscape_hint": "Netscape 格式（yt-dlp、curl、wget）",
+        "cookie_import": "导入 Cookie",
+        "cookie_import_hint": "来自 JSON 或 cookies.txt 文件",
+        "fingerprint_reset": "新指纹",
+        "fingerprint_reset_hint": "下次启动将呈现另一台设备",
+        "fingerprint_current": "当前设备：{platform}，{screen}，{cores} 核",
+        "fingerprint_none": "暂无指纹（首次启动时创建）",
+        "cookie_stop_first": "处理 Cookie 前请先停止“{name}”",
+        "cookie_working": "[{name}] 正在读取 Cookie...",
+        "cookie_exported": "[{name}] 已导出 {count} 个 Cookie 到 {path}",
+        "cookie_imported": "[{name}] 已导入 {count} 个 Cookie",
+        "cookie_error": "[{name}] Cookie 出错：{error}",
+        "fingerprint_was_reset": "[{name}] 指纹已重置；下次启动将使用新设备",
+        "validation_invalid_timezone": "未知时区“{value}”（请使用 IANA 名称，如 Europe/Paris）",
+        "validation_invalid_locale": "无效的区域“{value}”（请使用 语言-地区 格式，如 fr-FR）",
+        "timezone_optional": "时区",
+        "timezone_hint": "跟随 IP · 例如 Asia/Shanghai",
+        "locale_optional": "区域",
+        "locale_hint": "跟随 IP · 例如 zh-CN",
+        "check_ip": "检测 IP",
+        "ip_checking": "正在检测 IP...",
+        "geo_exit": "出口 IP {ip} · {country}",
+        "geo_timezone": "时区：{value}（{mode}）",
+        "geo_locale": "语言：{value}（{mode}）",
+        "geo_auto": "自动",
+        "geo_pinned": "已固定",
+        "geo_locale_random": "每次启动随机",
+        "geo_source": "{source}：{ip} · {country} {city} · {timezone}",
+        "geo_source_error": "{source}：失败（{error}）",
+        "geo_all_good": "未发现不一致",
+        "geo_check_failed": "无法获取出口 IP：{error}",
+        "geo_use_suggested": "使用 {value}",
+        "geo_warn_country_mismatch": "{source} 判定该 IP 位于 {got}；浏览器使用的是 {expected}",
+        "geo_warn_timezone_mismatch": "{source} 报告的时区为 {got}；浏览器使用的是 {expected}",
+        "geo_warn_hosting": "{source} 将此 IP 标记为数据中心/托管：可能遇到验证码和封锁",
+        "geo_warn_ip_differs": "双栈代理：时区跟随 {exit_ip}，但网站看到的是 {seen_ip}",
+        "geo_warn_locale_country": "语言 {locale} 不属于该 IP 所在国家（{country}）",
+        "geo_warn_locale_random": "自动语言每次启动都会重新随机（{suggested} 仅约占 {share}%）；建议固定",
+        "fp_tab_profile": "Profile",
+        "fp_tab": "指纹",
+        "fp_note_chrome": "这些设置仅适用于 Camoufox (Firefox) 引擎。",
+        "fp_device_title": "当前设备",
+        "fp_device_none": "暂无设备，将在首次启动时创建。",
+        "fp_gpu": "GPU",
+        "fp_source": "来源",
+        "fp_warnings": "警告",
+        "fp_regen": "重新生成设备",
+        "fp_regen_confirm": "丢弃此 Profile 已保存的设备，并在下次启动时重新生成？设置会保留。",
+        "fp_regen_stop": "请先停止浏览器再重新生成设备。",
+        "fp_regen_done": "下次启动将生成新设备",
+        "fp_next_launch": "更改将在下次启动时生效。",
+        "fp_mode_mask": "掩蔽",
+        "fp_mode_custom": "自定义",
+        "fp_mode_real": "真实",
+        "fp_mode_off": "禁用",
+        "fp_mode_noise": "噪声",
+        "fp_mode_prompt": "提示",
+        "fp_mode_allow": "允许",
+        "fp_mode_block": "屏蔽",
+        "fp_item_os": "操作系统",
+        "fp_item_user_agent": "User Agent",
+        "fp_item_platform": "平台",
+        "fp_item_hardware_concurrency": "CPU 核心数",
+        "fp_item_webgl_meta": "WebGL (GPU)",
+        "fp_item_webgl_noise": "WebGL 噪声",
+        "fp_item_canvas": "Canvas 噪声",
+        "fp_item_audio": "音频",
+        "fp_item_webrtc": "WebRTC",
+        "fp_item_timezone": "时区",
+        "fp_item_geo_permission": "地理位置权限",
+        "fp_item_geolocation": "地理位置",
+        "fp_item_language": "语言",
+        "fp_item_screen": "屏幕",
+        "fp_item_fonts": "字体",
+        "fp_item_media_devices": "媒体设备",
+        "fp_item_voices": "语音合成声音",
+        "fp_item_port_scan": "端口扫描保护",
+        "fp_hint_os": "“自定义”使用上方所选的操作系统；“真实”使用本机操作系统。",
+        "fp_hint_noise": "“噪声”会在每次启动、每个网站上变化（Firefox 自带的指纹防护）。",
+        "fp_hint_audio": "“噪声”使用此设备固定的音频特征；“真实”上报本机音频。",
+        "fp_hint_geo_permission": "“提示”仍会在不询问的情况下返回位置，网站可能察觉。",
+        "fp_hint_port_scan": "页面可访问的本地网络主机（不含端口）；用逗号或换行分隔。",
+        "fp_hint_language": "以逗号分隔，第一个为首选，例如 en-US,en",
+        "fp_hint_fonts": "每行一个字体。",
+        "fp_hint_screen": "选择一个尺寸，或输入 WIDTHxHEIGHT。",
+        "fp_fonts_fill": "从操作系统字体列表填充",
+        "fp_lat": "纬度",
+        "fp_lon": "经度",
+        "fp_acc": "精度（米）",
+        "fp_micros": "麦克风",
+        "fp_webcams": "摄像头",
+        "fp_speakers": "扬声器",
+        "fp_bad_number": "{item}：请输入数字",
+        "fp_options_failed": "无法加载指纹选项：{e}",
+        "fp_platform": "平台",
+        "fp_screen": "屏幕",
+        "fp_cpu": "CPU",
+    },
 }
 
-_ACTIVE = STRINGS.get(LANGUAGE, STRINGS["en"])
+_PREFS_FILE = Path(PROFILES_FILE).with_name("settings.json")
+_lang: str | None = None
+
+
+def _normalize(value: object) -> str | None:
+    """A supported UI language for a locale-ish string (zh, zh_CN, zh-Hans-CN, vi-VN, ...)."""
+    code = str(value or "").strip().replace("_", "-")
+    if not code:
+        return None
+    if code.lower().startswith("zh"):
+        return "zh-CN"
+    return next((k for k in STRINGS if k.lower() == code.lower().split("-")[0]), None)
+
+
+def _system_language() -> str | None:
+    """ "zh-CN" when the OS UI language is Chinese, else None. A bundled macOS app has
+    no LANG, so ask the system itself."""
+    try:
+        if sys.platform == "darwin":
+            out = subprocess.run(
+                ["defaults", "read", "-g", "AppleLanguages"],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            ).stdout
+            first = re.search(r"[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]+)*", out).group()
+        elif sys.platform == "win32":
+            import ctypes
+
+            # Primary language id 0x04 is Chinese.
+            first = "zh" if ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0xFF == 4 else ""
+        else:
+            first = (
+                os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG")
+            )
+        return "zh-CN" if first and first.lower().startswith("zh") else None
+    except Exception:
+        return None
+
+
+def _saved_language() -> str | None:
+    try:
+        return _normalize(json.loads(_PREFS_FILE.read_text(encoding="utf-8")).get("language"))
+    except Exception:
+        return None
+
+
+def _initial_language() -> str:
+    """FOXPROFILE_LANG, else the language the user last picked, else the system's (zh -> zh-CN, otherwise en)."""
+    for source in (lambda: _normalize(LANGUAGE), _saved_language, _system_language):
+        code = source()
+        if code in STRINGS:
+            return code
+    return "en"
 
 
 def current_language() -> str:
-    return next(code for code, table in STRINGS.items() if table is _ACTIVE)
+    global _lang
+    if _lang is None:
+        _lang = _initial_language()
+    return _lang
 
 
-def set_language(code: str) -> None:
-    """Switch the UI language for this process; callers rebuild their controls."""
-    global _ACTIVE
-    _ACTIVE = STRINGS.get(code, _ACTIVE)
+def set_language(code: str, persist: bool = False) -> None:
+    """Switch the UI language for this process; callers rebuild their controls.
+    persist=True also remembers the choice for the next start."""
+    global _lang
+    if code not in STRINGS:
+        return
+    _lang = code
+    if persist:
+        with contextlib.suppress(OSError):
+            _PREFS_FILE.write_text(json.dumps({"language": code}), encoding="utf-8")
+
+
+# Set per request by the API so REST/MCP replies stay English whatever the UI shows.
+FIXED_LANGUAGE: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "FIXED_LANGUAGE", default=None
+)
 
 
 def get_string(key: str, **kwargs: object) -> str:
-    text = _ACTIVE.get(key) or STRINGS["en"].get(key, key)
+    lang = FIXED_LANGUAGE.get() or current_language()
+    text = STRINGS[lang].get(key) or STRINGS["en"].get(key, key)
     if kwargs:
         try:
             return text.format(**kwargs)

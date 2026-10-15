@@ -721,3 +721,16 @@ def test_cross_os_fonts_on_a_mac():
         config, prefs = {"fonts": ["Arial"]}, {}
         fpsettings.cross_os_fonts(config, prefs, os_, host, fonts)
         assert prefs == {} and config == {"fonts": ["Arial"]}
+
+
+def test_api_replies_stay_english_when_the_ui_is_chinese(client, monkeypatch):
+    from src.core import strings
+
+    monkeypatch.setattr(strings, "_lang", "zh-CN")
+    assert (
+        strings.get_string("validation_empty_name")
+        != strings.STRINGS["en"]["validation_empty_name"]
+    )
+    r = client.post(f"{API}/profiles", json={"name": "   ", "os_type": "windows"})
+    assert r.status_code >= 400
+    assert not any("一" <= c <= "鿿" for c in r.text), r.text

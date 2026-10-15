@@ -21,7 +21,8 @@ DATA_DIR = _env("DATA_DIR", "camoufox_data")
 LOG_DIR = _env("LOG_DIR", "logs")
 LOG_LEVEL = _env("LOG_LEVEL", "INFO")
 PROXY_CHECK_TIMEOUT = int(_env("PROXY_TIMEOUT", "10"))
-LANGUAGE = _env("LANG", "en")
+# UI language: zh-CN / en / vi. Empty = the saved choice, else the system language.
+LANGUAGE = _env("LANG", "")
 
 API_HOST = _env("API_HOST", "127.0.0.1")
 API_PORT = int(_env("API_PORT", "8000"))

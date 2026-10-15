@@ -109,7 +109,7 @@ class App:
     def _set_language(self, code: str) -> None:
         if code == current_language():
             return
-        set_language(code)
+        set_language(code, persist=True)
         self.state.search_query = ""
         self._build_ui()
 

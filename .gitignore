@@ -178,6 +178,7 @@ pyrightconfig.json
 # Local runtime data (cookies, fingerprints, profiles, logs)
 camoufox_data/
 profiles.json
+settings.json
 logs/
 
 # Tooling artefacts
