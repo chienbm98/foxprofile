@@ -6,7 +6,7 @@ import shutil
 import threading
 import time
 
-from ...core.config import DATA_DIR, PROFILES_FILE
+from ...core.config import DATA_DIR, DEFAULT_ENGINE, PROFILES_FILE
 from ...core.logging import get_logger
 from ...models.profile import ENGINES, Profile
 from ...utils.validation import (
@@ -108,7 +108,7 @@ class ProfileManager:
         os_type: str,
         timezone: str | None = None,
         locale: str | None = None,
-        engine: str = "camoufox",
+        engine: str = DEFAULT_ENGINE,
     ) -> bool:
         with self._lock:
             if self._find_by_casefold(name) is not None:

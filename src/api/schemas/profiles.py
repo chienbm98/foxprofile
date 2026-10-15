@@ -1,10 +1,12 @@
 from pydantic import BaseModel, Field
 
+from ...core.config import DEFAULT_ENGINE, HOST_OS
+
 
 class ProfileCreate(BaseModel):
     name: str
     proxy: str | None = None
-    os_type: str = "windows"
+    os_type: str = HOST_OS
     timezone: str | None = Field(
         None, description="IANA timezone, e.g. Asia/Ho_Chi_Minh. Unset = follow the IP"
     )
@@ -12,8 +14,8 @@ class ProfileCreate(BaseModel):
         None, description="language-REGION, e.g. vi-VN. Unset = follow the IP"
     )
     engine: str = Field(
-        "camoufox",
-        description="camoufox (Firefox) or chrome (experimental, fingerprint-chromium). "
+        DEFAULT_ENGINE,
+        description="chrome (fingerprint-chromium, default) or camoufox (Firefox). "
         "Fixed once the profile is created",
     )
 

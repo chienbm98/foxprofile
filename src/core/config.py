@@ -1,4 +1,7 @@
 import os
+import secrets
+import sys
+from pathlib import Path
 
 try:
     from dotenv import load_dotenv
@@ -45,4 +48,25 @@ RESTORE_TABS = _env("RESTORE_TABS", "true").strip().lower() in ("1", "true", "ye
 
 # Shared secret for the REST API, the web panel and the MCP server. Required
 # whenever the API listens on anything other than the loopback interface.
-API_TOKEN = _env("API_TOKEN", "")
+TOKEN_FILE = Path(_env("TOKEN_FILE", str(Path(__file__).resolve().parents[2] / ".api_token")))
+
+
+def _load_or_create_token() -> str:
+    """The token in TOKEN_FILE, minted (owner-only) on first use, so the API is
+    never left open to every local process."""
+    try:
+        fd = os.open(TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        return TOKEN_FILE.read_text().strip()
+    token = secrets.token_urlsafe(32)
+    with os.fdopen(fd, "w") as f:
+        f.write(token)
+    return token
+
+
+API_TOKEN = _env("API_TOKEN", "") or _load_or_create_token()
+
+# New profiles default to the Chrome engine and to this machine's OS: the Chrome
+# engine shows the host's fonts, so another OS persona is inconsistent.
+HOST_OS = {"darwin": "macos", "win32": "windows"}.get(sys.platform, "linux")
+DEFAULT_ENGINE = "chrome"

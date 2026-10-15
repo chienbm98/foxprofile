@@ -69,7 +69,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "operating_system": "Operating System",
         "browser_engine": "Engine",
         "engine_camoufox": "Camoufox (Firefox)",
-        "engine_chrome": "Chrome (experimental)",
+        "engine_chrome": "Chrome",
         "engine_chrome_short": "Chrome",
         "engine_chrome_note": "Experimental Chromium engine. It is downloaded automatically the first time (~150 MB). Pick the OS of this machine: other OSes leak its fonts. The engine cannot be changed later.",
         "chrome_engine_downloading": "Downloading the Chrome engine in the background (~150 MB)...",

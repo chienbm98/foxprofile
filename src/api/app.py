@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from ..core.config import API_PORT, API_TOKEN, HEADLESS
+from ..core.config import API_PORT, API_TOKEN, DEFAULT_ENGINE, HEADLESS, HOST_OS
 from ..core.logging import get_logger
 from . import mcp_http
 from .auth import require_token
@@ -86,6 +86,8 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
             "auth_required": bool(API_TOKEN),
             "headless": HEADLESS,
             "mcp_path": mcp_http.MCP_PATH,
+            "host_os": HOST_OS,
+            "default_engine": DEFAULT_ENGINE,
         }
 
     @app.get("/", include_in_schema=False)

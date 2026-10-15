@@ -449,7 +449,7 @@ const I18N = {
     login_hint: "Enter the server's API token (FOXPROFILE_API_TOKEN).", token: "API token", login: "Log in",
     bad_token: "Invalid token", create: "Create profile", edit_title: "Edit profile", edit_sub: "Editing {name}", create_sub: "A profile is an identity: its own device, proxy and location.",
     name: "Profile name", os: "Operating system", engine: "Engine",
-    engine_camoufox: "Camoufox (Firefox)", engine_chrome: "Chrome (experimental)", engine_locked: "The engine cannot be changed after creation.",
+    engine_camoufox: "Camoufox (Firefox)", engine_chrome: "Chrome", engine_locked: "The engine cannot be changed after creation.",
     engine_note: "Experimental Chromium engine. It is downloaded automatically to the FoxProfile machine the first time (~150 MB). Pick that machine's OS: other OSes leak its fonts. The engine cannot be changed later.",
     proxy_label: "Proxy", proxy_hint: "user:pass@host:port, host:port:user:pass, or socks5://... Blank = direct connection.",
     check_proxy: "Check proxy", cancel: "Cancel", save: "Save changes", checking: "Checking...",
@@ -494,6 +494,7 @@ let lang = store.get("foxprofile.lang") || "en";
 let token = store.get("foxprofile.token") || "";
 let profiles = [], running = new Set(), fingerprints = {};
 let filter = "all";
+let defaults = { host_os: "windows", default_engine: "chrome" };
 const busy = new Map();          // name -> "starting" | "stopping"
 const failed = new Map();        // name -> error message of the last failed launch
 const liveSince = new Map();     // name -> Date the profile was first seen running
@@ -808,11 +809,11 @@ function openEditor(p) {
   modal((close) => {
     const name = h("input", { id: "f-name", value: p ? p.name : "", required: true, maxlength: 64, autocomplete: "off" });
     const os = h("select", { id: "f-os" }, [["windows", "Windows"], ["macos", "macOS"], ["linux", "Linux"]].map(([v, label]) =>
-      h("option", { value: v, selected: (p ? p.os_type : "windows") === v }, label)));
+      h("option", { value: v, selected: (p ? p.os_type : defaults.host_os) === v }, label)));
     // The engine is fixed once a profile exists: the two keep incompatible browser data.
     const engine = h("select", { id: "f-engine", disabled: !!p },
       [["camoufox", t("engine_camoufox")], ["chrome", t("engine_chrome")]].map(([v, label]) =>
-        h("option", { value: v, selected: (p ? p.engine : "camoufox") === v }, label)));
+        h("option", { value: v, selected: (p ? p.engine : defaults.default_engine) === v }, label)));
     const engineNote = h("div", { class: "note" }, icon("alert", true), h("span", {}, t("engine_note")));
     const syncNote = () => { engineNote.style.display = !p && engine.value === "chrome" ? "" : "none"; };
     engine.onchange = syncNote; syncNote();
@@ -1131,6 +1132,7 @@ document.addEventListener("keydown", (e) => {
     const res = await fetch("/api/v1/info");
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     const info = await res.json();
+    defaults = { ...defaults, ...info };
     if (info.auth_required && !token) return showLogin();
     try { await showApp(info.auth_required); } catch { showLogin(); }
   } catch (e) {

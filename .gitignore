@@ -190,3 +190,6 @@ e2e-output/
 .impeccable/decision/
 .impeccable/questions/
 .impeccable/mocks/
+
+# Auto-generated API token
+.api_token

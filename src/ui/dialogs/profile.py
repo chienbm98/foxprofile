@@ -4,6 +4,7 @@ from collections.abc import Callable
 
 import flet as ft
 
+from ...core.config import DEFAULT_ENGINE, HOST_OS
 from ...core.strings import get_string
 from ...interfaces.protocols import IProxyService
 from ...models.profile import Profile
@@ -47,12 +48,12 @@ def open_profile_dialog(
         **DLG_FIELD_KWARGS,
     )
     os_dropdown = build_os_dropdown(
-        profile.os_type if profile is not None else "windows",
+        profile.os_type if profile is not None else HOST_OS,
     )
     os_dropdown.expand = 2
     # Fixed once created: the engines keep incompatible browser data.
     engine_dropdown = build_engine_dropdown(
-        profile.engine if profile is not None else "camoufox",
+        profile.engine if profile is not None else DEFAULT_ENGINE,
         disabled=is_edit,
     )
     engine_dropdown.expand = 3
@@ -127,8 +128,8 @@ def open_profile_dialog(
     def on_submit(_: ft.ControlEvent) -> None:
         name = (name_field.value or "").strip()
         proxy = (proxy_field.value or "").strip()
-        os_type = os_dropdown.value or "windows"
-        engine = engine_dropdown.value or "camoufox"
+        os_type = os_dropdown.value or HOST_OS
+        engine = engine_dropdown.value or DEFAULT_ENGINE
         timezone = (timezone_field.value or "").strip()
         locale = (locale_field.value or "").strip()
         name_error.visible = proxy_error.visible = geo_error.visible = False
