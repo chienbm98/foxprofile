@@ -431,7 +431,10 @@ def test_check_real_values_on_another_os():
 
 
 def test_check_misc():
-    assert "cores" in warnings_for({"hardware_concurrency": item("custom", 4)}, host="macos")[0]
+    assert any(
+        "cores" in w
+        for w in warnings_for({"hardware_concurrency": item("custom", 4)}, host="macos")
+    )
     assert warnings_for({"hardware_concurrency": item("custom", 4)}) == []
     assert "prompt" in warnings_for({"geo_permission": item("prompt")})[0]
     assert warnings_for({"geo_permission": item("prompt"), "geolocation": item("real")}) == []
@@ -577,7 +580,8 @@ def test_rest_round_trip(client, workdir):
     r = client.get(f"{API}/profiles/r1/fingerprint")
     assert r.status_code == 200
     body = r.json()
-    assert body["exists"] is False and body["warnings"] == []
+    assert body["exists"] is False
+    assert all("fonts" in w for w in body["warnings"])  # only the cross-OS font note on a Mac
     assert body["settings"]["canvas"] == item("noise")
 
     r = client.put(
@@ -694,3 +698,20 @@ def test_build_launch_with_the_real_browser(tmp_path):
     assert not any(
         k.startswith(("addons", "locale:", "timezone", "geolocation:")) for k in saved["device"]
     )
+
+
+def test_cross_os_fonts_on_a_mac():
+    config, prefs = {"fonts": ["Arial", "Segoe UI"]}, {}
+    fpsettings.cross_os_fonts(config, prefs, "windows", "macos", "mask")
+    assert prefs["gfx.bundled-fonts.activate"] == 0
+    assert config["fonts"][-1] == fpsettings.FALLBACK_FONT
+    assert prefs["font.name-list.sans-serif.zh-CN"].startswith("Microsoft YaHei")
+    assert prefs["font.name-list.sans-serif.zh-CN"].endswith(fpsettings.FALLBACK_FONT)
+    for os_, host, fonts in (
+        ("macos", "macos", "mask"),
+        ("windows", "windows", "mask"),
+        ("windows", "macos", "real"),
+    ):
+        config, prefs = {"fonts": ["Arial"]}, {}
+        fpsettings.cross_os_fonts(config, prefs, os_, host, fonts)
+        assert prefs == {} and config == {"fonts": ["Arial"]}

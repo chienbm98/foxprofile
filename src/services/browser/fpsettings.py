@@ -499,6 +499,71 @@ def apply_modes(
     return notes
 
 
+# --- Fonts of another OS on a Mac ------------------------------------------------
+
+# Firefox on Windows's default font per language group (modules/libpref all.js), so
+# text whose page names no font falls back the way it does on Windows.
+_WINDOWS_LANG_FONTS = {
+    "ja": (
+        "Yu Mincho, MS PMincho, MS Mincho, Meiryo, Yu Gothic, MS PGothic, MS Gothic",
+        "Meiryo, Yu Gothic, MS PGothic, MS Gothic, Yu Mincho, MS PMincho, MS Mincho",
+        "MS Gothic",
+    ),
+    "ko": ("Batang, Gulim, Malgun Gothic", "Malgun Gothic, Gulim", "GulimChe"),
+    "zh-CN": ("SimSun, MS Song", "Microsoft YaHei, SimHei", "SimSun"),
+    "zh-TW": ("PMingLiu, MingLiU", "Microsoft JhengHei, PMingLiU", "MingLiU"),
+    "zh-HK": (
+        "MingLiu_HKSCS, Ming(for ISO10646)",
+        "Microsoft JhengHei, MingLiU_HKSCS",
+        "MingLiU_HKSCS",
+    ),
+    "th": ("Tahoma", "Tahoma", "Tahoma"),
+    **{
+        group: ("Nirmala UI, Mangal", "Nirmala UI, Mangal", "Mangal")
+        for group in (
+            "x-devanagari",
+            "x-beng",
+            "x-tamil",
+            "x-telu",
+            "x-knda",
+            "x-mlym",
+            "x-gujr",
+            "x-guru",
+            "x-orya",
+            "x-sinh",
+        )
+    },
+}
+# On macOS and on Windows (with Office) alike, and it covers CJK, Indic and more.
+FALLBACK_FONT = "Arial Unicode MS"
+# Prefs only for this launch: applied as defaults at startup (CAMOU_PREFS), never
+# written to the profile, so they do not stay behind when the OS item changes.
+_STARTUP_ONLY = ("gfx.bundled-fonts.activate", "font.name-list.")
+
+
+def cross_os_fonts(config: dict, prefs: dict, os: str, host_os: str, fonts_mode: str) -> None:
+    """Make another OS's identity render on a Mac.
+
+    Camoufox registers its bundled Windows/Linux fonts on top of the Mac's; headed,
+    that draws glyphs from the wrong font file (garbled tab titles, URL bar and every
+    non-Latin script, also with stock Camoufox 156). With the bundle off, the claimed
+    fonts the Mac has render normally and FALLBACK_FONT covers the scripts whose
+    fonts it lacks.
+    """
+    if host_os != "macos" or os == "macos" or fonts_mode == "real":
+        return
+    prefs["gfx.bundled-fonts.activate"] = 0
+    if isinstance(config.get("fonts"), list) and FALLBACK_FONT not in config["fonts"]:
+        config["fonts"] = [*config["fonts"], FALLBACK_FONT]
+    lang_fonts = _WINDOWS_LANG_FONTS if os == "windows" else {}
+    for group in _WINDOWS_LANG_FONTS:
+        serif, sans, mono = lang_fonts.get(group, ("", "", ""))
+        for kind, names in (("serif", serif), ("sans-serif", sans), ("monospace", mono)):
+            prefs[f"font.name-list.{kind}.{group}"] = ", ".join(
+                n for n in (names, FALLBACK_FONT) if n
+            )
+
+
 # --- Launch ----------------------------------------------------------------------
 
 
@@ -560,6 +625,7 @@ def build_launch(
         ff_major=resolve_verstr(exe).split(".")[0],
     ):
         log(note)
+    cross_os_fonts(config, prefs, os, HOST_OS, settings["fonts"]["mode"])
     validate_config(config, path=exe)
     for violation in coherence.validate(config, _KEY[os]):
         log(f"Fingerprint coherence ({violation.rule}): {violation.detail}")
@@ -567,6 +633,8 @@ def build_launch(
         del env[name]
     env.update(get_env_vars(config, _KEY[os], path=exe))
     env.update(get_pref_env_vars(prefs))
+    for name in [n for n in prefs if n.startswith(_STARTUP_ONLY)]:
+        del prefs[name]  # already in CAMOU_PREFS; kept out of the profile's user.js
     return opts
 
 
@@ -604,6 +672,13 @@ def check(
             for name in ("user_agent", "platform", "fonts", "webgl_meta", "screen")
             if mode[name] == "real"
         ]
+    if host_os == "macos" and os != "macos" and mode["fonts"] != "real":
+        out.append(
+            f"On a Mac a {os} identity can only show the fonts the Mac also has (Camoufox's "
+            f"bundled {os} fonts render garbled here), so a font probe sees fewer {os} fonts "
+            "such as Segoe UI. For a full font set use a macOS identity on this Mac, or run "
+            f"the {os} identity on a {os} machine."
+        )
     if mode["hardware_concurrency"] == "custom" and host_os == "macos":
         out.append(
             "macOS cannot pin CPU cores: a custom core count is not backed by real parallelism."
