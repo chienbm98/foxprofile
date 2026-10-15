@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-15
+
+### Thêm
+- Giao diện tiếng Trung giản thể (简体中文) cho app desktop và web panel; mặc định theo ngôn ngữ hệ thống, lựa chọn được lưu lại.
+- Mục "Language" của fingerprint chọn từ danh sách (English / 简体中文) thay vì gõ tay.
+
 ### Sửa
 - App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
 - Proxy dạng `host:port:user:pass` có `@` hoặc `:` trong mật khẩu không còn bị bỏ qua (trước đây profile mở mà không qua proxy). Chấp nhận proxy IPv6 dạng `[2001:db8::1]`; host proxy tối đa 253 ký tự.
@@ -16,6 +22,7 @@
 - App desktop: hỏi xác nhận trước khi tạo fingerprint mới; ô chọn ở tiêu đề bảng không còn bỏ chọn các profile ở trang khác; rail hiện số profile và số trình duyệt đang chạy; hộp thoại xoá nói rõ cookie và dữ liệu sẽ mất vĩnh viễn.
 
 ### Thay đổi
+- Mọi profile cố định theo hệ điều hành của máy đang chạy: chọn hệ khác sẽ lộ font và cách hiển thị của máy. API từ chối `os_type` khác, MCP không còn tham số `os_type`.
 - Engine mặc định của profile mới là Camoufox (Firefox). Mỗi profile Camoufox có 18 thiết lập fingerprint (`fingerprint` trong `profiles.json`; REST `PUT /profiles/{name}/fingerprint/settings`, `GET /fingerprint/options`, `POST /profiles/{name}/fingerprint/regenerate`; MCP `update_fingerprint_settings`, `fingerprint_options`). Thiết bị được chọn một lần từ thư viện thiết bị thật rồi đóng băng trong `fingerprint.json` (v2); file v1 được tạo lại ở lần mở sau.
 - Ngôn ngữ giao diện mặc định của app desktop và web panel là English; đặt `FOXPROFILE_LANG=vi` (hoặc bấm "Tiếng Việt" trong app) để dùng tiếng Việt.
 
