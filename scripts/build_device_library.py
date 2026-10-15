@@ -97,9 +97,18 @@ def check(os_name, rec, gpus, stats):
         return "screen-too-small"
     if key == "mac" and scr["height"] < 800:  # no Mac ships a smaller logical screen
         return "mac-screen-floor"
-    # Touch laptops exist outside macOS.
-    if not 0 <= nav["maxTouchPoints"] <= (0 if key == "mac" else 10):
-        return "touch-points"
+    if scr["devicePixelRatio"] not in coherence.PLAUSIBLE_DPR[key]:
+        return "dpr"  # a browser zoom folded into the ratio, not a display mode
+    if key == "mac":
+        # The largest Mac panel is the 6016x3384 Pro Display XDR.
+        if (
+            scr["width"] * scr["devicePixelRatio"] > 6016
+            or scr["height"] * scr["devicePixelRatio"] > 3384
+        ):
+            return "mac-physical-screen"
+        # Intel-era Macs with these GPU buckets topped out at 8 threads (bar a rare Mac Pro).
+        if not gpu[1].startswith("Apple") and nav["hardwareConcurrency"] > 8:
+            return "intel-mac-cores"
     try:
         opts = launch_options(
             os=os_name, headless=True, fingerprint_preset=rec, i_know_what_im_doing=True
@@ -159,6 +168,8 @@ def build(raw_path):
                 except KeyError:
                     stats[src, os_name]["missing-field"] += 1
                     continue
+                # Camoufox cannot fake touch events, so a touch-point count contradicts them.
+                rec["navigator"]["maxTouchPoints"] = 0
                 key = dedupe_key(os_name, rec)
                 if key in seen:
                     stats[src, os_name]["duplicate"] += 1

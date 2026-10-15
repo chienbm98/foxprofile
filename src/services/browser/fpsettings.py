@@ -457,6 +457,8 @@ def apply_modes(
         config.update({f"geolocation:{k}": v for k, v in value["geolocation"].items()})
     elif mode["geolocation"] == "mask" and geo:
         config.update({k: v for k, v in geo.items() if k.startswith("geolocation:")})
+        # GeoIP has no accuracy, and Firefox then reports a sub-metre fix.
+        config.setdefault("geolocation:accuracy", 50)
     prefs["permissions.default.geo"] = {"prompt": 0, "allow": 1, "block": 2}[mode["geo_permission"]]
     if mode["geo_permission"] == "block":
         _pop(config, "geolocation:")  # spoofed coordinates would bypass the denial

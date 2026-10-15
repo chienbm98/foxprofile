@@ -2,6 +2,7 @@ import json
 import random
 
 import pytest
+from camoufox.coherence import PLAUSIBLE_DPR
 
 from src.services.browser import devices
 
@@ -15,6 +16,17 @@ def test_every_record_gpu_is_allowed(os_name):
     for rec in devices.load()[os_name]:
         assert (rec["webgl"]["unmaskedVendor"], rec["webgl"]["unmaskedRenderer"]) in allowed
         assert rec["screen"]["width"] >= 1280 and rec["screen"]["height"] >= 720
+        scr, nav = rec["screen"], rec["navigator"]
+        assert (
+            scr["devicePixelRatio"]
+            in PLAUSIBLE_DPR[{"windows": "win", "macos": "mac", "linux": "lin"}[os_name]]
+        )
+        assert nav["maxTouchPoints"] == 0  # Camoufox cannot fake touch events
+        if os_name == "macos":
+            assert scr["width"] * scr["devicePixelRatio"] <= 6016
+            assert rec["webgl"]["unmaskedRenderer"].startswith("Apple") or (
+                nav["hardwareConcurrency"] <= 8
+            )
 
 
 @pytest.mark.parametrize("os_name", OSES)
