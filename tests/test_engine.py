@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
+from src.core.config import HOST_OS
 from src.core.container import Container
 from src.models.profile import Profile
 from src.services.browser import fingerprint
@@ -62,7 +63,7 @@ def test_runner_command_follows_the_engine():
 
 
 def test_api_creates_and_reports_the_engine(client):
-    r = client.post("/api/v1/profiles", json={"name": "c1", "os_type": "macos", "engine": "chrome"})
+    r = client.post("/api/v1/profiles", json={"name": "c1", "os_type": HOST_OS, "engine": "chrome"})
     assert r.status_code == 201
     assert r.json()["engine"] == "chrome"
     assert client.get("/api/v1/profiles/c1").json()["engine"] == "chrome"

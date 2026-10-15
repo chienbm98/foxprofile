@@ -660,7 +660,7 @@ def test_rest_regenerate_removes_the_device_and_keeps_settings(client, workdir):
 
 
 def test_rest_options(client):
-    r = client.get(f"{API}/fingerprint/options", params={"os": "macos"})
+    r = client.get(f"{API}/fingerprint/options", params={"os": HOST_OS})
     assert r.status_code == 200
     body = r.json()
     assert set(body) == {"gpus", "screens", "fonts", "items"}
