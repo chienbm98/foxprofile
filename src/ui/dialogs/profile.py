@@ -18,13 +18,15 @@ from ...utils.validation import (
 from ..theme.colors import COLORS, FONT_BOLD, FONT_DATA, FONT_SEMIBOLD
 from ..theme.page import build_engine_dropdown, build_os_dropdown
 from ..theme.styles import ACCENT_STYLE, DLG_FIELD_KWARGS, OUTLINE_STYLE
+from .fingerprint_panel import FingerprintPanel, segmented
 
 
 def open_profile_dialog(
     page: ft.Page,
     proxy_service: IProxyService,
-    on_save: Callable[[str, str, str, str, str, str], str | None],
+    on_save: Callable[[str, str, str, str, str, str, dict], str | None],
     profile: Profile | None = None,
+    is_running: Callable[[], bool] = lambda: False,
 ) -> None:
     is_edit = profile is not None
     title = get_string("edit_profile") if is_edit else get_string("create_new_profile")
@@ -77,23 +79,27 @@ def open_profile_dialog(
         ),
     )
 
+    # Timezone / locale live in the Fingerprint tab (the "timezone" and "language" items).
+    panel = FingerprintPanel(
+        page,
+        profile,
+        os_dropdown.value or HOST_OS,
+        engine_dropdown.value or DEFAULT_ENGINE,
+        is_running=is_running,
+        proxy_set=lambda: bool((proxy_field.value or "").strip()),
+    )
+
     def on_engine_change(_: ft.ControlEvent) -> None:
         engine_note.visible = engine_dropdown.value == "chrome" and not is_edit
+        panel.set_engine(engine_dropdown.value or DEFAULT_ENGINE)
+        page.update()
+
+    def on_os_change(_: ft.ControlEvent) -> None:
+        panel.set_os(os_dropdown.value or HOST_OS)
         page.update()
 
     engine_dropdown.on_select = on_engine_change
-    timezone_field = ft.TextField(
-        value=(profile.timezone or "") if profile is not None else "",
-        hint_text="Asia/Ho_Chi_Minh",
-        text_style=_DATA,
-        **DLG_FIELD_KWARGS,
-    )
-    locale_field = ft.TextField(
-        value=(profile.locale or "") if profile is not None else "",
-        hint_text="vi-VN",
-        text_style=_DATA,
-        **DLG_FIELD_KWARGS,
-    )
+    os_dropdown.on_select = on_os_change
     geo_error = ft.Text("", size=12, color=COLORS["error"], visible=False)
     # The Check IP report is the only part that can grow; it scrolls on its own
     # so the dialog keeps its height on short windows.
@@ -113,9 +119,7 @@ def open_profile_dialog(
         height=38,
         style=OUTLINE_STYLE,
     )
-    ip_btn.on_click = lambda _: _do_ip_check(
-        page, proxy_field, timezone_field, locale_field, geo_result, ip_btn
-    )
+    ip_btn.on_click = lambda _: _do_ip_check(page, proxy_field, panel, geo_result, ip_btn)
 
     check_btn.on_click = lambda _: _do_proxy_check(
         page,
@@ -130,8 +134,8 @@ def open_profile_dialog(
         proxy = (proxy_field.value or "").strip()
         os_type = os_dropdown.value or HOST_OS
         engine = engine_dropdown.value or DEFAULT_ENGINE
-        timezone = (timezone_field.value or "").strip()
-        locale = (locale_field.value or "").strip()
+        timezone = panel.custom_value("timezone")
+        locale = panel.custom_value("language")
         name_error.visible = proxy_error.visible = geo_error.visible = False
 
         valid_name, name_err = validate_profile_name(name)
@@ -151,12 +155,22 @@ def open_profile_dialog(
         for validate, value in ((validate_timezone, timezone), (validate_locale, locale)):
             valid, geo_err = validate(value)
             if not valid:
+                show_tab("fingerprint")
                 geo_error.value = geo_err
                 geo_error.visible = True
                 page.update()
                 return
 
-        error = on_save(name, proxy, os_type, timezone, locale, engine)
+        try:
+            fingerprint = panel.collect(os_type)
+        except ValueError as e:
+            show_tab("fingerprint")
+            geo_error.value = str(e)
+            geo_error.visible = True
+            page.update()
+            return
+
+        error = on_save(name, proxy, os_type, timezone, locale, engine, fingerprint)
         if error:
             name_error.value = error
             name_error.visible = True
@@ -170,6 +184,55 @@ def open_profile_dialog(
         # Text fields keep Material's 48px height so rows of fields and
         # dropdowns (which cannot go below 48px) line up.
         dropdown.text_size = 14
+    main_tab = ft.Column(
+        tight=True,
+        spacing=4,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+        controls=[
+            _field(get_string("profile_name"), name_field),
+            name_error,
+            ft.Row(
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.START,
+                controls=[
+                    ft.Container(
+                        expand=3,
+                        content=_field(
+                            get_string("browser_engine"),
+                            engine_dropdown,
+                            get_string("engine_locked") if is_edit else None,
+                        ),
+                    ),
+                    ft.Container(
+                        expand=2,
+                        content=_field(get_string("operating_system"), os_dropdown),
+                    ),
+                ],
+            ),
+            engine_note,
+            _field(get_string("proxy_optional"), proxy_field, get_string("proxy_format_hint")),
+            ft.Row(spacing=8, controls=[check_btn, ip_btn]),
+            proxy_error,
+            geo_result,
+        ],
+    )
+    fp_tab = ft.Column(
+        visible=False,
+        tight=True,
+        spacing=4,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+        controls=[
+            ft.Text(get_string("geo_follow_hint"), size=12, color=COLORS["text_dim"]),
+            geo_error,
+            panel.control,
+        ],
+    )
+
+    def show_tab(tab: str) -> None:
+        main_tab.visible = tab == "profile"
+        fp_tab.visible = tab == "fingerprint"
+        page.update()
+
     dlg = ft.AlertDialog(
         modal=True,
         bgcolor=COLORS["card_bg"],
@@ -186,54 +249,22 @@ def open_profile_dialog(
             ],
         ),
         content=ft.Container(
-            width=460,
+            width=600,
             content=ft.Column(
                 tight=True,
-                spacing=4,
+                spacing=8,
                 horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
                 controls=[
-                    _field(get_string("profile_name"), name_field),
-                    name_error,
-                    ft.Row(
-                        spacing=12,
-                        vertical_alignment=ft.CrossAxisAlignment.START,
-                        controls=[
-                            ft.Container(
-                                expand=3,
-                                content=_field(
-                                    get_string("browser_engine"),
-                                    engine_dropdown,
-                                    get_string("engine_locked") if is_edit else None,
-                                ),
-                            ),
-                            ft.Container(
-                                expand=2,
-                                content=_field(get_string("operating_system"), os_dropdown),
-                            ),
+                    segmented(
+                        [
+                            ("profile", get_string("fp_tab_profile")),
+                            ("fingerprint", get_string("fp_tab")),
                         ],
+                        "profile",
+                        lambda tab: show_tab(tab),
                     ),
-                    engine_note,
-                    _field(
-                        get_string("proxy_optional"), proxy_field, get_string("proxy_format_hint")
-                    ),
-                    ft.Row(spacing=8, controls=[check_btn, ip_btn]),
-                    proxy_error,
-                    ft.Row(
-                        spacing=12,
-                        controls=[
-                            ft.Container(
-                                expand=3,
-                                content=_field(get_string("timezone_optional"), timezone_field),
-                            ),
-                            ft.Container(
-                                expand=2,
-                                content=_field(get_string("locale_optional"), locale_field),
-                            ),
-                        ],
-                    ),
-                    ft.Text(get_string("geo_follow_hint"), size=12, color=COLORS["text_dim"]),
-                    geo_error,
-                    geo_result,
+                    main_tab,
+                    fp_tab,
                 ],
             ),
         ),
@@ -313,14 +344,13 @@ def _do_proxy_check(
 def _do_ip_check(
     page: ft.Page,
     proxy_field: ft.TextField,
-    timezone_field: ft.TextField,
-    locale_field: ft.TextField,
+    panel: FingerprintPanel,
     geo_result: ft.Column,
     ip_btn: ft.OutlinedButton,
 ) -> None:
     proxy = (proxy_field.value or "").strip()
-    timezone = (timezone_field.value or "").strip()
-    locale = (locale_field.value or "").strip()
+    timezone = panel.custom_value("timezone")
+    locale = panel.custom_value("language")
     for validate, value in (
         (validate_proxy_format, proxy),
         (validate_timezone, timezone),
@@ -339,7 +369,7 @@ def _do_ip_check(
     page.update()
 
     def use_locale(value: str) -> None:
-        locale_field.value = value
+        panel.use_language(value)
         page.update()
 
     def do_check() -> None:

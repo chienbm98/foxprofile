@@ -63,7 +63,7 @@ svg.i.s { width: 16px; height: 16px; }
 .icon-btn:disabled { opacity: .35; cursor: default; }
 
 /* Fields */
-input[type=text], input[type=search], input[type=password], input:not([type]), select, textarea {
+input[type=text], input[type=search], input[type=password], input[type=number], input:not([type]), select, textarea {
   width: 100%; height: 40px; padding: 0 12px; font-size: 14px; background-color: var(--paper-raised); border: 1px solid var(--rule-strong); border-radius: 8px; outline: none; transition: border-color .15s, box-shadow .15s; }
 textarea { height: auto; padding: 10px 12px; }
 select { appearance: none; -webkit-appearance: none; font-size: 14px; padding-right: 36px; cursor: pointer;
@@ -193,6 +193,25 @@ main { min-width: 0; padding: 26px 32px 40px; }
 .fp-card { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin-top: 16px; padding: 12px 14px; border-radius: 9px; background: var(--paper); border: 1px solid var(--rule); font-size: 13px; }
 .fp-card dt { color: var(--ink-3); }
 .fp-card dd { margin: 0; }
+.mseg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 8px; background: var(--paper-sunk); border: 1px solid var(--rule); }
+.mseg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: var(--ink-2); cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.mseg button:hover { color: var(--ink); }
+.mseg button.active { background: var(--cover); color: var(--cover-ink); }
+.mseg button:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.mseg.tabs { display: flex; margin-top: 14px; }
+.mseg.tabs button { flex: 1; height: 32px; }
+.fp-rows { margin-top: 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper-raised); }
+.fp-row { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--rule); }
+.fp-row:first-child { border-top: 0; }
+.fp-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.fp-wide { grid-column: 1 / -1; }
+.fp-row .hint { margin: 4px 0 0; }
+.fp-triple { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.fp-triple .field { margin-top: 0; }
+.fp-actions { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+.fp-actions .btn { height: 32px; padding: 0 12px; font-size: 13px; }
+.fp-warn ul { margin: 4px 0 0; padding-left: 18px; }
+@media (max-width: 560px) { .fp-row { grid-template-columns: 1fr; } .fp-triple { grid-template-columns: 1fr; } }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .chips button { height: 32px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--rule-strong); background: var(--paper-raised); cursor: pointer; font-weight: 500; font-size: 13px; }
 .chips button.active { background: var(--cover); border-color: var(--cover); color: var(--cover-ink); }
@@ -418,7 +437,7 @@ const I18N = {
     mcp_remote_note: "Claude Desktop chỉ chạy MCP server cục bộ, nên cấu hình này dùng cầu nối mcp-remote (cần cài Node.js).",
     mcp_security: "Nội dung trang web không đáng tin: AI được dặn không làm theo chỉ dẫn nằm trên trang. MCP không thể xoá profile.",
     mcp_http_warn: "Bạn đang dùng HTTP không mã hoá: token có thể bị nghe lén. Nên đặt server sau HTTPS.",
-    timezone: "Timezone", locale: "Locale", geo_hint: "Để trống thì tự theo IP của proxy.", check_ip: "Kiểm tra IP", tz_hint: "Asia/Ho_Chi_Minh", locale_hint: "vi-VN",
+    timezone: "Timezone", locale: "Locale", geo_hint: "Timezone và ngôn ngữ ở chế độ Masked sẽ theo IP của proxy.", check_ip: "Kiểm tra IP", tz_hint: "Asia/Ho_Chi_Minh", locale_hint: "vi-VN",
     geo_exit: "IP ra {ip} · {country}", geo_tz: "Timezone: {v} ({m})", geo_locale: "Locale: {v} ({m})",
     geo_auto: "tự động", geo_pinned: "đặt tay", geo_random: "ngẫu nhiên mỗi lần mở", geo_ok: "Không phát hiện điểm lệch",
     geo_failed: "Không lấy được IP ra: {e}", geo_use: "Dùng {v}",
@@ -431,6 +450,62 @@ const I18N = {
     go: "Đi", new_tab: "Tab mới", type: "Gõ", type_hint: "Gõ vào ô đang chọn (bấm lên ảnh để chọn ô)", working: "Đang xử lý...",
     back: "Quay lại", reload: "Tải lại",
     retry: "Thử lại", boot_error: "Không thể kết nối với server",
+    fp_tab_profile: "Profile",
+    fp_tab: "Fingerprint",
+    fp_note_chrome: "Các cài đặt này chỉ áp dụng cho engine Camoufox (Firefox).",
+    fp_device_title: "Thiết bị hiện tại",
+    fp_device_none: "Chưa có thiết bị. Sẽ tạo ở lần mở đầu.",
+    fp_gpu: "GPU",
+    fp_source: "Nguồn",
+    fp_warnings: "Cảnh báo",
+    fp_regen: "Tạo lại thiết bị",
+    fp_regen_confirm: "Bỏ thiết bị đã lưu của profile và tạo thiết bị mới ở lần mở sau? Các cài đặt được giữ nguyên.",
+    fp_regen_stop: "Hãy dừng trình duyệt để tạo lại thiết bị.",
+    fp_regen_done: "Lần mở sau sẽ dùng thiết bị mới",
+    fp_next_launch: "Thay đổi áp dụng ở lần mở sau.",
+    fp_mode_mask: "Masked",
+    fp_mode_custom: "Tùy chỉnh",
+    fp_mode_real: "Thật",
+    fp_mode_off: "Tắt",
+    fp_mode_noise: "Noise",
+    fp_mode_prompt: "Hỏi",
+    fp_mode_allow: "Cho phép",
+    fp_mode_block: "Chặn",
+    fp_item_os: "Hệ điều hành",
+    fp_item_user_agent: "User agent",
+    fp_item_platform: "Platform",
+    fp_item_hardware_concurrency: "Số nhân CPU",
+    fp_item_webgl_meta: "WebGL (GPU)",
+    fp_item_webgl_noise: "WebGL noise",
+    fp_item_canvas: "Canvas noise",
+    fp_item_audio: "Audio",
+    fp_item_webrtc: "WebRTC",
+    fp_item_timezone: "Timezone",
+    fp_item_geo_permission: "Quyền vị trí",
+    fp_item_geolocation: "Vị trí (geolocation)",
+    fp_item_language: "Ngôn ngữ",
+    fp_item_screen: "Màn hình",
+    fp_item_fonts: "Font",
+    fp_item_media_devices: "Thiết bị media",
+    fp_item_voices: "Giọng đọc",
+    fp_item_port_scan: "Chặn quét cổng",
+    fp_hint_os: "Tùy chỉnh dùng hệ điều hành chọn ở trên; Thật dùng hệ điều hành của máy này.",
+    fp_hint_noise: "Noise đổi mỗi lần mở và theo từng trang web (cơ chế chống fingerprint của Firefox).",
+    fp_hint_audio: "Noise dùng chữ ký audio cố định của thiết bị này; Thật báo audio của máy.",
+    fp_hint_geo_permission: "Hỏi vẫn trả vị trí mà không hỏi người dùng, trang web có thể nhận ra.",
+    fp_hint_port_scan: "Các host (không kèm port) mà trang web được phép truy cập trong mạng nội bộ; cách nhau bằng dấu phẩy hoặc xuống dòng.",
+    fp_hint_language: "Cách nhau bằng dấu phẩy, mục đầu là chính, ví dụ en-US,en",
+    fp_hint_fonts: "Mỗi dòng một font.",
+    fp_hint_screen: "Chọn kích thước hoặc nhập RỘNGxCAO.",
+    fp_fonts_fill: "Điền từ danh sách font của hệ điều hành",
+    fp_lat: "Vĩ độ",
+    fp_lon: "Kinh độ",
+    fp_acc: "Độ chính xác (m)",
+    fp_micros: "Micro",
+    fp_webcams: "Webcam",
+    fp_speakers: "Loa",
+    fp_bad_number: "{item}: hãy nhập một số",
+    fp_options_failed: "Không tải được danh sách tuỳ chọn fingerprint: {e}",
   },
   en: {
     tagline: "Anti-detect profile manager", new_profile: "New profile", filters: "Filter",
@@ -470,7 +545,7 @@ const I18N = {
     mcp_remote_note: "Claude Desktop only starts local MCP servers, so this config bridges through mcp-remote (requires Node.js).",
     mcp_security: "Page content is untrusted: the AI is told never to follow instructions found on web pages. Profiles cannot be deleted through MCP.",
     mcp_http_warn: "You are on plain HTTP: the token can be sniffed in transit. Put the server behind HTTPS.",
-    timezone: "Timezone", locale: "Locale", geo_hint: "Leave blank to follow the proxy's IP.", check_ip: "Check IP", tz_hint: "Asia/Ho_Chi_Minh", locale_hint: "vi-VN",
+    timezone: "Timezone", locale: "Locale", geo_hint: "Timezone and language set to Masked follow the proxy's IP.", check_ip: "Check IP", tz_hint: "Asia/Ho_Chi_Minh", locale_hint: "vi-VN",
     geo_exit: "Exit IP {ip} · {country}", geo_tz: "Timezone: {v} ({m})", geo_locale: "Locale: {v} ({m})",
     geo_auto: "automatic", geo_pinned: "pinned", geo_random: "random on every launch", geo_ok: "No mismatch found",
     geo_failed: "Could not get the exit IP: {e}", geo_use: "Use {v}",
@@ -483,6 +558,62 @@ const I18N = {
     go: "Go", new_tab: "New tab", type: "Type", type_hint: "Type into the focused field (click the screen to focus one)", working: "Working...",
     back: "Back", reload: "Reload",
     retry: "Retry", boot_error: "Cannot reach the server",
+    fp_tab_profile: "Profile",
+    fp_tab: "Fingerprint",
+    fp_note_chrome: "These settings apply to the Camoufox (Firefox) engine only.",
+    fp_device_title: "Current device",
+    fp_device_none: "No device yet. It is created on the first launch.",
+    fp_gpu: "GPU",
+    fp_source: "Source",
+    fp_warnings: "Warnings",
+    fp_regen: "Regenerate device",
+    fp_regen_confirm: "Discard this profile's saved device and draw a new one on the next launch? Settings are kept.",
+    fp_regen_stop: "Stop the browser to regenerate the device.",
+    fp_regen_done: "A new device will be drawn on the next launch",
+    fp_next_launch: "Changes apply on the next launch.",
+    fp_mode_mask: "Masked",
+    fp_mode_custom: "Custom",
+    fp_mode_real: "Real",
+    fp_mode_off: "Off",
+    fp_mode_noise: "Noise",
+    fp_mode_prompt: "Prompt",
+    fp_mode_allow: "Allow",
+    fp_mode_block: "Block",
+    fp_item_os: "Operating system",
+    fp_item_user_agent: "User agent",
+    fp_item_platform: "Platform",
+    fp_item_hardware_concurrency: "CPU cores",
+    fp_item_webgl_meta: "WebGL (GPU)",
+    fp_item_webgl_noise: "WebGL noise",
+    fp_item_canvas: "Canvas noise",
+    fp_item_audio: "Audio",
+    fp_item_webrtc: "WebRTC",
+    fp_item_timezone: "Timezone",
+    fp_item_geo_permission: "Geolocation permission",
+    fp_item_geolocation: "Geolocation",
+    fp_item_language: "Language",
+    fp_item_screen: "Screen",
+    fp_item_fonts: "Fonts",
+    fp_item_media_devices: "Media devices",
+    fp_item_voices: "Speech voices",
+    fp_item_port_scan: "Port scan protection",
+    fp_hint_os: "Custom uses the OS chosen above; Real uses this machine's OS.",
+    fp_hint_noise: "Noise changes on every launch and for every site (Firefox's own fingerprinting protection).",
+    fp_hint_audio: "Noise uses this device's frozen audio signature; Real reports this machine's audio.",
+    fp_hint_geo_permission: "Prompt still delivers a position without asking, which sites can notice.",
+    fp_hint_port_scan: "Hosts (no ports) pages may reach on the local network; separate with commas or new lines.",
+    fp_hint_language: "Comma-separated, first is primary, e.g. en-US,en",
+    fp_hint_fonts: "One font per line.",
+    fp_hint_screen: "Pick a size or type WIDTHxHEIGHT.",
+    fp_fonts_fill: "Fill from the OS font list",
+    fp_lat: "Latitude",
+    fp_lon: "Longitude",
+    fp_acc: "Accuracy (m)",
+    fp_micros: "Microphones",
+    fp_webcams: "Webcams",
+    fp_speakers: "Speakers",
+    fp_bad_number: "{item}: enter a number",
+    fp_options_failed: "Could not load the fingerprint options: {e}",
   },
 };
 
@@ -805,6 +936,99 @@ function field(label, input, hint) {
   return h("div", { class: "field" }, h("label", { for: input.id }, label), input, hint ? h("div", { class: "hint" }, hint) : null);
 }
 
+const FP_ORDER = ["os", "user_agent", "platform", "hardware_concurrency", "webgl_meta", "webgl_noise", "canvas", "audio", "webrtc",
+  "timezone", "geo_permission", "geolocation", "language", "screen", "fonts", "media_devices", "voices", "port_scan"];
+const FP_PLATFORM = { windows: "Win32", macos: "MacIntel", linux: "Linux x86_64" };
+const FP_HINT = { os: "fp_hint_os", webgl_noise: "fp_hint_noise", canvas: "fp_hint_noise", audio: "fp_hint_audio" };
+const FP_NUMBERS = { geolocation: ["latitude", "longitude", "accuracy"], media_devices: ["micros", "webcams", "speakers"] };
+const FP_LABELS = { latitude: "fp_lat", longitude: "fp_lon", accuracy: "fp_acc", micros: "fp_micros", webcams: "fp_webcams", speakers: "fp_speakers" };
+const fpOptions = {};   // os -> /fingerprint/options, fetched once per OS
+
+// Editable form of a custom value (strings, so a half-typed number survives mode switches).
+function fpDraft(name, value, opts, os) {
+  if (name === "fonts" || name === "port_scan") return Array.isArray(value) ? value.join("\n") : "";
+  if (name === "geolocation") return { latitude: "", longitude: "", accuracy: "50", ...mapStr(value) };
+  if (name === "media_devices") return { micros: "1", webcams: "1", speakers: "1", ...mapStr(value) };
+  if (name === "webgl_meta") return value || opts.gpus[0] || null;
+  if (name === "screen") return value || opts.screens[0] || "";
+  if (name === "platform") return value || FP_PLATFORM[os];
+  if (name === "language") return value || "en-US";
+  return value == null ? "" : String(value);
+}
+function mapStr(o) { return Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [k, String(v)])); }
+
+function fpValue(name, d) {
+  const num = (s) => { const n = Number(String(s).trim()); if (String(s).trim() === "" || Number.isNaN(n)) throw new Error(t("fp_bad_number", { item: t("fp_item_" + name) })); return n; };
+  if (FP_NUMBERS[name]) return Object.fromEntries(FP_NUMBERS[name].map((k) => [k, num(d[k])]));
+  if (name === "hardware_concurrency") return num(d);
+  if (name === "fonts") return d.split("\n").map((s) => s.trim()).filter(Boolean);
+  if (name === "port_scan") return d.split(/[\s,]+/).filter(Boolean);
+  return typeof d === "string" ? d.trim() : d;
+}
+
+function fpEditor(name, fp, osValue) {
+  const d = fp.draft, opts = fp.opts;
+  const input = (props = {}) => {
+    const el = h("input", { class: "data", autocomplete: "off", ...props });
+    el.value = d[name]; el.addEventListener("input", () => { d[name] = el.value; });
+    return el;
+  };
+  const sub = (k) => {
+    const el = h("input", { class: "data", type: "number", step: "any", autocomplete: "off", "aria-label": t(FP_LABELS[k]) });
+    el.value = d[name][k]; el.addEventListener("input", () => { d[name][k] = el.value; });
+    return h("div", { class: "field" }, h("label", {}, t(FP_LABELS[k])), el);
+  };
+  switch (name) {
+    case "user_agent": return input({ placeholder: "Mozilla/5.0 (…) Gecko/20100101 Firefox/…" });
+    case "platform": return input({ placeholder: FP_PLATFORM[osValue] });
+    case "hardware_concurrency": return input({ type: "number", min: 1, max: 128 });
+    case "webrtc": return input({ placeholder: "203.0.113.7" });
+    case "timezone": return input({ placeholder: t("tz_hint") });
+    case "language": return h("div", {}, input({ placeholder: "en-US" }), h("div", { class: "hint" }, t("fp_hint_language")));
+    case "webgl_meta": {
+      const gpus = opts.gpus.some((g) => g.vendor === d[name].vendor && g.renderer === d[name].renderer) ? opts.gpus : [d[name], ...opts.gpus];
+      const sel = h("select", { "aria-label": t("fp_item_webgl_meta") }, gpus.map((g, i) =>
+        h("option", { value: i, selected: g.vendor === d[name].vendor && g.renderer === d[name].renderer }, `${g.vendor} · ${g.renderer}`)));
+      sel.onchange = () => { d[name] = gpus[Number(sel.value)]; };
+      return sel;
+    }
+    case "screen": {
+      const list = h("datalist", { id: "fp-screens" }, opts.screens.map((s) => h("option", { value: s })));
+      return h("div", {}, input({ list: "fp-screens", placeholder: "1920x1080" }), list, h("div", { class: "hint" }, t("fp_hint_screen")));
+    }
+    case "fonts": {
+      const ta = h("textarea", { rows: 6, class: "data", "aria-label": t("fp_item_fonts") });
+      ta.value = d[name]; ta.addEventListener("input", () => { d[name] = ta.value; });
+      return h("div", {}, ta, h("div", { class: "fp-actions" },
+        h("button", { type: "button", class: "btn btn-line", onclick: () => { d[name] = opts.fonts.join("\n"); ta.value = d[name]; } }, t("fp_fonts_fill")),
+        h("span", { class: "hint" }, t("fp_hint_fonts"))));
+    }
+    case "port_scan": {
+      const ta = h("textarea", { rows: 3, class: "data", placeholder: "localhost\nexample.test", "aria-label": t("fp_item_port_scan") });
+      ta.value = d[name]; ta.addEventListener("input", () => { d[name] = ta.value; });
+      return h("div", {}, ta, h("div", { class: "hint" }, t("fp_hint_port_scan")));
+    }
+    case "geolocation": case "media_devices":
+      return h("div", { class: "fp-triple" }, FP_NUMBERS[name].map(sub));
+    default: return null;
+  }
+}
+
+// One row per item: label + segmented modes; "Custom" opens an inline editor.
+function fpRow(name, fp, osValue, onChange) {
+  const cur = fp.settings[name];
+  const modes = name === "os" ? ["custom", "real"] : fp.opts.items[name].modes;
+  const seg = h("div", { class: "mseg", role: "radiogroup", "aria-label": t("fp_item_" + name) }, modes.map((m) =>
+    h("button", { type: "button", role: "radio", "aria-checked": cur.mode === m ? "true" : "false", class: cur.mode === m ? "active" : "",
+      onclick: () => { cur.mode = m; onChange(name); } }, t("fp_mode_" + m))));
+  const hint = FP_HINT[name] ? t(FP_HINT[name]) : name === "geo_permission" && cur.mode === "prompt" ? t("fp_hint_geo_permission") : "";
+  const editor = cur.mode === "custom" ? fpEditor(name, fp, osValue) : null;
+  return h("div", { class: "fp-row" },
+    h("div", { class: "fp-label" }, t("fp_item_" + name)), seg,
+    hint ? h("div", { class: "hint fp-wide" }, hint) : null,
+    editor ? h("div", { class: "fp-wide" }, editor) : null);
+}
+
 function openEditor(p) {
   modal((close) => {
     const name = h("input", { id: "f-name", value: p ? p.name : "", required: true, maxlength: 64, autocomplete: "off" });
@@ -815,19 +1039,20 @@ function openEditor(p) {
       [["camoufox", t("engine_camoufox")], ["chrome", t("engine_chrome")]].map(([v, label]) =>
         h("option", { value: v, selected: (p ? p.engine : defaults.default_engine) === v }, label)));
     const engineNote = h("div", { class: "note" }, icon("alert", true), h("span", {}, t("engine_note")));
-    const syncNote = () => { engineNote.style.display = !p && engine.value === "chrome" ? "" : "none"; };
-    engine.onchange = syncNote; syncNote();
     const proxy = h("input", { id: "f-proxy", value: p && p.proxy ? p.proxy : "", placeholder: "socks5://user:pass@host:port", autocomplete: "off", class: "data" });
-    const tz = h("input", { id: "f-tz", value: p && p.timezone ? p.timezone : "", placeholder: t("tz_hint"), autocomplete: "off", class: "data" });
-    const loc = h("input", { id: "f-locale", value: p && p.locale ? p.locale : "", placeholder: t("locale_hint"), autocomplete: "off", class: "data" });
     const msg = h("div", { class: "msg", role: "status" });
     const geo = h("div");
     const say = (cls, text) => { msg.className = "msg " + cls; msg.textContent = text; };
+
+    // Fingerprint settings: fp.settings holds the modes, fp.draft the editable custom values.
+    const fp = { settings: null, base: null, opts: null, draft: {}, info: null, warnings: [], error: "" };
+    const fpBody = h("div"), tabFp = h("div", { hidden: true }), tabMain = h("div");
+    const customOf = (item) => (fp.settings && fp.settings[item].mode === "custom" ? String(fp.draft[item]).trim() : "");
     const checkIp = h("button", { type: "button", class: "btn btn-line", onclick: async () => {
       checkIp.disabled = true; geo.replaceChildren(h("div", { class: "msg info" }, t("checking")));
       try {
-        const r = await api("POST", "/proxy/geo-check", { proxy: proxy.value.trim() || null, timezone: tz.value.trim() || null, locale: loc.value.trim() || null });
-        geo.replaceChildren(geoLines(r, (v) => { loc.value = v; }));
+        const r = await api("POST", "/proxy/geo-check", { proxy: proxy.value.trim() || null, timezone: customOf("timezone") || null, locale: customOf("language") || null });
+        geo.replaceChildren(geoLines(r, (v) => { if (fp.settings) { fp.settings.language.mode = "custom"; fp.draft.language = v; renderFp(); } }));
       } catch (e) { geo.replaceChildren(h("div", { class: "msg err" }, e.message)); }
       checkIp.disabled = false;
     } }, icon("globe", true), t("check_ip"));
@@ -840,15 +1065,108 @@ function openEditor(p) {
       } catch (e) { say("err", e.message); }
       check.disabled = false;
     } }, icon("plug", true), t("check_proxy"));
-    return h("form", { onsubmit: async (e) => {
+
+    const isChrome = () => (p ? p.engine : engine.value) === "chrome";
+    const renderFp = () => {
+      if (isChrome()) return fpBody.replaceChildren(h("div", { class: "note calm" }, icon("fingerprint", true), h("span", {}, t("fp_note_chrome"))));
+      if (fp.error) return fpBody.replaceChildren(h("div", { class: "msg err" }, fp.error));
+      if (!fp.settings) return fpBody.replaceChildren(h("div", { class: "msg info" }, t("working")));
+      const info = fp.info;
+      const regen = p ? h("button", { type: "button", class: "btn btn-line", disabled: running.has(p.name), title: running.has(p.name) ? t("fp_regen_stop") : null, onclick: async () => {
+        if (!(await confirmDialog(t("fp_regen_confirm"), t("fp_regen")))) return;
+        try { await api("POST", `/profiles/${enc(p.name)}/fingerprint/regenerate`); delete fingerprints[p.name]; fp.info = null; toast(t("fp_regen_done")); refresh(); renderFp(); }
+        catch (e) { toast(e.message, true); }
+      } }, t("fp_regen")) : null;
+      fpBody.replaceChildren(...[
+        p ? h("div", { class: "fp-device" },
+          h("div", { class: "field" }, h("label", {}, t("fp_device_title"))),
+          info && info.exists
+            ? h("dl", { class: "fp-card", style: "margin-top:0" },
+                h("dt", {}, t("fp_platform")), h("dd", { class: "data" }, info.platform || "?"),
+                h("dt", {}, t("fp_screen")), h("dd", { class: "data" }, info.screen || "?"),
+                h("dt", {}, t("fp_cpu")), h("dd", { class: "data" }, String(info.hardware_concurrency || "?")),
+                h("dt", {}, t("fp_gpu")), h("dd", { class: "data" }, info.webgl_renderer || "?"),
+                h("dt", {}, t("fp_source")), h("dd", { class: "data" }, info.source || "?"))
+            : h("div", { class: "note calm" }, icon("fingerprint", true), h("span", {}, t("fp_device_none"))),
+          regen ? h("div", { class: "inline-btns" }, regen) : null) : null,
+        fp.warnings.length ? h("div", { class: "note fp-warn" }, icon("alert", true),
+          h("div", {}, h("strong", {}, t("fp_warnings")), h("ul", {}, fp.warnings.map((w) => h("li", {}, w))))) : null,
+        h("div", { class: "fp-rows" }, FP_ORDER.map((item) => fpRow(item, fp, os.value, () => renderFp()))),
+        h("div", { class: "hint", style: "margin-top:10px" }, t("fp_next_launch"))].filter(Boolean));
+    };
+    const loadOptions = async (osValue) => {
+      if (!fpOptions[osValue]) fpOptions[osValue] = await api("GET", `/fingerprint/options?os=${osValue}`);
+      return fpOptions[osValue];
+    };
+    const initFp = async () => {
+      if (isChrome()) return renderFp();
+      try {
+        const [opts, cur] = await Promise.all([loadOptions(os.value), p ? api("GET", `/profiles/${enc(p.name)}/fingerprint`) : null]);
+        fp.opts = opts;
+        fp.settings = cur && cur.settings ? JSON.parse(JSON.stringify(cur.settings))
+          : Object.fromEntries(FP_ORDER.map((n) => [n, { ...opts.items[n].default }]));
+        fp.base = JSON.parse(JSON.stringify(fp.settings));
+        fp.info = cur; fp.warnings = (cur && cur.warnings) || [];
+        for (const n of FP_ORDER) fp.draft[n] = fpDraft(n, fp.settings[n].value, opts, os.value);
+        if (cur && cur.hardware_concurrency && !fp.draft.hardware_concurrency) fp.draft.hardware_concurrency = String(cur.hardware_concurrency);
+      } catch (e) { fp.error = t("fp_options_failed", { e: e.message }); }
+      renderFp();
+    };
+    // A new OS has its own GPUs, screens, fonts and platform string.
+    let lastOs = os.value;
+    os.onchange = async () => {
+      if (!fp.settings) return;
+      try {
+        const opts = await loadOptions(os.value);
+        const wasDefault = fp.draft.platform === FP_PLATFORM[lastOs];
+        fp.opts = opts; lastOs = os.value;
+        if (wasDefault) fp.draft.platform = FP_PLATFORM[os.value];
+        if (!opts.gpus.some((g) => g.vendor === fp.draft.webgl_meta.vendor && g.renderer === fp.draft.webgl_meta.renderer)) fp.draft.webgl_meta = opts.gpus[0] || fp.draft.webgl_meta;
+        if (!opts.screens.includes(fp.draft.screen) && fp.settings.screen.mode !== "custom") fp.draft.screen = opts.screens[0] || "";
+        renderFp();
+      } catch (e) { fp.error = t("fp_options_failed", { e: e.message }); renderFp(); }
+    };
+    const syncEngine = () => {
+      engineNote.style.display = !p && engine.value === "chrome" ? "" : "none";
+      if (!fp.settings && !fp.error) initFp(); else renderFp();
+    };
+    engine.onchange = syncEngine;
+    engineNote.style.display = !p && engine.value === "chrome" ? "" : "none";
+    initFp();
+
+    // Only the items that differ from what was loaded (or from the defaults on create).
+    const collect = () => {
+      if (!fp.settings || isChrome()) return {};
+      const out = {};
+      for (const n of FP_ORDER) {
+        const cur = fp.settings[n], was = fp.base[n];
+        if (cur.mode === "custom") {
+          const value = n === "os" ? os.value : fpValue(n, fp.draft[n]);
+          if (was.mode !== "custom" || JSON.stringify(was.value) !== JSON.stringify(value)) out[n] = { mode: "custom", value };
+        } else if (cur.mode !== was.mode) out[n] = { mode: cur.mode };
+      }
+      return out;
+    };
+
+    const tabs = {};
+    const showTab = (which) => {
+      tabMain.hidden = which !== "main"; tabFp.hidden = which !== "fp";
+      for (const [k, b] of Object.entries(tabs)) { b.classList.toggle("active", k === which); b.setAttribute("aria-selected", k === which ? "true" : "false"); }
+    };
+    tabs.main = h("button", { type: "button", role: "tab", onclick: () => showTab("main") }, t("fp_tab_profile"));
+    tabs.fp = h("button", { type: "button", role: "tab", onclick: () => showTab("fp") }, t("fp_tab"));
+
+    const form = h("form", { onsubmit: async (e) => {
       e.preventDefault();
       say("", "");
       const submitBtn = e.currentTarget.querySelector(".modal-foot .btn-act");
       if (submitBtn) submitBtn.disabled = true;
-      const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null,
-        timezone: tz.value.trim(), locale: loc.value.trim() };
-      if (!p) body.engine = engine.value;
       try {
+        const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null };
+        let partial;
+        try { partial = collect(); } catch (ex) { showTab("fp"); throw ex; }
+        if (Object.keys(partial).length) body.fingerprint = partial;
+        if (!p) body.engine = engine.value;
         if (p) { await api("PATCH", `/profiles/${enc(p.name)}`, body); delete fingerprints[p.name]; toast(t("saved")); }
         else { await api("POST", "/profiles", body); toast(t("created", { name: body.name })); }
         close(); refresh();
@@ -857,19 +1175,22 @@ function openEditor(p) {
     } },
       modalHead(p ? t("edit_title") : t("create"), p ? t("edit_sub", { name: p.name }) : t("create_sub"), close),
       h("div", { class: "modal-body" },
-        field(t("name"), name),
-        h("div", { class: "field-row" }, field(t("engine"), engine, p ? t("engine_locked") : null), field(t("os"), os)),
-        engineNote,
-        field(t("proxy_label"), proxy, t("proxy_hint")),
-        h("div", { class: "inline-btns" }, check, checkIp),
-        msg,
-        h("div", { class: "field-row" }, field(t("timezone"), tz), field(t("locale"), loc)),
-        h("div", { class: "hint", style: "margin-top:6px;font-size:12px;color:var(--ink-3)" }, t("geo_hint")),
-        geo),
+        h("div", { class: "mseg tabs", role: "tablist" }, tabs.main, tabs.fp),
+        tabMain, tabFp, msg),
       h("div", { class: "modal-foot" },
         h("button", { type: "button", class: "btn btn-line", onclick: close }, t("cancel")),
         h("button", { class: "btn btn-act" }, p ? t("save") : t("create"))));
-  });
+    tabMain.append(
+      field(t("name"), name),
+      h("div", { class: "field-row" }, field(t("engine"), engine, p ? t("engine_locked") : null), field(t("os"), os)),
+      engineNote,
+      field(t("proxy_label"), proxy, t("proxy_hint")),
+      h("div", { class: "inline-btns" }, check, checkIp),
+      geo);
+    tabFp.append(h("div", { class: "hint", style: "margin-top:10px" }, t("geo_hint")), fpBody);
+    showTab("main");
+    return form;
+  }, { wide: true });
 }
 
 function geoLines(r, useLocale) {
