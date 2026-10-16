@@ -11,6 +11,7 @@ frozen "masked device"; fpsettings.py applies the profile's per-item modes on to
 import json
 import os
 import pathlib
+import uuid
 from typing import Any
 
 from ...core.config import FINGERPRINT_FILE
@@ -110,6 +111,24 @@ def load_or_create(profile_dir: str, os_type: str) -> dict[str, Any]:
     )
     logger.info("Froze device %s for %s (%s)", source, profile_dir, os_type)
     return device
+
+
+def noise_key(profile_dir: str) -> str:
+    """The profile's canvas/WebGL noise key ("{uuid}"), kept in fingerprint.json next to
+    the device so a new fingerprint also gets new noise. Call after load_or_create.
+
+    A patched Camoufox reads it as the browsing session key, so noise stays the same
+    across launches while still differing per site; stock Camoufox ignores the pref.
+    """
+    path = pathlib.Path(fingerprint_path(profile_dir))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    key = data.get("noise_key")
+    if not (isinstance(key, str) and len(key) == 38):
+        key = data["noise_key"] = "{" + str(uuid.uuid4()) + "}"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data), encoding="utf-8")
+        tmp.replace(path)
+    return key
 
 
 # The Chrome engine's equivalent of fingerprint.json (chrome_engine/persona.py).

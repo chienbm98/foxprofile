@@ -708,6 +708,17 @@ def test_build_launch_with_the_real_browser(tmp_path):
         k.startswith(("addons", "locale:", "timezone", "geolocation:")) for k in saved["device"]
     )
 
+    # The canvas/WebGL noise key is per profile: stable across launches, new with a new
+    # fingerprint, and not set when there is no noise to key.
+    key = opts["firefox_user_prefs"][fpsettings.NOISE_KEY_PREF]
+    assert again["firefox_user_prefs"][fpsettings.NOISE_KEY_PREF] == key == saved["noise_key"]
+    fingerprint.reset(str(tmp_path))
+    fresh = fpsettings.build_launch(str(tmp_path), settings, "windows", log=logs.append)
+    assert fresh["firefox_user_prefs"][fpsettings.NOISE_KEY_PREF] != key
+    quiet = fpsettings.normalize({"canvas": item("real"), "webgl_noise": item("real")}, "windows")
+    opts = fpsettings.build_launch(str(tmp_path), quiet, "windows", log=logs.append)
+    assert fpsettings.NOISE_KEY_PREF not in opts["firefox_user_prefs"]
+
 
 def test_cross_os_fonts_on_a_mac():
     config, prefs = {"fonts": ["Arial", "Segoe UI"]}, {}

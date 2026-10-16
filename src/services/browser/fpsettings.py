@@ -630,6 +630,11 @@ def cross_os_fonts(config: dict, prefs: dict, os: str, host_os: str, fonts_mode:
 # --- Launch ----------------------------------------------------------------------
 
 
+# Read by FoxProfile's Camoufox build (patches/foxprofile-session-key.patch) as the
+# canvas/WebGL randomization session key: per-profile stable, still per-site.
+NOISE_KEY_PREF = "privacy.fingerprintingProtection.randomization.sessionKey"
+
+
 def build_launch(
     profile_dir: str,
     settings: dict,
@@ -689,6 +694,8 @@ def build_launch(
     ):
         log(note)
     cross_os_fonts(config, prefs, os, HOST_OS, settings["fonts"]["mode"])
+    if prefs.get("privacy.fingerprintingProtection"):
+        prefs[NOISE_KEY_PREF] = fingerprint.noise_key(profile_dir)
     validate_config(config, path=exe)
     for violation in coherence.validate(config, _KEY[os]):
         log(f"Fingerprint coherence ({violation.rule}): {violation.detail}")
