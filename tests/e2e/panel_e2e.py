@@ -60,19 +60,19 @@ async def main():
         await page.wait_for_selector(".card:has-text('panel-demo')")
         meta = await page.text_content(".card:has-text('panel-demo') .meta")
         print("panel-demo meta:", meta, "| password hidden:", "secret" not in meta)
-        await page.click(".card:has-text('panel-demo') button[title='Sửa']")
+        await page.click(".card:has-text('panel-demo') button[title='Edit']")
         await page.fill("#f-proxy", "")
         await page.click("#modal-root .modal button.btn-accent")
         await page.wait_for_timeout(800)
 
         await page.click(".card:has-text('mcp-demo') .main-btn")
         await page.wait_for_selector(
-            ".card.running:has-text('mcp-demo') .main-btn:has-text('Dừng')", timeout=90_000
+            ".card.running:has-text('mcp-demo') .main-btn:has-text('Stop')", timeout=90_000
         )
         await page.screenshot(path=OUT + r"\panel_list.png")
         print("running cards:", await page.locator(".card.running").count())
 
-        await page.click(".card:has-text('mcp-demo') button[title='Xem màn hình']")
+        await page.click(".card:has-text('mcp-demo') button[title='View screen']")
         await page.wait_for_timeout(1500)
         print(
             "viewer class after click:",

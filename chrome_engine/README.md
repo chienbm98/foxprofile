@@ -1,19 +1,19 @@
-# Chrome engine (thử nghiệm)
+# Chrome engine（实验性）
 
-Engine trình duyệt thứ hai cho FoxProfile, chạy song song với Camoufox: một bản Chromium đã vá sẵn để giả fingerprint ngay trong C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), BSD-3, dựa trên ungoogled-chromium). Engine không tự build Chromium. Nó tải một bản build đã ghim checksum rồi thêm những phần mà fork chưa có.
+FoxProfile 的第二个浏览器 engine，与 Camoufox 并行运行：一个已打好补丁的 Chromium 构建，在 C++ 层直接伪装 fingerprint（[fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium)，BSD-3，基于 ungoogled-chromium）。本 engine 不自行编译 Chromium，而是下载一个固定了 checksum 的现成构建，再补上 fork 里缺少的部分。
 
-Engine đã được nối vào FoxProfile: profile có trường `engine` (`camoufox` hoặc `chrome`, cố định sau khi tạo). `BrowserLauncher` chạy `python -m chrome_engine.runner` cho profile Chrome (cùng protocol với runner Camoufox), cookie đi qua `cookie_tool.py` với engine `chrome`, và vân tay của profile Chrome là `chrome_persona.json`.
+Engine 已接入 FoxProfile：profile 有 `engine` 字段（`camoufox` 或 `chrome`，创建后不可更改）。`BrowserLauncher` 会为 Chrome profile 运行 `python -m chrome_engine.runner`（与 Camoufox runner 使用相同的 protocol），cookie 通过 `cookie_tool.py` 配合 `chrome` engine 处理，Chrome profile 的 fingerprint 保存在 `chrome_persona.json`。
 
-## Cài và dùng
+## 安装与使用
 
 ```bash
-python -m chrome_engine fetch            # tải ~190 MB, kiểm SHA-256, giải nén vào cache
-python -m chrome_engine info             # đường dẫn đã cài
+python -m chrome_engine fetch            # 下载约 190 MB，校验 SHA-256，解压到缓存目录
+python -m chrome_engine info             # 已安装的路径
 python -m chrome_engine probe data/alice --timezone Asia/Ho_Chi_Minh --locale vi-VN
 python -m chrome_engine open  data/alice --proxy "socks5://user:pass@host:1080" --url https://example.com
 ```
 
-Thư mục cache mặc định là `%LOCALAPPDATA%\foxprofile\chrome`, `~/Library/Caches/foxprofile/chrome` hoặc `~/.cache/foxprofile/chrome`. Đặt `FOXPROFILE_CHROME_HOME` để đổi.
+默认缓存目录是 `%LOCALAPPDATA%\foxprofile\chrome`、`~/Library/Caches/foxprofile/chrome` 或 `~/.cache/foxprofile/chrome`。设置 `FOXPROFILE_CHROME_HOME` 可以更改。
 
 ```python
 from chrome_engine import ChromeEngine
@@ -23,88 +23,88 @@ async with ChromeEngine("data/alice", proxy="http://u:p@1.2.3.4:8080") as contex
     await page.goto("https://example.com")
 ```
 
-`context` là một `BrowserContext` Playwright bình thường. Runner cho FoxProfile:
+`context` 就是普通的 Playwright `BrowserContext`。供 FoxProfile 使用的 runner：
 
 ```bash
-python -m chrome_engine.runner <tên> <proxy|None> <windows|macos|linux> [timezone] [locale]
-# in ra CONTROL:<port>:<token>, BROWSER_STARTED, BROWSER_CLOSED / LAUNCH_FAILED: ...
+python -m chrome_engine.runner <name> <proxy|None> <windows|macos|linux> [timezone] [locale]
+# 输出 CONTROL:<port>:<token>、BROWSER_STARTED、BROWSER_CLOSED / LAUNCH_FAILED: ...
 ```
 
-## Engine thêm gì vào fork
+## Engine 给 fork 补上了什么
 
-| Vấn đề của fork / Playwright | Cách engine xử lý | File |
+| fork / Playwright 的问题 | Engine 的处理方式 | 文件 |
 |---|---|---|
-| Bản 150.0.7871.186 crash renderer khi vẽ emoji lên canvas (đo được ~50% số lần mở) | Ghim bản 148.0.7778.215 (16/16 lần không crash), có test hồi quy | `release.py` |
-| Không có danh tính cố định theo profile | Persona (seed, OS, phiên bản OS, brand, số nhân, timezone, locale) lưu `chrome_persona.json` | `persona.py` |
-| `--proxy-server` không nhận mật khẩu, không hỗ trợ SOCKS5 có auth | Proxy bridge trên loopback, chuyển qua upstream HTTP/HTTPS/SOCKS5 có auth; tên miền gửi cho proxy, không phân giải tại máy (không rò DNS) | `proxy_bridge.py` |
-| Timezone/locale không theo IP proxy | Tra IP thoát qua bridge, dùng GeoIP của Camoufox; tra thất bại thì **từ chối mở** (thay vì lộ timezone máy thật) | `geo.py`, `engine.py` |
-| Playwright thêm các switch mà trang web đo được (`--enable-automation`, `--disable-popup-blocking`, `--hide-scrollbars`, `--force-color-profile=srgb`, tắt bfcache, tắt throttling, `--no-sandbox`, tắt storage partitioning…) | Bỏ chọn lọc, gồm cả đúng chuỗi `--disable-features` đọc từ driver Playwright đang cài | `engine.py` |
-| Headless báo màn hình 800x600, scrollbar 0px | `--screen-info`/`--window-size` 1920x1080, giữ scrollbar | `engine.py` |
-| WebRTC: fork chặn hết UDP; nếu mở lại thì lộ IP LAN (fork không che bằng mDNS) | Có proxy: chặn UDP. Không proxy: chỉ lộ IP public (`default_public_interface_only`), không bao giờ lộ IP LAN | `engine.py` |
-| Persona OS khác host tự mâu thuẫn | Bảng tương thích; persona Linux trên host Windows hoặc macOS bị từ chối (WebGL vẫn báo GPU thật của máy) | `persona.py` |
-| Cần biết trang web thực sự thấy gì | Probe đọc từ window, worker, iframe, ServiceWorker, SharedWorker, header HTTP; `check()` liệt kê mọi chỗ lệch | `probe.py` |
+| 150.0.7871.186 版在 canvas 上绘制 emoji 时 renderer 会崩溃（实测约 50% 的启动会出现） | 固定使用 148.0.7778.215 版（16/16 次没有崩溃），并带有回归测试 | `release.py` |
+| 没有按 profile 固定的身份 | Persona（seed、OS、OS 版本、brand、核数、timezone、locale）保存在 `chrome_persona.json` | `persona.py` |
+| `--proxy-server` 不接受密码，不支持带认证的 SOCKS5 | 在 loopback 上建立 proxy bridge，转发到带认证的上游 HTTP/HTTPS/SOCKS5；域名交给 proxy 解析，不在本机解析（不泄露 DNS） | `proxy_bridge.py` |
+| Timezone/locale 不跟随 proxy 的 IP | 通过 bridge 查询出口 IP，使用 Camoufox 的 GeoIP；查询失败时**拒绝启动**（而不是暴露本机真实的 timezone） | `geo.py`, `engine.py` |
+| Playwright 会添加网页能检测到的开关（`--enable-automation`、`--disable-popup-blocking`、`--hide-scrollbars`、`--force-color-profile=srgb`、关闭 bfcache、关闭 throttling、`--no-sandbox`、关闭 storage partitioning 等） | 有选择地移除，包括从当前安装的 Playwright driver 读取到的 `--disable-features` 字符串 | `engine.py` |
+| Headless 报告屏幕为 800x600，scrollbar 为 0px | `--screen-info`/`--window-size` 设为 1920x1080，保留 scrollbar | `engine.py` |
+| WebRTC：fork 屏蔽了所有 UDP；重新开启则会泄露局域网 IP（fork 没有用 mDNS 遮蔽） | 有 proxy：屏蔽 UDP。无 proxy：只暴露公网 IP（`default_public_interface_only`），绝不暴露局域网 IP | `engine.py` |
+| Persona 的 OS 与宿主机不同时自相矛盾 | 兼容性表；Windows 或 macOS 宿主机上的 Linux persona 会被拒绝（WebGL 仍会报告本机真实的 GPU） | `persona.py` |
+| 需要知道网页实际看到了什么 | Probe 从 window、worker、iframe、ServiceWorker、SharedWorker、HTTP header 读取；`check()` 列出所有不一致之处 | `probe.py` |
 
-## Cài đặt fingerprint (tab Fingerprint)
+## Fingerprint 设置（Fingerprint 选项卡）
 
-Runner đọc `fingerprint` của profile (`fpsettings.saved(..., "chrome")`) và `settings.py` chuyển thành switch, preferences và thao tác Playwright. Cài đặt luôn thắng `timezone`/`locale` truyền vào và `chrome_persona.json`; chúng chỉ áp dụng trong bộ nhớ, không ghi vào persona. Preferences (WebRTC, quyền vị trí, Local Network Access) được ghi lại ở mỗi lần mở. Đã kiểm bằng probe trên 148.0.7778.215, macOS:
+Runner 读取 profile 的 `fingerprint`（`fpsettings.saved(..., "chrome")`），`settings.py` 将其转换为开关、preferences 和 Playwright 操作。这些设置始终优先于传入的 `timezone`/`locale` 和 `chrome_persona.json`；它们只在内存中生效，不会写入 persona。Preferences（WebRTC、位置权限、Local Network Access）在每次启动时重新写入。已在 148.0.7778.215、macOS 上用 probe 验证：
 
-| Mục | Chế độ | Cách làm |
+| 条目 | 模式 | 实现方式 |
 |---|---|---|
-| hardware_concurrency | mask / custom / real | `--fingerprint-hardware-concurrency` (real = số nhân máy) |
-| webgl_meta | mask / real | real = `--disable-spoofing=gpu` (GPU của máy; mask = GPU theo seed) |
-| canvas | real (cố định) | luôn `--disable-spoofing=canvas`: noise canvas làm `measureText()` trả về ~0 (fingerprint-chromium#96, cả 148 và 150). Cũng tắt noise đọc pixel WebGL, nên không có `webgl_noise` riêng |
+| hardware_concurrency | mask / custom / real | `--fingerprint-hardware-concurrency`（real = 本机核数） |
+| webgl_meta | mask / real | real = `--disable-spoofing=gpu`（本机 GPU；mask = 按 seed 生成的 GPU） |
+| canvas | real（固定） | 始终 `--disable-spoofing=canvas`：canvas 噪声会让 `measureText()` 返回约 0（fingerprint-chromium#96，148 和 150 都有）。同时也会关闭 WebGL 读取像素的噪声，因此没有单独的 `webgl_noise` |
 | audio | noise / real | `--disable-spoofing=audio` |
-| webrtc | mask / off / real | mask: pref policy theo proxy; off: `disable_non_proxied_udp`; real: `--webrtc-ip-handling-policy=default` (lộ IP LAN). API `RTCPeerConnection` vẫn tồn tại ở chế độ off |
-| timezone, language | mask / custom / real | `--timezone`, `--lang`/`--accept-lang`; mask theo IP thoát (cần proxy), real để trình duyệt tự lấy theo máy |
-| geo_permission | prompt / allow / block | block: pref `geolocation=2`; allow: `grant_permissions`; prompt: pref `3` |
-| geolocation | mask / custom / real | `context.set_geolocation`; real không giả vị trí |
-| port_scan | mask / real | mask: pref `local_network_access`/`loopback_network` = block; real: `--disable-features=LocalNetworkAccessChecks`. Chặn cả `fetch` và `ws://localhost`, kể cả IP LAN; không có danh sách ngoại lệ |
-| os, platform | cố định | luôn là OS của máy |
-| user_agent, webgl_noise, screen, fonts, media_devices, voices | không hỗ trợ | UA phải khớp client hints; `--fingerprint-screen-*` không có tác dụng ở bản này và `--screen-info` chỉ chạy headless; font/thiết bị do máy cung cấp |
+| webrtc | mask / off / real | mask：按 proxy 设置 pref policy；off：`disable_non_proxied_udp`；real：`--webrtc-ip-handling-policy=default`（暴露局域网 IP）。off 模式下 `RTCPeerConnection` API 仍然存在 |
+| timezone, language | mask / custom / real | `--timezone`、`--lang`/`--accept-lang`；mask 跟随出口 IP（需要 proxy），real 让浏览器按本机自行获取 |
+| geo_permission | prompt / allow / block | block：pref `geolocation=2`；allow：`grant_permissions`；prompt：pref `3` |
+| geolocation | mask / custom / real | `context.set_geolocation`；real 不伪造位置 |
+| port_scan | mask / real | mask：pref `local_network_access`/`loopback_network` = block；real：`--disable-features=LocalNetworkAccessChecks`。同时拦截 `fetch` 和 `ws://localhost`，包括局域网 IP；没有例外名单 |
+| os, platform | 固定 | 始终是本机的 OS |
+| user_agent, webgl_noise, screen, fonts, media_devices, voices | 不支持 | UA 必须与 client hints 一致；`--fingerprint-screen-*` 在此版本中无效，`--screen-info` 只在 headless 下可用；字体/设备由本机提供 |
 
-## Tương thích persona ↔ máy chủ
+## Persona 与宿主机的兼容性
 
-| Máy chủ \ Persona | Windows | macOS | Linux |
+| 宿主机 \ Persona | Windows | macOS | Linux |
 |---|---|---|---|
-| Windows | ok | cảnh báo: font Windows lộ qua đo font | **từ chối**: WebGL báo Direct3D 11 |
-| Linux | cảnh báo: font Linux | cảnh báo: font Linux | ok |
-| macOS | cảnh báo: font macOS, scrollbar overlay 0px | ok | **từ chối**: WebGL báo GPU Apple thật |
+| Windows | ok | 警告：Windows 字体会通过字体测量泄露 | **拒绝**：WebGL 会报告 Direct3D 11 |
+| Linux | 警告：Linux 字体 | 警告：Linux 字体 | ok |
+| macOS | 警告：macOS 字体，overlay scrollbar 为 0px | ok | **拒绝**：WebGL 会报告真实的 Apple GPU |
 
-Hàng Windows và macOS được đo trực tiếp; hàng Linux là suy luận và chưa kiểm chứng.
+Windows 和 macOS 两行是直接实测得到的；Linux 一行是推断，尚未验证。
 
-Bản macOS của fork chỉ có arm64: Mac Intel không được hỗ trợ (`fetch` báo lỗi thay vì tải về một bản không chạy được). Python x86_64 chạy qua Rosetta trên Mac Apple Silicon vẫn được nhận là arm64.
+该 fork 的 macOS 版本只有 arm64：不支持 Intel Mac（`fetch` 会报错，而不是下载一个无法运行的版本）。在 Apple Silicon Mac 上通过 Rosetta 运行的 x86_64 Python 仍会被识别为 arm64。
 
-## Kết quả kiểm thử (2026-10-09, Windows 11, fingerprint-chromium 148.0.7778.215)
+## 测试结果（2026-10-09，Windows 11，fingerprint-chromium 148.0.7778.215）
 
 ```bash
-pytest chrome_engine/tests                 # 191 test; test cần browser tự skip nếu chưa fetch
+pytest chrome_engine/tests                 # 191 个测试；需要 browser 的测试在尚未 fetch 时自动跳过
 pytest chrome_engine/tests -m "not browser"
-python chrome_engine/e2e/detection_e2e.py headed headless   # cần internet
+python chrome_engine/e2e/detection_e2e.py headed headless   # 需要联网
 ```
 
-- Test đơn vị: release, fetch (checksum, rollback, path traversal), persona, proxy bridge (HTTP/SOCKS5 có auth, sai mật khẩu, upstream chết, 25 tunnel song song, body 3 MB), probe check (mỗi loại lệch đều bị bắt).
-- Test tích hợp với browser thật: fingerprint nhất quán ở headed/headless/offscreen, brand Chrome/Edge, persona macOS trên Windows, emoji canvas không crash, cùng seed = cùng thiết bị, khác seed = khác thiết bị, cookie/localStorage/persona giữ qua lần mở sau, proxy HTTP và SOCKS5 có auth (không rò DNS), sai mật khẩu proxy không bao giờ đi thẳng, geoip, popup blocker hoạt động, storage partitioning bật, `Runtime.enable` không lộ, WebRTC theo proxy, 3 profile song song cách ly nhau.
-- Runner: đúng thứ tự `CONTROL` → `BROWSER_STARTED`, điều khiển qua control server, lưu/khôi phục tab, runner bị kill cứng vẫn mở lại được profile, đóng tab cuối → `BROWSER_CLOSED`.
-- Trang kiểm tra công khai, cả headed và headless: sannysoft pass toàn bộ, vượt Cloudflare challenge, BrowserScan "Normal", CreepJS 0% headless (Chrome thật chạy dưới Playwright: 33% headless).
+- 单元测试：release、fetch（checksum、回滚、path traversal）、persona、proxy bridge（带认证的 HTTP/SOCKS5、密码错误、上游挂掉、25 个并行 tunnel、3 MB body）、probe check（每一种不一致都会被捕获）。
+- 使用真实 browser 的集成测试：headed/headless/offscreen 下 fingerprint 一致、brand 为 Chrome/Edge、Windows 上的 macOS persona、canvas emoji 不崩溃、相同 seed = 相同设备、不同 seed = 不同设备、cookie/localStorage/persona 在后续启动中保留、带认证的 HTTP 和 SOCKS5 proxy（不泄露 DNS）、proxy 密码错误时绝不直连、geoip、弹窗拦截正常工作、storage partitioning 已开启、`Runtime.enable` 不暴露、WebRTC 跟随 proxy、3 个并行 profile 互相隔离。
+- Runner：`CONTROL` → `BROWSER_STARTED` 的顺序正确，通过 control server 控制，标签页保存/恢复，runner 被强制终止后仍能重新打开 profile，关闭最后一个标签页 → `BROWSER_CLOSED`。
+- 公开检测页面，headed 和 headless 都测试：sannysoft 全部通过，通过 Cloudflare challenge，BrowserScan 为 "Normal"，CreepJS 的 headless 比例为 0%（在 Playwright 下运行的真实 Chrome：33% headless）。
 
-## Kết quả kiểm thử (2026-10-09, macOS 15.3, Apple M1 Pro, fingerprint-chromium 148.0.7778.215)
+## 测试结果（2026-10-09，macOS 15.3，Apple M1 Pro，fingerprint-chromium 148.0.7778.215）
 
-- `fetch`: tải `.dmg`, kiểm SHA-256, giải nén bằng `hdiutil`; binary arm64 ký ad-hoc chạy được.
-- Test tích hợp với browser thật: 23 pass, 1 skip (`test_macos_persona_on_windows_host`, chỉ chạy trên Windows).
-- Probe persona macOS (headed và headless): 0 issue; WebGL báo GPU đã giả (vd. Apple M4), không lộ chip thật.
-- Probe persona Windows: scrollbar 0px (scrollbar overlay của macOS khi cài đặt "Tự động"); font macOS lộ.
-- Probe persona Linux: WebGL lộ `ANGLE Metal Renderer: Apple M1 Pro`, nên tổ hợp này bị từ chối.
-- Trang kiểm tra công khai (headed và headless, persona macOS): sannysoft pass toàn bộ, vượt Cloudflare challenge, BrowserScan "Normal", CreepJS 0% headless.
+- `fetch`：下载 `.dmg`，校验 SHA-256，用 `hdiutil` 解压；ad-hoc 签名的 arm64 二进制文件可以运行。
+- 使用真实 browser 的集成测试：23 个通过，1 个跳过（`test_macos_persona_on_windows_host`，只在 Windows 上运行）。
+- macOS persona 的 probe（headed 和 headless）：0 个问题；WebGL 报告的是伪造的 GPU（例如 Apple M4），不会暴露真实芯片。
+- Windows persona 的 probe：scrollbar 为 0px（macOS 在“自动”设置下的 overlay scrollbar）；macOS 字体被暴露。
+- Linux persona 的 probe：WebGL 暴露 `ANGLE Metal Renderer: Apple M1 Pro`，因此这种组合会被拒绝。
+- 公开检测页面（headed 和 headless，macOS persona）：sannysoft 全部通过，通过 Cloudflare challenge，BrowserScan 为 "Normal"，CreepJS 的 headless 比例为 0%。
 
-## Giới hạn đã biết
+## 已知限制
 
-- Font là font của máy chủ. Persona khác OS sẽ lộ qua đo font.
-- Ảnh render WebGL (pixel) vẫn từ GPU thật; chỉ chuỗi vendor/renderer và tham số được giả.
-- WebRTC không có candidate host dạng mDNS như Chrome thật (fork tắt). Không lộ IP, nhưng là một điểm khác biệt nhỏ.
-- `userAgentData.fullVersionList` báo bản vá do fork chọn (vd. 148.0.7778.97), không phải số build thật.
-- Chưa kiểm chứng trên Linux; bản `.dmg` chỉ giải nén được trên macOS và chỉ chạy trên Apple Silicon.
-- Persona macOS luôn báo `devicePixelRatio` 1, trong khi MacBook thật gần như luôn là 2 (Retina). Ở headless, `availHeight` bằng `height` (không trừ thanh menu).
-- Persona Windows trên macOS: scrollbar 0px. Đặt `defaults write org.chromium.Chromium AppleShowScrollBars Always` đưa về 15px (Windows thật 17px), nhưng cài đặt đó áp dụng cho mọi Chromium cùng bundle id trên máy.
-- Phát hiện qua thời gian phản hồi CDP chưa được xử lý.
-- Proxy bridge nghe trên `127.0.0.1` cổng ngẫu nhiên, không có mật khẩu (Chromium không gửi được). Trang web không dùng được nó (không gửi được `CONNECT`, request thường bị trả 400), nhưng tiến trình khác trên cùng máy có thể đi ra ngoài qua proxy của profile trong lúc profile đang mở.
-- Phụ thuộc fork bên ngoài: nâng phiên bản phải chạy lại toàn bộ test (đặc biệt `test_emoji_canvas_does_not_crash`) trước khi đổi `DEFAULT_VERSION`.
+- 字体是宿主机的字体。与宿主机 OS 不同的 persona 会通过字体测量暴露。
+- WebGL 渲染出的图像（像素）仍来自真实 GPU；只有 vendor/renderer 字符串和参数被伪造。
+- WebRTC 没有像真实 Chrome 那样的 mDNS 形式 host candidate（fork 关闭了它）。不会泄露 IP，但这是一个细微的差异。
+- `userAgentData.fullVersionList` 报告的是 fork 选定的补丁版本（例如 148.0.7778.97），而不是真实的 build 号。
+- 尚未在 Linux 上验证；`.dmg` 版本只能在 macOS 上解压，并且只能在 Apple Silicon 上运行。
+- macOS persona 始终报告 `devicePixelRatio` 为 1，而真实的 MacBook 几乎总是 2（Retina）。在 headless 下，`availHeight` 等于 `height`（没有扣除菜单栏）。
+- macOS 上的 Windows persona：scrollbar 为 0px。设置 `defaults write org.chromium.Chromium AppleShowScrollBars Always` 可以恢复到 15px（真实 Windows 为 17px），但该设置会作用于本机所有使用相同 bundle id 的 Chromium。
+- 尚未处理通过 CDP 响应时间进行的检测。
+- Proxy bridge 在 `127.0.0.1` 的随机端口上监听，没有密码（Chromium 无法发送密码）。网页无法使用它（无法发送 `CONNECT`，普通请求会返回 400），但同一台机器上的其他进程可以在 profile 打开期间通过该 profile 的 proxy 访问外网。
+- 依赖外部 fork：升级版本前必须重新运行全部测试（尤其是 `test_emoji_canvas_does_not_crash`），然后再更改 `DEFAULT_VERSION`。

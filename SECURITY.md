@@ -1,30 +1,30 @@
-# Chính sách bảo mật
+# 安全政策
 
-## Báo cáo lỗ hổng
+## 报告漏洞
 
-**Không mở issue công khai cho lỗ hổng bảo mật.** Hãy báo riêng qua tab **Security → Report a vulnerability** của repo (GitHub Private Vulnerability Reporting).
+**请勿为安全漏洞公开提交 issue。** 请通过本仓库的 **Security → Report a vulnerability** 选项卡私下报告（GitHub Private Vulnerability Reporting）。
 
-Vui lòng ghi rõ:
+请尽量写明：
 
-- Mô tả lỗ hổng và ảnh hưởng
-- Các bước tái hiện
-- Phiên bản hoặc commit bị ảnh hưởng
+- 漏洞描述及其影响
+- 复现步骤
+- 受影响的版本或 commit
 
-Maintainer sẽ phản hồi trong vòng 7 ngày và công bố bản sửa trước khi công khai chi tiết.
+Maintainer 会在 7 天内回复，并在公开细节之前先发布修复版本。
 
-## Phạm vi đáng chú ý
+## 重点关注范围
 
-FoxProfile lưu cookie đăng nhập và proxy của nhiều tài khoản, nên các lỗi sau được ưu tiên cao nhất:
+FoxProfile 保存着多个账号的登录 cookie 和 proxy，因此以下问题的优先级最高：
 
-- Đọc hoặc ghi file ngoài thư mục dữ liệu (path traversal qua tên profile hay file ZIP nhập vào)
-- Lộ cookie, proxy hoặc mật khẩu proxy ra log hay ra ngoài máy
-- Khiến REST API nghe ngoài `127.0.0.1` khi người dùng không chủ động cấu hình
-- Vượt qua token của API / web panel, hoặc truy cập kênh điều khiển trình duyệt (`control.py`) mà không có token
-- Cho AI agent qua MCP mở được URL `file://` hay đọc file trên máy
+- 读取或写入数据目录之外的文件（通过 profile 名称或导入的 ZIP 文件进行 path traversal）
+- cookie、proxy 或 proxy 密码泄露到日志中或本机之外
+- 在用户没有主动配置的情况下，让 REST API 监听 `127.0.0.1` 以外的地址
+- 绕过 API / web panel 的 token，或不带 token 访问浏览器控制通道 (`control.py`)
+- 让 AI agent 通过 MCP 打开 `file://` URL 或读取本机文件
 
-## Lưu ý cho người dùng
+## 给用户的提醒
 
-- Khi đưa lên mạng, luôn đặt `FOXPROFILE_API_TOKEN` (ít nhất 24 ký tự ngẫu nhiên) và dùng HTTPS.
-- Nội dung trang web là dữ liệu không tin cậy: trang có thể chứa chỉ dẫn nhằm lừa AI agent.
-- Thư mục `camoufox_data/` chứa cookie đăng nhập. Không chia sẻ và không commit.
-- Chỉ nhập profile ZIP hay file cookie từ nguồn bạn tin tưởng.
+- 暴露到公网时，务必设置 `FOXPROFILE_API_TOKEN`（至少 24 个随机字符）并使用 HTTPS。
+- 网页内容属于不可信数据：网页中可能包含用来欺骗 AI agent 的指令。
+- `camoufox_data/` 目录保存着登录 cookie。不要分享，也不要提交。
+- 只导入你信任来源的 profile ZIP 或 cookie 文件。

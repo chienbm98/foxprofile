@@ -4,7 +4,7 @@ from src.utils.proxy_parser import parse_proxy
 from src.utils.validation import validate_profile_name, validate_proxy_format
 
 
-@pytest.mark.parametrize("name", ["shop-01", "TikTok US 2", "ads_agency.3", "tài-khoản-1"])
+@pytest.mark.parametrize("name", ["shop-01", "TikTok US 2", "ads_agency.3", "账号-1"])
 def test_valid_profile_names(name):
     assert validate_profile_name(name) == (True, "")
 

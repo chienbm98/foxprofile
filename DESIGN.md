@@ -209,7 +209,7 @@ Two surfaces share this one system. The web panel (`src/web/index.html`, CSS cus
 The palette is paper and ink with a deep green cover. One warm action colour sits on top, and four stamp inks are reserved for state.
 
 ### Primary
-- **Fox Orange** (act): the only action colour. It fills the Launch button (`Mở`), Create profile (`Tạo profile`), Save, the bulk Launch and the dialog confirm. It is also the focus outline and the text caret. Hover deepens it to **Burnt Fox** (act-hover).
+- **Fox Orange** (act): the only action colour. It fills the Launch button (`启动`), Create profile (`新建 Profile`), Save, the bulk Launch and the dialog confirm. It is also the focus outline and the text caret. Hover deepens it to **Burnt Fox** (act-hover).
 
 ### Secondary
 - **Passport Cover Green** (cover): the rail ground, the viewer bar, active chips, checked checkboxes, the focused-field border, text selection, and the Chrome engine label and tag. **Cover Deep** (cover-deep) is the rail hover, the segmented-control well, the activity log and code blocks. **Cover Line** (cover-line) draws the guilloché strokes and the rail-side outlines. **Cover Ink** (cover-ink) is text on the cover and the active nav pill. **Cover Muted** (cover-muted) is secondary text on the cover.
@@ -240,7 +240,7 @@ The palette is paper and ink with a deep green cover. One warm action colour sit
 **UI Font:** Be Vietnam Pro (with system-ui, -apple-system, Segoe UI, sans-serif), bundled locally at 400/500/600/700.
 **Data Font:** JetBrains Mono (with ui-monospace, SF Mono, Consolas, monospace), bundled as a variable font.
 
-**Character:** Be Vietnam Pro is a clean geometric sans that renders Vietnamese diacritics properly, and it carries all the human language. JetBrains Mono sets anything a machine produced, the way a passport sets its machine-readable zone: proxy host:port, scheme, timezone, locale, screen and CPU, OS badge, nav counts, stamp text and code.
+**Character:** Be Vietnam Pro is a clean geometric sans that renders Latin diacritics properly, and it carries all the human language. JetBrains Mono sets anything a machine produced, the way a passport sets its machine-readable zone: proxy host:port, scheme, timezone, locale, screen and CPU, OS badge, nav counts, stamp text and code.
 
 ### Hierarchy
 - **Headline** (700, 26px, 1.2, -0.02em): the page title (`Profile`) and the login heading (24px).
@@ -255,7 +255,7 @@ The palette is paper and ink with a deep green cover. One warm action colour sit
 ### Named Rules
 **The Machine Zone Rule.** Values a machine reads (proxy, IP, timezone, locale, screen, fingerprint, counts) are set in JetBrains Mono. Words a person reads are set in Be Vietnam Pro. Never set a sentence in mono, and never set an IP in the sans.
 
-**The Two-Line Cell Rule.** Every data cell in a profile row has exactly two lines: a primary line, plus a minor line in ink-3. When there is no value, the minor line is filled with honest copy (`không proxy`, `Theo IP`, `chưa có fingerprint`). That keeps row heights and baselines identical.
+**The Two-Line Cell Rule.** Every data cell in a profile row has exactly two lines: a primary line, plus a minor line in ink-3. When there is no value, the minor line is filled with honest copy (`无代理`, `跟随 IP`, `暂无指纹`). That keeps row heights and baselines identical.
 
 ## Layout
 
@@ -320,9 +320,9 @@ Buttons are solid and quiet. The fill colour says what kind of action it is.
 - **Desktop difference:** Flet dropdowns cannot go below 48px, so desktop text fields keep Material's 48px height to stay aligned with them. Desktop labels sit above the fields as separate text rather than floating.
 
 ### Navigation (the cover rail)
-- From top to bottom: brand (fox mark, `FoxProfile` at 18px/700, subtitle in cover-muted), a full-width orange Create button, the filter list (`Tất cả`, `Đang chạy`, `Có proxy`, `Không proxy`, `Engine Chrome`), MCP and API links, and the language segment (`Tiếng Việt` / `English`).
+- From top to bottom: brand (fox mark, `FoxProfile` at 18px/700, subtitle in cover-muted), a full-width orange Create button, the filter list (`全部`, `运行中`, `有代理`, `无代理`, `Chrome 引擎`), MCP and API links, and the language segment (`简体中文` / `English`).
 - Filter items are 36px tall with 7px corners, in cover-ink at 500. Hover fills them with cover-deep. The active item is a cover-ink pill with cover-coloured 600 text. Counts are right-aligned in mono.
-- On desktop, the rail also holds a collapsible activity log (`Nhật ký hoạt động`) on cover-deep.
+- On desktop, the rail also holds a collapsible activity log (`活动日志`) on cover-deep.
 
 ### Dialogs
 - Raised paper, 12px corners and the dialog-lift shadow. Width is 500px, or 740px for wide dialogs. The title is 19px/700 with a 13.5px ink-2 subtitle. On web, the footer is a paper band with a hairline top border, and buttons are right-aligned with Cancel (line) before Confirm (act or danger).
@@ -333,7 +333,7 @@ The entry stamp is the profile's state, marked like a rubber stamp on a passport
 - **Live:** violet ink with a double rule (a 1.5px frame plus a 1px outer ring 2px out), rotated -4°. It reads `ĐANG CHẠY` / `RUNNING` with the launch time (HH:MM) beneath. A 35% white wash sits under the ink.
 - **Starting / Stopping:** ink-2 on a single thin rule with no outer ring, reading `ĐANG MỞ` / `ĐANG DỪNG`. The web panel uses a dashed 1.5px rule tilted -2°. The desktop uses a solid 1px rule set straight, because Flet borders cannot be dashed.
 - **Failed:** red ink on a single 1.5px rule, rotated -4°, with the text struck through (`LỖI` / `FAILED`). Hovering it on web shows the error.
-- **Idle:** no stamp. It shows plain `Đã dừng` in ink-3 at 13px.
+- **Idle:** no stamp. It shows plain `已停止` in ink-3 at 13px.
 - **Motion:** on web, a stamp that has just gone live lands once (0.34s, `cubic-bezier(.16,1,.3,1)`). It scales from 1.55× at -11° down to 1× at -4°, fading in from 25%. It never loops. The animation is removed under `prefers-reduced-motion`. The desktop stamp is static.
 
 **The Form-Before-Hue Rule.** You can tell every state apart without colour: a double rule means live, a single plain rule means in transition, a struck rule means failed, and no frame means idle.
@@ -347,7 +347,7 @@ The entry stamp is the profile's state, marked like a rubber stamp on a passport
 - **Do** set proxy, IP, timezone, locale, screen, fingerprint and counts in JetBrains Mono with tabular figures.
 - **Do** encode state by stamp form (double, single, struck, none) as well as ink.
 - **Do** separate surfaces with hairline rules and paper tones instead of shadows.
-- **Do** keep industry terms in English inside Vietnamese copy (profile, proxy, cookie, engine, fingerprint).
+- **Do** keep industry terms in English inside Chinese copy (profile, proxy, cookie, engine, fingerprint).
 
 ### Don't:
 - **Don't** build the dark card dashboard this world refuses: no dark-mode card grid, no coloured OS tiles, no orange-on-black.

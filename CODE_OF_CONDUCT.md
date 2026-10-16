@@ -1,12 +1,12 @@
-# Quy tắc ứng xử
+# 行为准则
 
-Dự án áp dụng [Contributor Covenant phiên bản 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+本项目采用 [Contributor Covenant 2.1 版](https://www.contributor-covenant.org/zh-cn/version/2/1/code_of_conduct/)。
 
-Tóm tắt:
+摘要：
 
-- Tôn trọng mọi người, bất kể kinh nghiệm, giới tính, xu hướng tính dục, khuyết tật, ngoại hình, sắc tộc, tôn giáo hay quốc tịch.
-- Góp ý vào vấn đề, không công kích cá nhân.
-- Không quấy rối, không đăng nội dung xúc phạm, không công khai thông tin cá nhân của người khác.
-- Không dùng issue hay discussion để quảng cáo, bán tài khoản, bán proxy hoặc dịch vụ.
+- 尊重每一个人，无论其经验、性别、性取向、残障、外貌、种族、宗教或国籍。
+- 针对问题提出意见，不要进行人身攻击。
+- 不骚扰他人，不发布冒犯性内容，不公开他人的个人信息。
+- 不要利用 issue 或 discussion 做广告，或出售账号、proxy 及各类服务。
 
-Vi phạm có thể dẫn đến việc bị xóa bình luận, khóa issue hoặc chặn khỏi dự án. Báo cáo vi phạm cho maintainer qua GitHub ([@chienbm98](https://github.com/chienbm98)). Mọi báo cáo được giữ kín.
+违反准则可能导致评论被删除、issue 被锁定，或被项目封禁。请通过 GitHub 向 maintainer（[@chienbm98](https://github.com/chienbm98)）举报违规行为。所有举报都会严格保密。

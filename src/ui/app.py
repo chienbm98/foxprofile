@@ -310,7 +310,7 @@ class App:
         self._refresh_profiles()
 
     def _set_subtitle(self, text: ft.Text) -> None:
-        """ "10 profile · 2 đang chạy", the running count in stamp violet."""
+        """ "10 profiles · 2 running", the running count in stamp violet."""
         c, r = len(self.pm.profiles), self.bl.running_count()
         head = get_string("profiles_configured", count=c) + " · "
         text.value = None

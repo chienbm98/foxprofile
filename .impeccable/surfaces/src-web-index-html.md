@@ -21,7 +21,7 @@ OWN-WORLD: Light security-paper ground (#F3F4EF) with hairline rules; a deep pas
 
 STORY: The operator sees which accounts are live and where they appear to be from, finds one by name or proxy, launches or stops it in one click, and trusts the list because every row reads the same columns.
 
-FIRST VIEWPORT: Left green rail (logo, Tạo profile, filters with counts, MCP, language). Main: title + counts, search, then a dense aligned table of profiles: select, name + engine, device (OS · engine · screen), proxy, timezone/locale, status stamp, Launch/Stop plus icon actions. Bulk bar above the table when rows are selected.
+FIRST VIEWPORT: Left green rail (logo, Create profile, filters with counts, MCP, language). Main: title + counts, search, then a dense aligned table of profiles: select, name + engine, device (OS · engine · screen), proxy, timezone/locale, status stamp, Launch/Stop plus icon actions. Bulk bar above the table when rows are selected.
 
 SIGNATURE MOVE: The entry stamp. A running profile's status is a rotated rubber-stamp mark in violet ink with a double rule and the launch time; it lands with one short press animation when the profile starts. Starting is a dashed stamp, failure a struck red stamp; state reads by form as well as colour. Raises kept: one column grid and baseline for every row (botanical folio); orange reserved for actions (warm consumer app); flat colour only (zoo map); state encoded by line form, not hue alone (emission rail).
 

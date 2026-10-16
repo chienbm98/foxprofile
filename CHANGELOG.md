@@ -1,87 +1,93 @@
-# Changelog
+# 更新日志
 
-Định dạng theo [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/); phiên bản theo [Semantic Versioning](https://semver.org/lang/vi/).
+格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## [Unreleased]
 
+### 变更
+- 文档改为简体中文：`README.vi.md` 改为 `README.zh-CN.md`，`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`docs/DEPLOY.md`、`DESIGN.md`、`CHANGELOG.md` 和 issue/PR 模板同样改为中文。
+
+### 移除
+- 越南语界面。界面语言现在只有 English 和简体中文；之前保存的越南语选项（`settings.json` 中的 `vi`，或 `FOXPROFILE_LANG=vi`）会被忽略，改为跟随系统语言，系统语言不受支持时使用 English。
+
 ## [2.6.0] - 2026-10-16
 
-### Thêm
-- Bộ cài kèm sẵn bản Camoufox riêng của FoxProfile (156.0.1-beta.36-fp1, `patches/foxprofile-session-key.patch`), không còn tải bản gốc ở lần chạy đầu. Bộ cài nặng khoảng 1.4GB.
-- Mỗi profile có khóa nhiễu canvas/WebGL riêng (`noise_key` trong `fingerprint.json`): nhiễu giữ nguyên qua các lần mở, vẫn khác nhau giữa các trang web và giữa các profile. Tạo lại fingerprint thì đổi khóa.
+### 新增
+- 安装包内置 FoxProfile 自己的 Camoufox 构建（156.0.1-beta.36-fp1，`patches/foxprofile-session-key.patch`），首次运行不再下载原版。安装包约 1.4GB。
+- 每个 profile 拥有独立的 canvas/WebGL 噪声密钥（`fingerprint.json` 中的 `noise_key`）：多次打开之间噪声保持不变，同时在不同网站之间、不同 profile 之间仍各不相同。重新生成 fingerprint 会更换密钥。
 
 ## [2.5.0] - 2026-10-16
 
-### Thêm
-- Engine Chrome dùng được các cài đặt fingerprint theo từng mục (tab Fingerprint của app desktop, web panel, REST, MCP), mỗi engine chỉ hiện những chế độ trình duyệt thật sự làm được. Hỗ trợ: số nhân CPU (masked/custom/real), WebGL GPU (masked/real), audio (noise/real), WebRTC (masked/off/real), timezone, ngôn ngữ, vị trí và quyền vị trí, chặn quét cổng nội bộ (masked/real). Canvas của Chrome luôn là real: noise canvas của bản fingerprint-chromium này làm `measureText()` trả về ~0 (fingerprint-chromium#96). Các mục Chrome không làm được (user agent, WebGL noise riêng, màn hình, font, thiết bị media, giọng đọc) vẫn hiện nhưng ghi "Not supported by the Chrome engine". `GET /fingerprint/options` và MCP `fingerprint_options` nhận tham số `engine`.
-- Profile Chrome cũ chưa từng chỉnh cài đặt được chuyển sang mặc định của Chrome (ngôn ngữ theo IP thoát, quyền vị trí "prompt") để hành vi không đổi.
-- Không dùng proxy, profile Chrome để vị trí ở chế độ masked sẽ tra IP của máy bạn một lần mỗi lần mở (như Camoufox khi dùng geoip) trừ khi quyền vị trí là "block".
+### 新增
+- Chrome engine 支持按条目设置 fingerprint（桌面应用的 Fingerprint 选项卡、web panel、REST、MCP），每种 engine 只显示浏览器真正能做到的模式。已支持：CPU 核数（masked/custom/real）、WebGL GPU（masked/real）、audio（noise/real）、WebRTC（masked/off/real）、timezone、语言、位置及位置权限、拦截内网端口扫描（masked/real）。Chrome 的 canvas 始终为 real：这个 fingerprint-chromium 构建的 canvas 噪声会让 `measureText()` 返回约 0（fingerprint-chromium#96）。Chrome 做不到的条目（user agent、独立的 WebGL 噪声、屏幕、字体、媒体设备、语音）仍会显示，但标注为 "Not supported by the Chrome engine"。`GET /fingerprint/options` 和 MCP `fingerprint_options` 接受 `engine` 参数。
+- 从未调整过设置的旧 Chrome profile 会迁移到 Chrome 的默认值（语言跟随出口 IP，位置权限为 "prompt"），行为保持不变。
+- 不使用 proxy 时，位置处于 masked 模式的 Chrome profile 每次打开都会查询一次你本机的 IP（与 Camoufox 使用 geoip 时相同），除非位置权限为 "block"。
 
 ## [2.4.0] - 2026-10-15
 
-### Thêm
-- Giao diện tiếng Trung giản thể (简体中文) cho app desktop và web panel; mặc định theo ngôn ngữ hệ thống, lựa chọn được lưu lại.
-- Mục "Language" của fingerprint chọn từ danh sách (English / 简体中文) thay vì gõ tay.
+### 新增
+- 桌面应用和 web panel 新增简体中文界面（简体中文）；默认跟随系统语言，所选语言会被保存。
+- fingerprint 的 "Language" 项改为从列表中选择（English / 简体中文），不再手动输入。
 
-### Sửa
-- App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
-- Proxy dạng `host:port:user:pass` có `@` hoặc `:` trong mật khẩu không còn bị bỏ qua (trước đây profile mở mà không qua proxy). Chấp nhận proxy IPv6 dạng `[2001:db8::1]`; host proxy tối đa 253 ký tự.
-- Tên profile không phân biệt hoa thường: "Demo" và "demo" không còn tạo được hai profile dùng chung một thư mục dữ liệu trên Windows/macOS. Đổi tên chỉ khác hoa thường vẫn giữ nguyên dữ liệu; tên chứa ký tự điều khiển bị từ chối.
-- Đổi tên profile sang tên có thư mục dữ liệu sót lại trả về lỗi 409 thay vì làm hỏng danh sách profile. `profiles.json` được ghi nguyên tử, và các thao tác đồng thời (API, MCP, app) không còn ghi đè lẫn nhau, gây lỗi 500 hay xoá nhầm thư mục của profile vừa tạo lại.
-- Proxy không vào được mạng báo lỗi dễ hiểu ("no internet connection through proxy host:port") thay vì chuỗi lỗi nội bộ; chi tiết vẫn có trong log.
-- MCP `update_profile(proxy="")` xoá được proxy.
-- Điều khiển trang từ chối cả scheme bị mã hoá phần trăm (`%66ile:`) và URL hỏng như `[::1`.
-- Web panel: xác nhận "New fingerprint" không còn đóng luôn hộp thoại cookie; Esc đóng màn hình xem trực tiếp và đúng hộp thoại trên cùng; hiện lỗi kèm nút Thử lại khi không kết nối được server thay vì trang trắng; nút Lưu và các thao tác cookie bị khoá khi đang chạy; lỗi 422 hiển thị dễ đọc.
-- App desktop: hỏi xác nhận trước khi tạo fingerprint mới; ô chọn ở tiêu đề bảng không còn bỏ chọn các profile ở trang khác; rail hiện số profile và số trình duyệt đang chạy; hộp thoại xoá nói rõ cookie và dữ liệu sẽ mất vĩnh viễn.
+### 修复
+- 桌面应用：使用 English 界面时，"Launch" 按钮不再被折成两行。
+- 密码中含有 `@` 或 `:` 的 `host:port:user:pass` 格式 proxy 不再被忽略（此前 profile 会不经过 proxy 直接打开）。接受 `[2001:db8::1]` 形式的 IPv6 proxy；proxy 主机名最长 253 个字符。
+- Profile 名称不再区分大小写：在 Windows/macOS 上，"Demo" 和 "demo" 不能再创建出共用同一数据目录的两个 profile。仅大小写不同的重命名仍会保留数据；含控制字符的名称会被拒绝。
+- 重命名为一个遗留有数据目录的名称时，现在返回 409 错误，而不是弄坏 profile 列表。`profiles.json` 采用原子写入，并发操作（API、MCP、应用）不再互相覆盖，也不再导致 500 错误或误删刚重新创建的 profile 的目录。
+- 无法联网的 proxy 现在给出易懂的错误（"no internet connection through proxy host:port"），而不是内部错误字符串；细节仍记录在日志中。
+- MCP `update_profile(proxy="")` 现在可以清除 proxy。
+- 页面控制现在会拒绝经过百分号编码的 scheme（`%66ile:`）以及 `[::1` 这类损坏的 URL。
+- Web panel："New fingerprint" 的确认不再直接关闭 cookie 对话框；Esc 会关闭实时画面查看器以及最上层的对话框；无法连接 server 时显示错误和重试按钮，而不是空白页；运行时保存按钮和 cookie 操作会被锁定；422 错误以易读形式显示。
+- 桌面应用：生成新 fingerprint 前会先确认；表头的复选框不再取消其他页面上已选中的 profile；侧边栏显示 profile 数量和正在运行的浏览器数量；删除对话框明确说明 cookie 和数据将被永久删除。
 
-### Thay đổi
-- Mọi profile cố định theo hệ điều hành của máy đang chạy: chọn hệ khác sẽ lộ font và cách hiển thị của máy. API từ chối `os_type` khác, MCP không còn tham số `os_type`.
-- Engine mặc định của profile mới là Camoufox (Firefox). Mỗi profile Camoufox có 18 thiết lập fingerprint (`fingerprint` trong `profiles.json`; REST `PUT /profiles/{name}/fingerprint/settings`, `GET /fingerprint/options`, `POST /profiles/{name}/fingerprint/regenerate`; MCP `update_fingerprint_settings`, `fingerprint_options`). Thiết bị được chọn một lần từ thư viện thiết bị thật rồi đóng băng trong `fingerprint.json` (v2); file v1 được tạo lại ở lần mở sau.
-- Ngôn ngữ giao diện mặc định của app desktop và web panel là English; đặt `FOXPROFILE_LANG=vi` (hoặc bấm "Tiếng Việt" trong app) để dùng tiếng Việt.
+### 变更
+- 所有 profile 都固定为当前运行机器的操作系统：选择其他系统会暴露本机的字体和渲染方式。API 会拒绝不同的 `os_type`，MCP 不再有 `os_type` 参数。
+- 新 profile 的默认 engine 是 Camoufox (Firefox)。每个 Camoufox profile 有 18 项 fingerprint 设置（`profiles.json` 中的 `fingerprint`；REST `PUT /profiles/{name}/fingerprint/settings`、`GET /fingerprint/options`、`POST /profiles/{name}/fingerprint/regenerate`；MCP `update_fingerprint_settings`、`fingerprint_options`）。设备从真实设备库中选取一次，然后冻结在 `fingerprint.json`（v2）中；v1 文件会在下次打开时重新生成。
+- 桌面应用和 web panel 的默认界面语言是 English；设置 `FOXPROFILE_LANG=vi`（或在应用中点击 "Tiếng Việt"）可使用越南语。
 
 ## [2.3.1] - 2026-10-09
 
-### Sửa
-- Web panel: bảng profile không còn tràn mất cột thao tác (Mở/Dừng) khi cửa sổ trình duyệt hẹp hơn khoảng 1460px; bảng giờ đổi bố cục theo bề rộng thực của chính nó.
-- Profile không còn kẹt ở trạng thái "Đang mở" trên app desktop khi cùng lúc được mở qua API hoặc MCP; hai lệnh mở đồng thời cho cùng một profile không còn khởi chạy hai trình duyệt.
+### 修复
+- Web panel：浏览器窗口宽度小于约 1460px 时，profile 表格不再把操作列（Launch/Stop）挤出去；表格现在会根据自身的实际宽度调整布局。
+- 当 profile 同时通过 API 或 MCP 被打开时，桌面应用中它不再卡在 "Launching" 状态；对同一个 profile 同时发出两个打开命令，也不会再启动两个浏览器。
 
 ## [2.3.0] - 2026-10-09
 
-### Thay đổi
-- Thiết kế lại giao diện app desktop và web panel theo một hệ thống chung (xem `DESIGN.md`): nền giấy sáng, rail xanh, bảng profile thẳng cột với cột Thiết bị / Proxy / Timezone · Locale, và "dấu" trạng thái (đang chạy, đang mở, lỗi) phân biệt bằng cả hình dạng lẫn màu. Font Be Vietnam Pro và JetBrains Mono được đóng gói sẵn (OFL), chạy được không cần mạng.
-- Thêm bộ lọc profile kèm số đếm (tất cả, đang chạy, có/không proxy, engine Chrome) trên cả hai giao diện; web panel có thêm thao tác hàng loạt và hộp thoại xác nhận riêng; app desktop đổi được Tiếng Việt / English ngay khi đang chạy.
-- Thuật ngữ chuyên ngành giữ tiếng Anh trong giao diện tiếng Việt (fingerprint, engine, timezone, locale).
+### 变更
+- 桌面应用和 web panel 的界面按统一的设计体系重新设计（见 `DESIGN.md`）：浅色纸张底色、绿色侧边栏、列对齐的 profile 表格（含 Device / Proxy / Timezone · Locale 列），以及用形状和颜色共同区分的状态“印章”（运行中、启动中、失败）。Be Vietnam Pro 和 JetBrains Mono 字体已内置（OFL），无需联网即可使用。
+- 两种界面都新增带数量的 profile 筛选（全部、运行中、有/无 proxy、Chrome engine）；web panel 另外新增批量操作和独立的确认对话框；桌面应用运行时即可在越南语 / English 之间切换。
+- 越南语界面中的专业术语保留英文（fingerprint、engine、timezone、locale）。
 
-### Thêm
-- Nhân **Chrome (thử nghiệm)** bên cạnh Camoufox, dựa trên fingerprint-chromium: chọn khi tạo profile trên app, web panel, REST API (`"engine": "chrome"`) và MCP (`create_profile(engine="chrome")`). Nhân cố định sau khi tạo. Cookie, fingerprint, điều khiển trang, mở lại tab và Kiểm tra IP dùng được như profile Camoufox. Bản trình duyệt được tự tải ở nền khi tạo profile Chrome đầu tiên, hoặc lúc mở profile nếu chưa có (cũng tải tay được bằng `python -m chrome_engine fetch`).
-- Proxy dạng `host:port:user:pass` (định dạng thường gặp của nhà bán proxy) được chấp nhận ở mọi nơi nhập proxy, kể cả có tiền tố `socks5://`.
-- Mở lại các tab đang mở khi profile được dừng (lưu vào `camoufox_data/<profile>/tabs.json` mỗi 2 giây khi tab thay đổi, chỉ `http`/`https`, tối đa 30 tab). Tắt bằng `FOXPROFILE_RESTORE_TABS=false`.
+### 新增
+- 在 Camoufox 之外新增 **Chrome（实验性）** 内核，基于 fingerprint-chromium：创建 profile 时可在应用、web panel、REST API（`"engine": "chrome"`）和 MCP（`create_profile(engine="chrome")`）中选择。内核创建后不可更改。Cookie、fingerprint、页面控制、重新打开标签页和 Check IP 的用法与 Camoufox profile 相同。浏览器构建会在创建第一个 Chrome profile 时于后台自动下载，如果缺失则在打开 profile 时下载（也可以用 `python -m chrome_engine fetch` 手动下载）。
+- 所有填写 proxy 的地方都接受 `host:port:user:pass` 格式（proxy 服务商常见的格式），包括带 `socks5://` 前缀的写法。
+- 停止 profile 时记住已打开的标签页并在下次重新打开（标签页变化时每 2 秒保存一次到 `camoufox_data/<profile>/tabs.json`，仅限 `http`/`https`，最多 30 个标签页）。可用 `FOXPROFILE_RESTORE_TABS=false` 关闭。
 
-### Sửa
-- Rò rỉ DNS khi dùng proxy `socks5://`/`socks4://`: việc tra IP đi ra lúc mở profile và nút **Kiểm tra IP** từng phân giải tên miền bằng DNS của máy (lộ nhà mạng thật). Nay chuyển sang `socks5h://`/`socks4a://` để proxy phân giải. Bản thân trình duyệt không bị ảnh hưởng.
-- Chế độ `HEADLESS=virtual` (server Linux) không còn bỏ sót tiến trình Xvfb khi profile mở lỗi (ví dụ proxy không vào được) hoặc khi runner bị kill cứng/crash. Runner tự quản lý màn hình ảo và ghi lại Xvfb nó đã bật (theo PID và thời điểm khởi động, trong thư mục tạm riêng của user) để launcher, hoặc lần mở sau, tắt đúng Xvfb đó.
+### 修复
+- 使用 `socks5://`/`socks4://` proxy 时的 DNS 泄露：打开 profile 时的出口 IP 查询以及 **Check IP** 按钮此前会用本机 DNS 解析域名（暴露真实运营商）。现在改用 `socks5h://`/`socks4a://`，由 proxy 负责解析。浏览器本身不受影响。
+- `HEADLESS=virtual` 模式（Linux server）在 profile 打开失败（例如 proxy 无法连接）或 runner 被强制终止/崩溃时，不再遗漏 Xvfb 进程。Runner 自行管理虚拟显示器，并记录它启动的 Xvfb（按 PID 和启动时间，保存在用户专属的临时目录），以便 launcher 或下一次启动关闭正确的那个 Xvfb。
 
 ## [2.2.0] - 2026-10-08
 
-### Thêm
-- Đặt cố định múi giờ (IANA) và ngôn ngữ (`vi-VN`) cho từng profile; để trống vẫn tự động theo IP.
-- Nút **Kiểm tra IP**: đối chiếu IP đi ra với Cloudflare, ipinfo và ip-api, cảnh báo lệch quốc gia/múi giờ, IP datacenter, proxy dual-stack và ngôn ngữ ngẫu nhiên. Có trên app, web panel, REST API (`GET /profiles/{name}/ip-check`, `POST /proxy/geo-check`) và MCP (`check_profile_ip`).
-- Hướng dẫn triển khai lên server Linux (`docs/DEPLOY.md`, `deploy/`) và các script e2e thủ công (`tests/e2e/`).
+### 新增
+- 可为每个 profile 固定 timezone（IANA）和语言（`vi-VN`）；留空时仍自动跟随 IP。
+- **Check IP** 按钮：把出口 IP 与 Cloudflare、ipinfo 和 ip-api 对比，对国家/timezone 不一致、机房 IP、双栈 proxy 和随机语言给出警告。应用、web panel、REST API（`GET /profiles/{name}/ip-check`、`POST /proxy/geo-check`）和 MCP（`check_profile_ip`）都提供。
+- Linux server 部署指南（`docs/DEPLOY.md`、`deploy/`）以及手动 e2e 脚本（`tests/e2e/`）。
 
 ## [2.1.0] - 2026-10-08
 
-### Thêm
-- MCP server (27 tool) cho AI agent, qua stdio và qua HTTP tại `/mcp`.
-- Web panel có token bảo vệ, xem và điều khiển màn hình trình duyệt từ xa.
-- Server mode chạy ẩn trình duyệt (`python -m src.server`).
-- Hộp thoại hướng dẫn kết nối MCP cho Claude Code, Cursor, VS Code và Claude Desktop.
+### 新增
+- 面向 AI agent 的 MCP server（27 个工具），支持 stdio 以及 `/mcp` 路径的 HTTP。
+- 受 token 保护的 web panel，可远程查看和控制浏览器画面。
+- 隐藏浏览器的 server 模式（`python -m src.server`）。
+- 面向 Claude Code、Cursor、VS Code 和 Claude Desktop 的 MCP 连接指南对话框。
 
-### Sửa
-- Server mode đọc đúng `FOXPROFILE_HEADLESS` từ `.env`.
+### 修复
+- Server 模式现在能正确读取 `.env` 中的 `FOXPROFILE_HEADLESS`。
 
 ## [2.0.0] - 2026-10-08
 
-Phát hành đầu tiên của FoxProfile: vân tay cố định theo profile, proxy riêng, xuất/nhập cookie (JSON và Netscape), REST API, giao diện tiếng Việt/tiếng Anh.
+FoxProfile 首次发布：按 profile 固定的 fingerprint、独立 proxy、cookie 导出/导入（JSON 和 Netscape）、REST API、越南语/英语界面。
 
 [Unreleased]: https://github.com/chienbm98/foxprofile/compare/v2.3.1...HEAD
 [2.3.1]: https://github.com/chienbm98/foxprofile/compare/v2.3.0...v2.3.1

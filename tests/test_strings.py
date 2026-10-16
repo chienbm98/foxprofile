@@ -15,7 +15,7 @@ LANGS = sorted(STRINGS)
 
 
 def test_languages_are_the_supported_set():
-    assert LANGS == ["en", "vi", "zh-CN"]
+    assert LANGS == ["en", "zh-CN"]
 
 
 def test_languages_have_same_keys():
@@ -60,15 +60,25 @@ def test_language_follows_a_chinese_system(fresh, monkeypatch):
 
 def test_saved_choice_beats_system_and_env_beats_saved(fresh, monkeypatch):
     monkeypatch.setattr(fresh, "_system_language", lambda: "zh-CN")
-    fresh.set_language("vi", persist=True)
+    fresh.set_language("zh-CN", persist=True)
+    monkeypatch.setattr(fresh, "_system_language", lambda: None)
     monkeypatch.setattr(fresh, "_lang", None)
-    assert fresh.current_language() == "vi"
+    assert fresh.current_language() == "zh-CN"
     monkeypatch.setattr(fresh, "_lang", None)
     monkeypatch.setattr(fresh, "LANGUAGE", "zh_CN")
     assert fresh.current_language() == "zh-CN"
     monkeypatch.setattr(fresh, "_lang", None)
     monkeypatch.setattr(fresh, "LANGUAGE", "en")
     assert fresh.current_language() == "en"
+
+
+def test_legacy_vi_setting_falls_back_to_system_language(fresh, monkeypatch):
+    fresh._PREFS_FILE.write_text('{"language": "vi"}', encoding="utf-8")
+    monkeypatch.setattr(fresh, "_system_language", lambda: None)
+    assert fresh.current_language() == "en"
+    monkeypatch.setattr(fresh, "_lang", None)
+    monkeypatch.setattr(fresh, "_system_language", lambda: "zh-CN")
+    assert fresh.current_language() == "zh-CN"
 
 
 def test_unknown_language_is_ignored(fresh):
@@ -112,7 +122,7 @@ def test_web_used_keys_exist():
 
 def test_web_language_buttons():
     text = INDEX.read_text(encoding="utf-8")
-    assert re.findall(r'data-lang="([\w-]+)"', text) == ["zh-CN", "en", "vi"]
+    assert re.findall(r'data-lang="([\w-]+)"', text) == ["zh-CN", "en"]
 
 
 # --- no hard-coded English ---------------------------------------------------------------
@@ -126,7 +136,6 @@ ALLOWED = {
     "Camoufox (Firefox)",
     "Firefox",
     "English",
-    "Tiếng Việt",
     "OS",
     "GPU",
     "CPU",

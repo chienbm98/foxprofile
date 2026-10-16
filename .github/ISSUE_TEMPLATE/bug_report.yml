@@ -1,51 +1,51 @@
-name: 🐛 Báo lỗi / Bug report
-description: Báo một lỗi để chúng tôi sửa
+name: 🐛 Bug 报告 / Bug report
+description: 报告一个 bug，帮助我们修复
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Cảm ơn bạn đã báo lỗi! **Xóa cookie, proxy có mật khẩu và thông tin tài khoản** trước khi dán log.
-        Lỗ hổng bảo mật xin báo riêng theo [SECURITY.md](../blob/main/SECURITY.md).
+        感谢你报告 bug！粘贴日志前，请**删除 cookie、带密码的 proxy 和账号信息**。
+        安全漏洞请按 [SECURITY.md](../blob/main/SECURITY.md) 私下报告。
   - type: textarea
     id: what
     attributes:
-      label: Mô tả lỗi
-      description: Chuyện gì xảy ra, và bạn mong đợi điều gì?
+      label: Bug 描述
+      description: 发生了什么？你期望的结果是什么？
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Các bước tái hiện
+      label: 复现步骤
       placeholder: |
-        1. Tạo profile macOS có proxy socks5
-        2. Bấm Mở
+        1. 创建一个带 socks5 proxy 的 macOS profile
+        2. 点击 Launch
         3. ...
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: Phiên bản FoxProfile / commit
-      placeholder: "2.0.0 hoặc abc1234"
+      label: FoxProfile 版本 / commit
+      placeholder: "2.0.0 或 abc1234"
     validations:
       required: true
   - type: dropdown
     id: os
     attributes:
-      label: Hệ điều hành của máy
+      label: 本机操作系统
       options: [Windows, macOS, Linux]
     validations:
       required: true
   - type: input
     id: python
     attributes:
-      label: Phiên bản Python
+      label: Python 版本
       placeholder: "3.12.4"
   - type: textarea
     id: logs
     attributes:
-      label: Log liên quan
-      description: Trích đoạn trong thư mục `logs/`
+      label: 相关日志
+      description: `logs/` 目录中的片段
       render: text

@@ -40,13 +40,13 @@ Open source (MIT), runs on the user's own machine or VPS, no account and no per-
 
 - Name: **FoxProfile**. Keep it.
 - Logo: the fox icon in `src/assets/icon.png` (and `icon.ico`). Keep it.
-- Language: Vietnamese is the default UI language, with English available.
-- Terminology: keep industry terms in English inside Vietnamese copy (profile, proxy, cookie, fingerprint, engine, timezone, locale, headless, API, MCP...) because users read them more easily than translations.
+- Language: English is the default UI language, with Simplified Chinese (zh-CN) available.
+- Terminology: keep industry terms in English inside Chinese copy (profile, proxy, cookie, fingerprint, engine, timezone, locale, headless, API, MCP...) because users read them more easily than translations.
 
 ## Evidence on Hand
 
-- Screenshots of the current UI: `docs/images/main.png` (desktop), `panel.png`, `panel-viewer.png`, `cookies.png`, `mcp-guide.png` (web panel), `profile-dialog.png` (desktop).
-- README (vi/en) describing every feature. No user testimonials, usage numbers or customer names exist; do not invent them.
+- Screenshots of the current UI: `docs/images/en/main.png` (desktop), `panel.png`, `panel-viewer.png`, `cookies.png`, `mcp-guide.png` (web panel), `profile-dialog.png` (desktop).
+- README (en/zh-CN) describing every feature. No user testimonials, usage numbers or customer names exist; do not invent them.
 
 ## Product Principles
 

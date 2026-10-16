@@ -2,7 +2,7 @@
   <img src="src/assets/icon.png" width="112" alt="FoxProfile logo" />
   <h1>FoxProfile</h1>
   <p><strong>Free, open-source manager for anti-detect browser profiles</strong></p>
-  <p>Per-profile device fingerprint, cookies and proxy · Two engines: Camoufox (Firefox) and Chrome · English and Vietnamese UI · REST API and MCP for automation</p>
+  <p>Per-profile device fingerprint, cookies and proxy · Two engines: Camoufox (Firefox) and Chrome · English and Simplified Chinese UI · REST API and MCP for automation</p>
 
   <p>
     <a href="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml"><img src="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -13,7 +13,7 @@
     <a href="https://buymeacoffee.com/chienbm98"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" /></a>
   </p>
 
-  <p>English · <a href="README.vi.md">Tiếng Việt</a></p>
+  <p>English · <a href="README.zh-CN.md">简体中文</a></p>
   <p>
     <a href="#quick-start">Quick start</a> ·
     <a href="#features">Features</a> ·
@@ -61,7 +61,7 @@ FoxProfile manages anti-detect browser profiles: each profile is a separate iden
 - **MCP server** so AI agents (Claude, Cursor...) can launch profiles, browse, click, type and take screenshots.
 - **Server mode + web panel** for VPS deployments: manage profiles and view their screens remotely, protected by a token.
 - **REST API** with Swagger docs for scripting.
-- **English** (default) and Vietnamese UI, switchable inside the app. Fonts are bundled, no network needed.
+- **English** (default) and Simplified Chinese UI, switchable inside the app. Fonts are bundled, no network needed.
 
 ## Requirements
 
@@ -91,7 +91,7 @@ Run the app:
 python -m src.main
 ```
 
-On Windows you can also double-click `run_foxprofile.bat`. The app opens the manager window and serves the API on `http://127.0.0.1:8000`; API docs are at `http://127.0.0.1:8000/docs`. Set `FOXPROFILE_LANG=vi` for the Vietnamese UI.
+On Windows you can also double-click `run_foxprofile.bat`. The app opens the manager window and serves the API on `http://127.0.0.1:8000`; API docs are at `http://127.0.0.1:8000/docs`. Set `FOXPROFILE_LANG=zh-CN` for the Simplified Chinese UI.
 
 ## Timezone, locale and Check IP
 
@@ -129,7 +129,7 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 On a VPS, put the server behind an HTTPS reverse proxy (Caddy, Nginx) so the token is never sent in clear text. On a display-less Linux box, `FOXPROFILE_HEADLESS=virtual` (needs `xvfb`) runs browsers on a virtual display, which is harder to detect than plain headless.
 
-Full deployment guide (Ubuntu, systemd, nginx, HTTPS; in Vietnamese): [docs/DEPLOY.md](docs/DEPLOY.md).
+Full deployment guide (Ubuntu, systemd, nginx, HTTPS; in Chinese): [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## MCP: let AI agents drive the browser
 
@@ -170,7 +170,7 @@ There is deliberately **no** delete tool, so an agent cannot wipe an account's c
 
 Besides Camoufox (Firefox), a profile can run on the **Chrome** engine: a Chromium build with fingerprint spoofing patched in C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), BSD-3 license). Pick it in **Engine** when creating a profile; it cannot be changed afterwards. The browser build (~140-190 MB depending on the OS, fetched from fingerprint-chromium's GitHub releases and verified by SHA-256) is downloaded in the background as soon as the first Chrome profile is created, or on launch if it is still missing; progress shows in the log. To fetch it ahead of time: `python -m chrome_engine fetch`.
 
-Pick the OS of the machine running FoxProfile: a persona of another OS leaks the machine's fonts, and a Linux persona on Windows/macOS is refused because WebGL reveals the real GPU. Supported: Windows x64, macOS Apple Silicon, Linux x64 (untested). The Fingerprint tab works for Chrome profiles too, but offers only the modes the browser can honour (CPU cores, GPU, audio, WebRTC, timezone, language, geolocation and local-network scan protection); items it cannot do, such as user agent, screen and fonts, are shown as not supported. Canvas is always real on Chrome: this build's canvas noise makes `measureText()` return ~0 (fingerprint-chromium#96). Details and test results (in Vietnamese): [chrome_engine/README.md](chrome_engine/README.md).
+Pick the OS of the machine running FoxProfile: a persona of another OS leaks the machine's fonts, and a Linux persona on Windows/macOS is refused because WebGL reveals the real GPU. Supported: Windows x64, macOS Apple Silicon, Linux x64 (untested). The Fingerprint tab works for Chrome profiles too, but offers only the modes the browser can honour (CPU cores, GPU, audio, WebRTC, timezone, language, geolocation and local-network scan protection); items it cannot do, such as user agent, screen and fonts, are shown as not supported. Canvas is always real on Chrome: this build's canvas noise makes `measureText()` return ~0 (fingerprint-chromium#96). Details and test results (in Chinese): [chrome_engine/README.md](chrome_engine/README.md).
 
 ## Cookies and fingerprints
 
@@ -187,7 +187,7 @@ Everything is optional. To override defaults, copy `.env.example` to `.env`.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `FOXPROFILE_LANG` | `en` | UI language: `en` or `vi` |
+| `FOXPROFILE_LANG` | `en` | UI language: `en` or `zh-CN` |
 | `FOXPROFILE_PROFILES_FILE` | `profiles.json` | Profile list file |
 | `FOXPROFILE_DATA_DIR` | `camoufox_data` | Data directory, one subdirectory per profile |
 | `FOXPROFILE_LOG_DIR` | `logs` | Log directory |
@@ -289,7 +289,7 @@ ruff format --check src tests chrome_engine
 pytest                  # real-browser tests skip unless the browsers are fetched
 ```
 
-Project layout, code conventions and the PR process are in [CONTRIBUTING.md](CONTRIBUTING.md) (Vietnamese; issues and PRs in English are welcome). UI changes follow [DESIGN.md](DESIGN.md) and touch both the desktop app and the web panel. Release notes: [CHANGELOG.md](CHANGELOG.md).
+Project layout, code conventions and the PR process are in [CONTRIBUTING.md](CONTRIBUTING.md) (Chinese; issues and PRs in English are welcome). UI changes follow [DESIGN.md](DESIGN.md) and touch both the desktop app and the web panel. Release notes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
