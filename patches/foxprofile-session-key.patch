@@ -1,0 +1,52 @@
+--- a/toolkit/components/resistfingerprinting/nsRFPService.cpp
++++ b/toolkit/components/resistfingerprinting/nsRFPService.cpp
+@@ -1321,6 +1321,38 @@
+ // ============================================================================
+ // ============================================================================
+ // Randomization Stuff
++
++// The pref holds a persistent session key, "{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}".
++// With it set, noise survives restarts. An empty or invalid value keeps the
++// per-session random key.
++static nsID GenerateSessionKey(const nsACString& aOaSuffix) {
++  nsAutoCString prefKey;
++  nsID id;
++  if (NS_FAILED(Preferences::GetCString(
++          "privacy.fingerprintingProtection.randomization.sessionKey",
++          prefKey)) ||
++      !id.Parse(prefKey)) {
++    return nsID::GenerateUUID();
++  }
++  if (aOaSuffix.IsEmpty()) {
++    return id;
++  }
++  // Private browsing, containers and per-site partitions: a stable key that
++  // differs for every suffix.
++  HMAC hmac;
++  nsTArray<uint8_t> digest;
++  if (NS_FAILED(hmac.Begin(SEC_OID_SHA256,
++                           Span(reinterpret_cast<const uint8_t*>(prefKey.get()),
++                                prefKey.Length()))) ||
++      NS_FAILED(hmac.Update(reinterpret_cast<const uint8_t*>(aOaSuffix.BeginReading()),
++                            aOaSuffix.Length())) ||
++      NS_FAILED(hmac.End(digest)) || digest.Length() < sizeof(nsID)) {
++    return nsID::GenerateUUID();
++  }
++  memcpy(&id, digest.Elements(), sizeof(nsID));
++  return id;
++}
++
+ nsresult nsRFPService::GetBrowsingSessionKey(
+     const OriginAttributes& aOriginAttributes, nsID& aBrowsingSessionKey) {
+   MOZ_ASSERT(XRE_IsParentProcess());
+@@ -1358,8 +1390,8 @@
+     return NS_OK;
+   }
+ 
+-  nsID& newKey =
+-      mBrowsingSessionKeys.InsertOrUpdate(oaSuffix, nsID::GenerateUUID());
++  nsID& newKey = mBrowsingSessionKeys.InsertOrUpdate(
++      oaSuffix, GenerateSessionKey(oaSuffix));
+ 
+   MOZ_LOG(gResistFingerprintingLog, LogLevel::Debug,
+           ("Generated browsing session key: %s\n", newKey.ToString().get()));

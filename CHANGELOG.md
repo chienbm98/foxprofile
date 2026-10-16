@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-16
+
+### Thêm
+- Bộ cài kèm sẵn bản Camoufox riêng của FoxProfile (156.0.1-beta.36-fp1, `patches/foxprofile-session-key.patch`), không còn tải bản gốc ở lần chạy đầu. Bộ cài nặng khoảng 1.4GB.
+- Mỗi profile có khóa nhiễu canvas/WebGL riêng (`noise_key` trong `fingerprint.json`): nhiễu giữ nguyên qua các lần mở, vẫn khác nhau giữa các trang web và giữa các profile. Tạo lại fingerprint thì đổi khóa.
+
 ## [2.5.0] - 2026-10-16
 
 ### Thêm
