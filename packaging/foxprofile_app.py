@@ -60,6 +60,29 @@ def run_helper(kind: str, args: list[str]) -> None:
     runpy.run_module(HELPERS[kind], run_name="__main__", alter_sys=True)
 
 
+def bundled_browser() -> Path | None:
+    """The patched Camoufox shipped inside the app (see build_macos.sh / release.yml):
+    FoxProfile.app/Contents/Resources/browser on macOS, <install dir>/browser on Windows."""
+    exe = Path(sys.executable).resolve()
+    root = exe.parent.parent / "Resources" if sys.platform == "darwin" else exe.parent
+    path = root / "browser"
+    return path if (path / "version.json").exists() else None
+
+
+def use_bundled_browser(path: Path) -> None:
+    """Make Camoufox launch the bundled build in place (no 2 GB copy): an absolute
+    active_version, marked as the user's choice so the package pin does not override it."""
+    from camoufox.multiversion import COMPAT_FLAG, load_config, save_config
+
+    # Without the flag camoufox treats its cache dir as an old layout and deletes it.
+    COMPAT_FLAG.parent.mkdir(parents=True, exist_ok=True)
+    COMPAT_FLAG.touch()
+    config = load_config()
+    if config.get("active_version") != str(path) or not config.get("pinned"):
+        config.update(active_version=str(path), pinned=True)
+        save_config(config)
+
+
 def fetch_browser_if_missing() -> None:
     """Camoufox (~300 MB) is not bundled and nothing else fetches it: download it
     in the background on first start; progress goes to logs/camoufox_fetch.log."""
@@ -92,7 +115,10 @@ def main() -> None:
         run_helper(sys.argv[2], sys.argv[3:])
         return
     if frozen:
-        fetch_browser_if_missing()
+        if bundled := bundled_browser():
+            use_bundled_browser(bundled)
+        else:
+            fetch_browser_if_missing()
     from src.main import main as run_app
 
     run_app()

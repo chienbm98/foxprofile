@@ -1,7 +1,7 @@
 name: Release
 
-# Builds the desktop installers (Windows Setup .exe, macOS .dmg). The Camoufox browser is
-# not bundled: the app downloads it on first start (see README, "Installers").
+# Builds the desktop installers (Windows Setup .exe, macOS .dmg) with FoxProfile's patched
+# Camoufox bundled inside (from the CAMOUFOX_TAG release).
 on:
   workflow_dispatch:
   push:
@@ -9,6 +9,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # Release in this repo holding FoxProfile's Camoufox builds (patches/foxprofile-session-key.patch)
+  CAMOUFOX_TAG: camoufox-v156.0.1-beta.36-fp1
 
 jobs:
   windows:
@@ -32,6 +36,13 @@ jobs:
       - name: Build app (PyInstaller via flet pack)
         shell: bash
         run: bash packaging/pack.sh --icon src/assets/icon.ico
+      - name: Bundle the patched Camoufox
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$CAMOUFOX_TAG" -p '*-win.x86_64.zip' -D "$RUNNER_TEMP/camoufox"
+          bash packaging/bundle_browser.sh "$RUNNER_TEMP"/camoufox/*-win.x86_64.zip dist/FoxProfile/browser
       - name: Build installer (Inno Setup)
         shell: pwsh
         run: |
@@ -65,7 +76,11 @@ jobs:
           cache: pip
           cache-dependency-path: requirements*.txt
       - run: python -m pip install -r requirements.lock -r requirements-build.txt
-      - run: bash packaging/build_macos.sh
+      - name: Fetch the patched Camoufox
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$CAMOUFOX_TAG" -p '*-mac.arm64.zip' -D "$RUNNER_TEMP/camoufox"
+      - run: CAMOUFOX_ZIP=$(ls "$RUNNER_TEMP"/camoufox/*-mac.arm64.zip) bash packaging/build_macos.sh
       - uses: actions/upload-artifact@v4
         with:
           name: FoxProfile-dmg-macos-arm64

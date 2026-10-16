@@ -16,6 +16,12 @@ iconutil -c icns "$ICONSET" -o packaging/.gen/FoxProfile.icns
 
 bash packaging/pack.sh --icon packaging/.gen/FoxProfile.icns --bundle-id com.foxprofile.app
 
+# The patched Camoufox (canvas noise key, see README) ships inside the app and is launched
+# in place: CAMOUFOX_ZIP=path/to/camoufox-<version>-<build>-fp1-mac.arm64.zip
+if [[ -n "${CAMOUFOX_ZIP:-}" ]]; then
+  bash packaging/bundle_browser.sh "$CAMOUFOX_ZIP" dist/FoxProfile.app/Contents/Resources/browser
+fi
+
 codesign --force --deep -s - dist/FoxProfile.app   # ad-hoc: not notarized, first open needs right-click > Open
 codesign --verify --deep --strict dist/FoxProfile.app
 
