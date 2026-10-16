@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-10-16
+
 ### 变更
 - 文档改为简体中文：`README.vi.md` 改为 `README.zh-CN.md`，`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`docs/DEPLOY.md`、`DESIGN.md`、`CHANGELOG.md` 和 issue/PR 模板同样改为中文。
 
