@@ -27,5 +27,5 @@ codesign --verify --deep --strict dist/FoxProfile.app
 
 STAGE=build/dmg
 mkdir -p "$STAGE" && cp -R dist/FoxProfile.app "$STAGE/" && ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname FoxProfile -srcfolder "$STAGE" -ov -format UDZO "dist/FoxProfile-$VERSION.dmg"
+hdiutil create -volname FoxProfile -srcfolder "$STAGE" -ov -format ULMO "dist/FoxProfile-$VERSION.dmg"
 du -sh dist/FoxProfile.app "dist/FoxProfile-$VERSION.dmg"
