@@ -22,6 +22,13 @@ if [[ -n "${CAMOUFOX_ZIP:-}" ]]; then
   bash packaging/bundle_browser.sh "$CAMOUFOX_ZIP" dist/FoxProfile.app/Contents/Resources/browser
 fi
 
+# flet pack leaves the version at 0.0.0. LSUIElement: this Python launcher only starts the
+# Flet window app (~/.flet/client/.../FoxProfile.app), which has its own Dock icon.
+PLIST=dist/FoxProfile.app/Contents/Info.plist
+plutil -replace CFBundleShortVersionString -string "$VERSION" "$PLIST"
+plutil -replace CFBundleVersion -string "$VERSION" "$PLIST"
+plutil -replace LSUIElement -bool true "$PLIST"
+
 codesign --force --deep -s - dist/FoxProfile.app   # ad-hoc: not notarized, first open needs right-click > Open
 codesign --verify --deep --strict dist/FoxProfile.app
 

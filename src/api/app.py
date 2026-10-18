@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 
-from ..core.config import API_PORT, API_TOKEN, DEFAULT_ENGINE, HEADLESS, HOST_OS
+from ..core.config import API_PORT, API_TOKEN, DEFAULT_ENGINE, HEADLESS, HOST_OS, VERSION
 from ..core.logging import get_logger
 from ..core.strings import FIXED_LANGUAGE
 from . import mcp_http
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
 logger = get_logger("api")
 
 API_PREFIX = "/api/v1"
-VERSION = "2.6.2"
 _PANEL = pathlib.Path(__file__).resolve().parents[1] / "web" / "index.html"
 _FONTS = pathlib.Path(__file__).resolve().parents[1] / "assets" / "fonts"
 # Served to the panel without a token: it needs them before login.

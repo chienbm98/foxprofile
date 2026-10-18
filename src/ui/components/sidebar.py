@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 import flet as ft
 
+from ...core.config import VERSION
 from ...core.strings import get_string
 from ..theme.colors import COLORS, FONT_BOLD, FONT_DATA, FONT_MEDIUM, FONT_SEMIBOLD
 from ..theme.styles import ACCENT_STYLE, RAIL_STYLE
@@ -89,11 +90,23 @@ def build_sidebar(
                         ft.Column(
                             spacing=0,
                             controls=[
-                                ft.Text(
-                                    get_string("app_name"),
-                                    size=18,
-                                    font_family=FONT_BOLD,
-                                    color=COLORS["cover_ink"],
+                                ft.Row(
+                                    spacing=6,
+                                    vertical_alignment=ft.CrossAxisAlignment.END,
+                                    controls=[
+                                        ft.Text(
+                                            get_string("app_name"),
+                                            size=18,
+                                            font_family=FONT_BOLD,
+                                            color=COLORS["cover_ink"],
+                                        ),
+                                        ft.Text(
+                                            f"v{VERSION}",
+                                            size=11,
+                                            font_family=FONT_DATA,
+                                            color=COLORS["cover_muted"],
+                                        ),
+                                    ],
                                 ),
                                 ft.Text(
                                     get_string("app_subtitle"),

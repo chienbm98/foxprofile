@@ -63,5 +63,5 @@ Run everything from the repo root: `profiles.json`, `camoufox_data/`, `logs/` an
 - Profile names become directory names: always pass them through `validate_profile_name`.
 - Proxies go through `utils/proxy_parser.parse_proxy` (accepts `[scheme://][user:pass@]host:port` and `host:port:user:pass`); validation is `utils/validation.validate_proxy_format`.
 - `README.md` (English, primary) and `README.zh-CN.md` (Chinese) must stay in sync. `CONTRIBUTING.md`, `SECURITY.md` and `docs/DEPLOY.md` are in Chinese.
-- Release: bump `version` in `pyproject.toml`, `VERSION` in `src/api/app.py`, and `CHANGELOG.md` in one PR, then tag `vX.Y.Z`.
+- Release: bump `version` in `pyproject.toml`, `VERSION` in `src/core/config.py`, and `CHANGELOG.md` in one PR, then tag `vX.Y.Z`.
 - `main` is protected: changes go through a PR with all CI checks green. Commits follow Conventional Commits.

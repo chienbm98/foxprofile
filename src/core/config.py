@@ -69,5 +69,7 @@ API_TOKEN = _env("API_TOKEN", "") or _load_or_create_token()
 
 # New profiles default to the Camoufox (Firefox) engine and to this machine's OS.
 # The Chrome engine shows the host's fonts, so another OS persona is inconsistent there.
+VERSION = "2.6.2"  # also pyproject.toml
+
 HOST_OS = {"darwin": "macos", "win32": "windows"}.get(sys.platform, "linux")
 DEFAULT_ENGINE = "camoufox"
