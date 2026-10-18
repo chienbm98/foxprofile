@@ -55,7 +55,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       # Tag builds go to the release; keep manual test builds only briefly (Actions storage is 0.5 GB).
       - uses: actions/upload-artifact@v4
-        if: \"!startsWith(github.ref, 'refs/tags/v')\"
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         with:
           name: FoxProfile-Setup-windows
           path: dist/FoxProfile-Setup-*.exe
@@ -91,7 +91,7 @@ jobs:
       - run: CAMOUFOX_ZIP=$(ls "$RUNNER_TEMP"/camoufox/*-mac.arm64.zip) bash packaging/build_macos.sh
       # Tag builds go to the release; keep manual test builds only briefly (Actions storage is 0.5 GB).
       - uses: actions/upload-artifact@v4
-        if: \"!startsWith(github.ref, 'refs/tags/v')\"
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         with:
           name: FoxProfile-dmg-macos-arm64
           path: dist/FoxProfile-*.dmg
