@@ -52,8 +52,19 @@ def push(name: str, force: bool = False, svc: SyncService = Depends(get_sync)) -
 
 
 @router.post("/{name}/pull")
-def pull(name: str, force: bool = False, svc: SyncService = Depends(get_sync)) -> dict:
-    return _call(svc.pull, name, force)
+def pull(
+    request: Request,
+    name: str,
+    force: bool = False,
+    check: bool = True,
+    svc: SyncService = Depends(get_sync),
+) -> dict:
+    """Pull a profile; with check=true also verify in the background that its Gmail
+    session survived the move (opens the profile briefly)."""
+    result = _call(svc.pull, name, force)
+    if check and not result.get("skipped"):
+        request.app.state.container.automation.check_sessions([name])
+    return result
 
 
 @router.put("/{name}/auto")

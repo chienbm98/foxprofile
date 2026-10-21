@@ -43,6 +43,17 @@ def _guard(fn, *args, **kwargs):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+class SessionCheckBody(BaseModel):
+    profiles: list[str]
+
+
+@router.post("/session-check")
+def session_check(body: SessionCheckBody, a: Automation = Depends(get_auto)) -> dict:
+    """Open each profile's Gmail inbox in the background and record whether it is still
+    logged in (and as whom) on the profile: session_state, session_checked_at, email."""
+    return _guard(a.check_sessions, body.profiles)
+
+
 @router.get("/groups")
 def groups(a: Automation = Depends(get_auto)) -> dict:
     return {"groups": a.groups()}

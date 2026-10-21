@@ -43,4 +43,10 @@ def profile_response(profile: Profile, bl: IBrowserLauncher) -> ProfileResponse:
         engine=profile.engine,
         data_dir=os.path.join(os.getcwd(), DATA_DIR, profile.name),
         is_running=bl.is_running(profile.name),
+        email=profile.email,
+        purpose=profile.purpose,
+        notes=profile.notes,
+        tags=list(profile.tags),
+        session_state=profile.session_state,
+        session_checked_at=profile.session_checked_at,
     )

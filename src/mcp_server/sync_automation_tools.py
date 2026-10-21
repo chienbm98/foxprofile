@@ -105,3 +105,12 @@ async def activity_log(limit: int = 50, profile: str | None = None) -> dict:
     return await _arequest(
         "GET", "/automation/activity", query={"limit": limit, "profile": profile}
     )
+
+
+@mcp.tool()
+async def check_sessions(profiles: list[str]) -> dict:
+    """Check in the background whether each profile is still logged in to Gmail (opens its
+    inbox, closes the profile afterwards if it was closed). Results land on the profile:
+    session_state (alive / logged_out / unknown), session_checked_at and the detected email;
+    read them with list_profiles."""
+    return await _arequest("POST", "/automation/session-check", {"profiles": profiles})

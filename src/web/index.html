@@ -275,6 +275,12 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
   .login { grid-template-columns: 1fr; }
   .login .cover-side { padding: 24px; }
 }
+.sdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; background: var(--ink-3); vertical-align: baseline; }
+.sdot.alive { background: #2e9d57; }
+.sdot.logged_out { background: #c43b2f; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--paper-sunk); color: var(--ink-2); }
+textarea { width: 100%; resize: vertical; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--rule); background: var(--paper); color: inherit; }
 </style>
 </head>
 <body>
@@ -385,7 +391,7 @@ const I18N = {
   vi: {
     tagline: "Quản lý profile anti-detect", new_profile: "Tạo profile", filters: "Lọc",
     f_all: "Tất cả", f_running: "Đang chạy", f_proxy: "Có proxy", f_direct: "Không proxy", f_chrome: "Engine Chrome",
-    api_docs: "Tài liệu API", logout: "Đăng xuất", your_profiles: "Profile", search: "Tìm theo tên hoặc proxy",
+    api_docs: "Tài liệu API", logout: "Đăng xuất", your_profiles: "Profile", search: "Tìm theo tên, email, thẻ, ghi chú hoặc proxy",
     counts: "{n} profile · {r} đang chạy", counts_none: "{n} profile · chưa có profile nào chạy",
     col_profile: "Profile", col_device: "Thiết bị", col_proxy: "Proxy", col_geo: "Timezone · Locale", col_status: "Trạng thái",
     empty_title: "Chưa có profile nào", empty: "Mỗi profile là một danh tính riêng: fingerprint, cookie và proxy của nó. Tạo profile đầu tiên để bắt đầu.",
@@ -411,6 +417,9 @@ const I18N = {
     confirm_reset: "Tạo fingerprint mới cho “{name}”? Trang web sẽ thấy đây là một máy khác.", close: "Đóng",
     launching: "Đang mở {name}...", started: "Đã mở {name}", stopped: "Đã dừng {name}", created: "Đã tạo {name}", saved: "Đã lưu",
     deleted: "Đã xoá {name}", deleted_n: "Đã xoá {n} profile", exported: "Đã xuất {n} cookie", imported: "Đã nhập {n} cookie", fp_reset: "Đã tạo fingerprint mới",
+    f_loggedout: "Mất đăng nhập", session_alive: "Phiên còn sống", session_logged_out: "Đã mất đăng nhập", session_unknown: "Chưa rõ", session_none: "Chưa kiểm tra", session_never: "chưa kiểm tra lần nào",
+    check_sessions: "Kiểm tra phiên", check_started: "Đang kiểm tra {n} profile trong nền...",
+    account_email: "Tài khoản (email)", purpose: "Mục đích", purpose_hint: "vd: đăng ký web free, nuôi mail", tags: "Thẻ", tags_hint: "Cách nhau bằng dấu phẩy", notes: "Ghi chú", notes_hint: "Ghi chú nhiều dòng...",
     sync_auto: "Tự đồng bộ", sync_auto_hint: "Kéo bản mới trước khi mở và tự đẩy lên khi profile dừng",
     sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
     sync_title: "Đồng bộ profile giữa các máy", sync_sub: "Đăng nhập một lần, dùng ở máy khác mà không phải đăng nhập lại.",
@@ -453,7 +462,7 @@ const I18N = {
   en: {
     tagline: "Anti-detect profile manager", new_profile: "New profile", filters: "Filter",
     f_all: "All", f_running: "Running", f_proxy: "With proxy", f_direct: "No proxy", f_chrome: "Chrome engine",
-    api_docs: "API docs", logout: "Log out", your_profiles: "Profiles", search: "Search by name or proxy",
+    api_docs: "API docs", logout: "Log out", your_profiles: "Profiles", search: "Search by name, email, tag, note or proxy",
     counts: "{n} profiles · {r} running", counts_none: "{n} profiles · none running",
     col_profile: "Profile", col_device: "Device", col_proxy: "Proxy", col_geo: "Timezone · Locale", col_status: "Status",
     empty_title: "No profiles yet", empty: "Each profile is its own identity: its fingerprint, cookies and proxy. Create the first one to get started.",
@@ -479,6 +488,9 @@ const I18N = {
     confirm_reset: "Create a new fingerprint for “{name}”? Sites will see a different machine.", close: "Close",
     launching: "Launching {name}...", started: "Started {name}", stopped: "Stopped {name}", created: "Created {name}", saved: "Saved",
     deleted: "Deleted {name}", deleted_n: "Deleted {n} profiles", exported: "Exported {n} cookies", imported: "Imported {n} cookies", fp_reset: "New fingerprint created",
+    f_loggedout: "Logged out", session_alive: "Session alive", session_logged_out: "Logged out", session_unknown: "Unknown", session_none: "Not checked", session_never: "never checked",
+    check_sessions: "Check sessions", check_started: "Checking {n} profile(s) in the background...",
+    account_email: "Account (email)", purpose: "Purpose", purpose_hint: "e.g. free signups, mail warm-up", tags: "Tags", tags_hint: "Comma separated", notes: "Notes", notes_hint: "Multi-line notes...",
     sync_auto: "Auto-sync", sync_auto_hint: "Pull a newer copy before launch and push when the profile stops",
     sync_button: "Sync profiles", tasks_button: "Tasks & groups",
     sync_title: "Sync profiles between machines", sync_sub: "Log in once, reuse the session on another machine without logging in again.",
@@ -634,11 +646,12 @@ const FILTERS = [
   ["proxy", "f_proxy", (p) => !!p.proxy],
   ["direct", "f_direct", (p) => !p.proxy],
   ["chrome", "f_chrome", (p) => p.engine === "chrome"],
+  ["loggedout", "f_loggedout", (p) => p.session_state === "logged_out"],
 ];
 function visible() {
   const q = $("search").value.trim().toLowerCase();
   const pass = FILTERS.find((f) => f[0] === filter)[2];
-  return profiles.filter((p) => pass(p) && (!q || p.name.toLowerCase().includes(q) || (p.proxy || "").toLowerCase().includes(q)));
+  return profiles.filter((p) => pass(p) && (!q || [p.name, p.proxy, p.email, p.purpose, p.notes, (p.tags || []).join(" ")].some((v) => (v || "").toLowerCase().includes(q))));
 }
 
 let lastRender = "";
@@ -708,6 +721,12 @@ function stamp(p) {
   return h("span", { class: "idle" }, t("idle"));
 }
 
+function sessionDot(p) {
+  const st = p.session_state || "none";
+  const when = p.session_checked_at ? fmtTime(p.session_checked_at) : t("session_never");
+  return h("span", { class: "sdot " + st, title: `${t("session_" + st)} · ${when}`, role: "img", "aria-label": t("session_" + st) });
+}
+
 function row(p) {
   const on = running.has(p.name);
   const fp = fingerprints[p.name];
@@ -726,8 +745,9 @@ function row(p) {
   return h("div", { class: "row body" + (on ? " live" : "") + (selected.has(p.name) ? " selected" : ""), role: "row" },
     h("div", { class: "c-sel", role: "cell" }, box),
     h("div", { class: "c-name stack", role: "cell" },
-      h("span", { class: "name", title: p.name }, p.name),
-      h("span", { class: "minor" }, engine)),
+      h("span", { class: "name", title: p.name }, sessionDot(p), p.name),
+      h("span", { class: "minor", title: [p.purpose, p.notes].filter(Boolean).join("\n") }, [engine, p.email, p.purpose].filter(Boolean).join(" · ")),
+      (p.tags && p.tags.length) ? h("span", { class: "tags" }, p.tags.map((tg) => h("span", { class: "tag" }, tg))) : null),
     h("div", { class: "c-device device", role: "cell" }, h("span", { class: "os", title: p.os_type }, os),
       h("div", { class: "stack" }, h("span", { class: p.engine === "chrome" ? "engine chrome" : "engine" }, engine),
         fp && fp.exists ? h("span", { class: "data minor" }, [fp.screen, `${fp.hardware_concurrency || "?"} CPU`].filter(Boolean).join(" · "))
@@ -753,8 +773,15 @@ function bulkBar() {
     h("span", { class: "n" }, t("selected", { n: names.length })),
     h("button", { class: "btn btn-act", onclick: () => bulk("launch") }, icon("play", true), t("bulk_launch")),
     h("button", { class: "btn btn-line", onclick: () => bulk("stop") }, icon("stop", true), t("bulk_stop")),
+    h("button", { class: "btn btn-line", onclick: () => checkSessions(names) }, icon("check", true), t("check_sessions")),
     h("button", { class: "btn btn-line", onclick: () => bulk("delete") }, icon("trash", true), t("bulk_delete")),
     h("button", { class: "btn btn-ghost", style: "margin-left:auto", onclick: () => { selected.clear(); render(); } }, t("clear_sel")));
+}
+
+async function checkSessions(names) {
+  try { await api("POST", "/automation/session-check", { profiles: names }); toast(t("check_started", { n: names.length })); }
+  catch (e) { return toast(e.message, true); }
+  for (let i = 0; i < 8; i++) { await new Promise((r) => setTimeout(r, 15000)); await refresh(); }
 }
 
 async function bulk(action) {
@@ -853,6 +880,11 @@ function openEditor(p) {
     const proxy = h("input", { id: "f-proxy", value: p && p.proxy ? p.proxy : "", placeholder: "socks5://user:pass@host:port", autocomplete: "off", class: "data" });
     const tz = h("input", { id: "f-tz", value: p && p.timezone ? p.timezone : "", placeholder: t("tz_hint"), autocomplete: "off", class: "data" });
     const loc = h("input", { id: "f-locale", value: p && p.locale ? p.locale : "", placeholder: t("locale_hint"), autocomplete: "off", class: "data" });
+    const email = h("input", { id: "f-email", type: "email", value: p && p.email ? p.email : "", placeholder: "name@gmail.com", autocomplete: "off" });
+    const purpose = h("input", { id: "f-purpose", value: p && p.purpose ? p.purpose : "", placeholder: t("purpose_hint"), maxlength: 200, autocomplete: "off" });
+    const tags = h("input", { id: "f-tags", value: p && p.tags ? p.tags.join(", ") : "", placeholder: "gmail, free, vps-1", autocomplete: "off" });
+    const notes = h("textarea", { id: "f-notes", rows: 4, maxlength: 5000, placeholder: t("notes_hint") });
+    notes.value = p && p.notes ? p.notes : "";
     const msg = h("div", { class: "msg", role: "status" });
     const geo = h("div");
     const say = (cls, text) => { msg.className = "msg " + cls; msg.textContent = text; };
@@ -879,7 +911,9 @@ function openEditor(p) {
       const submitBtn = e.currentTarget.querySelector(".modal-foot .btn-act");
       if (submitBtn) submitBtn.disabled = true;
       const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null,
-        timezone: tz.value.trim(), locale: loc.value.trim() };
+        timezone: tz.value.trim(), locale: loc.value.trim(),
+        email: email.value.trim(), purpose: purpose.value.trim(), notes: notes.value.trim(),
+        tags: tags.value.split(",").map((x) => x.trim()).filter(Boolean) };
       if (!p) body.engine = engine.value;
       try {
         if (p) { await api("PATCH", `/profiles/${enc(p.name)}`, body); delete fingerprints[p.name]; toast(t("saved")); }
@@ -893,6 +927,10 @@ function openEditor(p) {
         field(t("name"), name),
         h("div", { class: "field-row" }, field(t("engine"), engine, p ? t("engine_locked") : null), field(t("os"), os)),
         engineNote,
+        field(t("account_email"), email),
+        h("div", { class: "field-row" }, field(t("purpose"), purpose), field(t("tags"), tags, t("tags_hint"))),
+        field(t("notes"), notes),
+        p ? h("div", { class: "hint" }, sessionDot(p), ` ${t("session_" + (p.session_state || "none"))} · ${p.session_checked_at ? fmtTime(p.session_checked_at) : t("session_never")}`) : null,
         field(t("proxy_label"), proxy, t("proxy_hint")),
         h("div", { class: "inline-btns" }, check, checkIp),
         msg,

@@ -15,15 +15,34 @@ from ...utils.validation import (
 )
 from ..browser.fingerprint import CHROME_PERSONA_FILE
 
+
+def _meta_from(data: dict) -> dict:
+    from .manager import _meta_from as meta
+
+    return meta(data)
+
+
 logger = get_logger("profile.transfer")
 
 # Rebuilt by the browser on demand; leaving them out keeps a synced profile small
 # without touching cookies, logins, local storage or the session.
 CACHE_DIRS = frozenset(
     {
-        "cache2", "startupCache", "shader-cache", "GPUCache", "Code Cache", "crashes",
-        "minidumps", "datareporting", "safebrowsing", "thumbnails", "Crashpad",
-        "ShaderCache", "GrShaderCache", "DawnCache", "component_crx_cache",
+        "cache2",
+        "startupCache",
+        "shader-cache",
+        "GPUCache",
+        "Code Cache",
+        "crashes",
+        "minidumps",
+        "datareporting",
+        "safebrowsing",
+        "thumbnails",
+        "Crashpad",
+        "ShaderCache",
+        "GrShaderCache",
+        "DawnCache",
+        "component_crx_cache",
     }
 )
 
@@ -120,6 +139,7 @@ def import_from_zip(
                 engine=profile_data.get("engine")
                 if profile_data.get("engine") in ENGINES
                 else "camoufox",
+                **_meta_from(profile_data),
             )
 
             data_files = [f for f in zipf.namelist() if f.startswith("data/")]

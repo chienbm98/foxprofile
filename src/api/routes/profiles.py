@@ -15,6 +15,7 @@ from ...services.browser.launcher import ProfileBusyError
 from ...services.proxy.geo_check import check_geo
 from ...utils.validation import (
     validate_locale,
+    validate_meta,
     validate_profile_name,
     validate_proxy_format,
     validate_timezone,
@@ -67,6 +68,25 @@ def _require_engine(engine: str) -> None:
         raise HTTPException(status_code=400, detail=f"Chrome engine unavailable here: {reason}")
 
 
+META_INPUT = ("email", "purpose", "notes", "tags")
+
+
+def _current_meta(profile) -> dict:
+    return {k: getattr(profile, k) for k in META_INPUT}
+
+
+def _require_meta(values: dict) -> None:
+    valid, msg = validate_meta(*(values.get(k) for k in META_INPUT))
+    if not valid:
+        raise HTTPException(status_code=400, detail=msg)
+
+
+def _store_meta(pm, name: str, supplied: dict) -> None:
+    meta = {k: supplied[k] for k in META_INPUT if k in supplied}
+    if meta:
+        pm.update_meta(name, **meta)
+
+
 def _require_geo(timezone: str | None, locale: str | None) -> None:
     for validate, value in ((validate_timezone, timezone), (validate_locale, locale)):
         valid, msg = validate(value or "")
@@ -101,6 +121,7 @@ def create_profile(
     _require_os(body.os_type)
     _require_engine(body.engine)
     _require_geo(body.timezone, body.locale)
+    _require_meta(body.model_dump(exclude_unset=True))
 
     if body.proxy:
         valid, msg = validate_proxy_format(body.proxy)
@@ -117,6 +138,7 @@ def create_profile(
     ):
         raise HTTPException(status_code=409, detail="Profile already exists")
 
+    _store_meta(pm, body.name, body.model_dump(exclude_unset=True))
     logger.info("API created profile: %s", body.name)
     if body.engine == "chrome":
         chrome_prefetch.start()
@@ -183,10 +205,15 @@ def update_profile(
         if not valid:
             raise HTTPException(status_code=400, detail=msg)
 
+    meta = {k: v for k, v in supplied.items() if k in META_INPUT}
+    if meta:
+        _require_meta({**_current_meta(profile), **meta})
+
     if not pm.update_profile(
         name, new_name, new_proxy or "", new_os, new_timezone or None, new_locale or None
     ):
         raise HTTPException(status_code=409, detail="Update failed (name conflict?)")
+    _store_meta(pm, new_name, meta)
 
     logger.info("API updated profile: %s -> %s", name, new_name)
     bus.emit()

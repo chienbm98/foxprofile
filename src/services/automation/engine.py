@@ -46,6 +46,7 @@ STEP_VERBS: dict[str, tuple[str, ...]] = {
     "evaluate": ("script",),
     "screenshot": (),
     "text": (),
+    "session_check": (),
 }
 
 WARMUP_SITES = [
@@ -57,6 +58,7 @@ WARMUP_SITES = [
 ]
 
 TEMPLATES: dict[str, list[dict[str, Any]]] = {
+    "session-check-gmail": [{"do": "session_check"}],
     "keepalive-gmail": [
         {"do": "goto", "url": "https://mail.google.com/"},
         {"do": "wait", "seconds": [6, 12]},
@@ -394,6 +396,8 @@ class Automation:
                 out.append(c(name, "evaluate", {"script": step["script"]}))
             elif verb == "text":
                 out.append(c(name, "text", {"selector": step.get("selector", "body")}))
+            elif verb == "session_check":
+                out.append(self._check_running(name))
             elif verb == "screenshot":
                 shot = c(name, "screenshot", {"full_page": bool(step.get("full_page"))})
                 folder = pathlib.Path(SCREENSHOT_DIR) / name
@@ -402,6 +406,56 @@ class Automation:
                 path.write_bytes(base64.b64decode(shot["png_base64"]))
                 out.append({"saved": str(path)})
         return out
+
+    # -- session check --
+    def _check_running(self, name: str) -> dict[str, Any]:
+        from ..browser import session_check
+
+        result = session_check.check(self.launcher.control, name)
+        fields: dict[str, Any] = {
+            "session_state": result["state"],
+            "session_checked_at": time.time(),
+        }
+        if result["email"]:
+            fields["email"] = result["email"]
+        self.pm.update_meta(name, **fields)
+        self.log.add("session_check", name, state=result["state"], email=result["email"])
+        return result
+
+    def check_session(self, name: str) -> dict[str, Any]:
+        """Check one profile's Gmail session, launching it first if it is closed."""
+        profile = self.pm.profiles.get(name)
+        if profile is None:
+            raise AutomationError(f"profile {name} not found")
+        launched_here = False
+        try:
+            if not self.launcher.is_running(name):
+                if not self.launcher.start_thread(profile, lambda m: None):
+                    raise AutomationError("could not start the profile")
+                launched_here = True
+                ok, error = self.launcher.wait_for_launch(name, LAUNCH_WAIT_TIMEOUT)
+                if not ok:
+                    raise AutomationError(f"launch failed: {error}")
+            return self._check_running(name)
+        finally:
+            if launched_here:
+                self.launcher.stop_profile(name)
+
+    def check_sessions(self, names: list[str]) -> dict[str, Any]:
+        """Check several profiles in the background, a few at a time."""
+        unknown = [n for n in names if n not in self.pm.profiles]
+        if unknown:
+            raise AutomationError(f"unknown profiles: {', '.join(unknown)}")
+
+        def one(n: str) -> None:
+            try:
+                self.check_session(n)
+            except Exception as e:
+                self.log.add("session_check_error", n, error=str(e)[:200])
+
+        for n in names:
+            self._pool.submit(one, n)
+        return {"started": names}
 
     # -- scheduler --
     def start(self) -> None:

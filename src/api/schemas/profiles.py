@@ -16,6 +16,10 @@ class ProfileCreate(BaseModel):
         description="camoufox (Firefox) or chrome (experimental, fingerprint-chromium). "
         "Fixed once the profile is created",
     )
+    email: str | None = Field(None, description="Account address this profile is logged in as")
+    purpose: str | None = Field(None, description="What the profile is for, e.g. free signups")
+    notes: str | None = Field(None, description="Free-form multi-line notes")
+    tags: list[str] | None = Field(None, description="Labels for filtering, e.g. gmail, free")
 
 
 class ProfileUpdate(BaseModel):
@@ -27,6 +31,10 @@ class ProfileUpdate(BaseModel):
     timezone: str | None = Field(None, description='"" switches back to automatic')
     locale: str | None = Field(None, description='"" switches back to automatic')
     engine: str | None = Field(None, description="Cannot be changed; only the current value")
+    email: str | None = Field(None, description="Account address this profile is logged in as")
+    purpose: str | None = Field(None, description="What the profile is for, e.g. free signups")
+    notes: str | None = Field(None, description="Free-form multi-line notes")
+    tags: list[str] | None = Field(None, description="Labels for filtering, e.g. gmail, free")
 
 
 class ProfileResponse(BaseModel):
@@ -38,6 +46,12 @@ class ProfileResponse(BaseModel):
     engine: str = "camoufox"
     data_dir: str
     is_running: bool
+    email: str | None = None
+    purpose: str | None = None
+    notes: str | None = None
+    tags: list[str] = []
+    session_state: str | None = None
+    session_checked_at: float | None = None
 
 
 class ProfileListResponse(BaseModel):

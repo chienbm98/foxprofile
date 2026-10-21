@@ -113,3 +113,22 @@ def valid_or_none(value: object, validate: Callable[[str], tuple[bool, str]]) ->
 @functools.cache
 def _timezones() -> frozenset[str]:
     return frozenset(zoneinfo.available_timezones())
+
+
+_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}$")
+
+
+def validate_meta(email: object, purpose: object, notes: object, tags: object) -> tuple[bool, str]:
+    """Free-form profile labels: an email, a purpose, notes and tags."""
+    if email and not (isinstance(email, str) and _EMAIL.match(email)):
+        return False, "email is not a valid address"
+    if purpose and not (isinstance(purpose, str) and len(purpose) <= 200):
+        return False, "purpose must be at most 200 characters"
+    if notes and not (isinstance(notes, str) and len(notes) <= 5000):
+        return False, "notes must be at most 5000 characters"
+    if tags:
+        if not isinstance(tags, list) or len(tags) > 20:
+            return False, "at most 20 tags"
+        if not all(isinstance(t, str) and 0 < len(t.strip()) <= 32 for t in tags):
+            return False, "each tag must be 1-32 characters"
+    return True, ""
