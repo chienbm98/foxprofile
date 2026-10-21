@@ -187,6 +187,14 @@ There is no lock. Each push bumps a version; a push is refused if the store has 
 
 Google ties a session to the device and the network. Keep the same proxy (or at least country) and the same `os_type` on every machine, or Google may ask you to verify again. S3 needs `pip install boto3`.
 
+## Gmail accounts: email, password, 2FA and automatic re-login
+
+The **Gmail accounts** page (left sidebar) lists every profile that has an email: session state, the live 6-digit 2FA code with a countdown, and one-click buttons: **Open Gmail** (launches the profile and goes straight to the inbox), copy email, copy password (the clipboard is cleared after 30 seconds), copy 2FA code, sign in again, check session, edit.
+
+Edit a profile to store, encrypted: password, 2FA secret key (the text Google shows under "can't scan the QR code"), backup codes, recovery email/phone, a hint. They are saved as scrypt + AES-256-GCM tokens in `profiles.json` (never plain text), travel with the profile through export and sync, and are never returned by the profile list or by MCP. The passphrase is the sync passphrase: the panel stores it in the OS credential store (Windows Credential Manager, macOS Keychain, Secret Service), and a VPS can use `FOXPROFILE_SYNC_PASSPHRASE`.
+
+Automatic re-login (per profile, switch **Sign in again when the session is lost**) runs when a session check, a profile launch or a scheduled task finds the profile logged out. It types like a person and stops on anything it does not recognise (a phone prompt, "is it you", CAPTCHA) and marks the profile **Needs manual check**. Modes: fill email and password, fill the email only, or never. An automatic attempt per profile waits `FOXPROFILE_LOGIN_COOLDOWN` seconds (default 600) so a wrong password is not retried in a loop. Automating Google sign-in may still trigger Google's own checks; the account is yours to manage and Google's terms apply.
+
 ## Groups, scheduled tasks and the activity log
 
 Group profiles, then schedule steps (`goto`, `wait`, `scroll`, `click`, `type`, `press`, `wait_for`, `evaluate`, `screenshot`, `text`) to run in each: the task launches the profile (or reuses an open one), runs the steps with random waits and jitter, and stops it. Templates: `keepalive-gmail`, `browse-warmup`.

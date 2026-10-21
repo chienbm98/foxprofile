@@ -26,7 +26,7 @@
   --ui: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
   --data: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
   --row-h: 58px;
-  --cols: 32px minmax(150px, 1.15fr) minmax(170px, 1.05fr) minmax(170px, 1.15fr) minmax(150px, 1fr) 112px 232px;
+  --cols: 32px minmax(150px, 1.15fr) minmax(170px, 1.05fr) minmax(170px, 1.15fr) minmax(150px, 1fr) 112px 266px;
   --ease-out: cubic-bezier(.16, 1, .3, 1);
 }
 * { box-sizing: border-box; }
@@ -244,7 +244,7 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
 /* The table follows its own width, not the viewport: all columns need about
    1140px, the version without Timezone · Locale about 870px. */
 @container sheet (max-width: 1150px) {
-  .row { --cols: 32px minmax(140px, 1.1fr) minmax(140px, 1fr) minmax(140px, 1.1fr) 108px 218px; column-gap: 12px; }
+  .row { --cols: 32px minmax(140px, 1.1fr) minmax(140px, 1fr) minmax(140px, 1.1fr) 108px 252px; column-gap: 12px; }
   .col-geo { display: none; }
   .geo-inline { display: block; }
 }
@@ -281,6 +281,26 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
 .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
 .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--paper-sunk); color: var(--ink-2); }
 textarea { width: 100%; resize: vertical; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--rule); background: var(--paper); color: inherit; }
+.sdot.needs_verification { background: #d89a1d; }
+.acc-wrap { display: none; }
+body.view-accounts .acc-wrap { display: block; }
+body.view-accounts #sheet, body.view-accounts .head { display: none; }
+.acc-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.acc-head h1 { margin: 0; }
+.acc-head .vault { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 13px; }
+.acc-table { border: 1px solid var(--rule); border-radius: 12px; background: var(--paper); overflow: hidden; }
+.acc-row { display: grid; grid-template-columns: minmax(190px, 1.3fr) minmax(120px, .9fr) 150px 128px minmax(280px, auto); column-gap: 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+.acc-row:last-child { border-bottom: 0; }
+.acc-row.acc-headrow { color: var(--ink-3); font-size: 12px; font-weight: 600; min-height: 38px; }
+.acc-row .mail { font-weight: 600; word-break: break-all; }
+.acc-row .sub { color: var(--ink-3); font-size: 12px; }
+.acc-row .code { font-family: ui-monospace, Consolas, monospace; font-size: 17px; letter-spacing: .08em; }
+.acc-row .code small { font-size: 11px; color: var(--ink-3); margin-left: 6px; letter-spacing: 0; }
+.acc-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.secret-field { position: relative; }
+.secret-field .stored { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.fieldset-title { margin: 18px 0 4px; font-weight: 700; font-size: 13px; color: var(--ink-2); }
+@media (max-width: 980px) { .acc-row { grid-template-columns: 1fr; row-gap: 6px; } .acc-row.acc-headrow { display: none; } .acc-actions { justify-content: flex-start; } }
 </style>
 </head>
 <body>
@@ -315,6 +335,9 @@ textarea { width: 100%; resize: vertical; font: inherit; padding: 8px 10px; bord
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
   <symbol id="i-fingerprint" viewBox="0 0 24 24"><path d="M12 10a2 2 0 0 0-2 2c0 1-.1 2.5-.3 4M14 13.1c0 2.4 0 6.4-1 8.9M17.3 21c.1-.6.4-2.3.5-3M2 12a10 10 0 0 1 18-6M21.8 16c.2-2 .1-5.4 0-6M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .3-2M8.7 22c.2-.7.4-1.3.6-2M9 6.8a6 6 0 0 1 9 5.2v2"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4.5"/><path d="m11.2 11.8 8.8-8.8M16 7l3 3M14 9l2 2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
   <symbol id="i-tab" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M12 13v4M10 15h4"/></symbol>
 </svg>
 
@@ -344,6 +367,7 @@ textarea { width: 100%; resize: vertical; font: inherit; padding: 8px 10px; bord
     </nav>
     <div class="grow"></div>
     <div class="rail-foot">
+      <button class="rail-link" id="accounts-btn"><svg class="i"><use href="#i-mail"/></svg><span data-t="accounts_button"></span></button>
       <button class="rail-link" id="sync-btn"><svg class="i"><use href="#i-upload"/></svg><span data-t="sync_button"></span></button>
       <button class="rail-link" id="tasks-btn"><svg class="i"><use href="#i-tab"/></svg><span data-t="tasks_button"></span></button>
       <button class="rail-link" id="mcp-btn"><svg class="i"><use href="#i-bot"/></svg><span data-t="mcp_button"></span></button>
@@ -358,6 +382,7 @@ textarea { width: 100%; resize: vertical; font: inherit; padding: 8px 10px; bord
       <label class="search"><svg class="i s" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" autocomplete="off"></label>
     </div>
     <div class="sheet" id="sheet" role="table"></div>
+    <section class="acc-wrap" id="accounts-view" aria-label="Accounts"></section>
   </main>
 </div>
 
@@ -420,6 +445,17 @@ const I18N = {
     f_loggedout: "Mất đăng nhập", session_alive: "Phiên còn sống", session_logged_out: "Đã mất đăng nhập", session_unknown: "Chưa rõ", session_none: "Chưa kiểm tra", session_never: "chưa kiểm tra lần nào",
     check_sessions: "Kiểm tra phiên", check_started: "Đang kiểm tra {n} profile trong nền...",
     account_email: "Tài khoản (email)", purpose: "Mục đích", purpose_hint: "vd: đăng ký web free, nuôi mail", tags: "Thẻ", tags_hint: "Cách nhau bằng dấu phẩy", notes: "Ghi chú", notes_hint: "Ghi chú nhiều dòng...",
+    accounts_button: "Tài khoản Gmail", accounts_title: "Tài khoản Gmail", accounts_sub: "{n} tài khoản · bấm Mở Gmail để vào thẳng hộp thư", back_profiles: "Về danh sách profile",
+    col_account: "Tài khoản", col_session: "Phiên", col_2fa: "Mã 2FA", check_all: "Kiểm tra tất cả", no_accounts: "Chưa có tài khoản nào. Sửa một profile và nhập email để nó hiện ở đây.", no_email: "chưa có email",
+    open_gmail: "Mở Gmail", open_gmail_short: "Mở Gmail", copy_email: "Copy email", copy_password: "Copy mật khẩu", copy_2fa: "Copy mã 2FA", relogin: "Tự đăng nhập lại", check_one: "Kiểm tra phiên",
+    copied: "Đã copy {what}", copied_clear: "Đã copy {what}, clipboard tự xoá sau 30 giây", copy_failed: "Không copy được", gmail_opened: "Đã mở Gmail trong {name}",
+    relogin_started: "Đang đăng nhập lại {name}...", auto_login_on: "tự đăng nhập bật",
+    vault_title: "Mở khoá kho mật khẩu", vault_hint: "Passphrase này mã hoá mật khẩu và mã 2FA, và là passphrase của đồng bộ. Dùng cùng một passphrase trên mọi máy.", vault_pass: "Passphrase",
+    vault_persist: "Nhớ trong kho khoá của hệ điều hành", vault_saved: "Đã mở khoá (lưu: {where})", vault_open: "Kho mật khẩu: đã mở", vault_locked: "Kho mật khẩu đang khoá", vault_locked_short: "khoá", vault_set: "Đặt passphrase", vault_retry: "Mật khẩu chưa được lưu. Mở lại profile, nhập lại rồi lưu.",
+    secrets_section: "Đăng nhập và bí mật (mã hoá)", password: "Mật khẩu", totp_secret: "Khoá bí mật 2FA", totp_hint: "Khoá 2FA là chuỗi chữ-số Google hiện khi chọn 'không quét được mã QR'. App sinh mã 6 số đổi mỗi 30 giây.",
+    backup_codes: "Mã dự phòng", recovery: "Email/số điện thoại khôi phục", hint_f: "Gợi ý", login_mode: "Cách tự đăng nhập", mode_full: "Điền email và mật khẩu", mode_email_only: "Chỉ điền email", mode_manual: "Không tự đăng nhập",
+    auto_login: "Tự đăng nhập lại khi mất phiên", auto_login_hint: "Khi kiểm tra phiên, mở profile hoặc tác vụ theo lịch thấy mất đăng nhập", connection_section: "Kết nối",
+    secret_stored_ph: "•••• đã lưu, để trống để giữ nguyên", secret_stored: "Đã lưu", secret_clear: "Xoá", secret_will_clear: "Sẽ xoá khi lưu", f_verify: "Cần xác minh", session_needs_verification: "Cần xác minh tay",
     sync_auto: "Tự đồng bộ", sync_auto_hint: "Kéo bản mới trước khi mở và tự đẩy lên khi profile dừng",
     sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
     sync_title: "Đồng bộ profile giữa các máy", sync_sub: "Đăng nhập một lần, dùng ở máy khác mà không phải đăng nhập lại.",
@@ -491,6 +527,17 @@ const I18N = {
     f_loggedout: "Logged out", session_alive: "Session alive", session_logged_out: "Logged out", session_unknown: "Unknown", session_none: "Not checked", session_never: "never checked",
     check_sessions: "Check sessions", check_started: "Checking {n} profile(s) in the background...",
     account_email: "Account (email)", purpose: "Purpose", purpose_hint: "e.g. free signups, mail warm-up", tags: "Tags", tags_hint: "Comma separated", notes: "Notes", notes_hint: "Multi-line notes...",
+    accounts_button: "Gmail accounts", accounts_title: "Gmail accounts", accounts_sub: "{n} accounts · Open Gmail goes straight to the inbox", back_profiles: "Back to profiles",
+    col_account: "Account", col_session: "Session", col_2fa: "2FA code", check_all: "Check all", no_accounts: "No accounts yet. Edit a profile and enter its email to list it here.", no_email: "no email yet",
+    open_gmail: "Open Gmail", open_gmail_short: "Open Gmail", copy_email: "Copy email", copy_password: "Copy password", copy_2fa: "Copy 2FA code", relogin: "Sign in again", check_one: "Check session",
+    copied: "Copied {what}", copied_clear: "Copied {what}; the clipboard clears in 30 seconds", copy_failed: "Could not copy", gmail_opened: "Opened Gmail in {name}",
+    relogin_started: "Signing {name} back in...", auto_login_on: "auto sign-in on",
+    vault_title: "Unlock the password vault", vault_hint: "This passphrase encrypts passwords and 2FA keys, and is also the sync passphrase. Use the same one on every machine.", vault_pass: "Passphrase",
+    vault_persist: "Remember it in the OS credential store", vault_saved: "Unlocked (kept in: {where})", vault_open: "Vault: unlocked", vault_locked: "Vault is locked", vault_locked_short: "locked", vault_set: "Set passphrase", vault_retry: "The secrets were not saved. Edit the profile and save again.",
+    secrets_section: "Sign-in and secrets (encrypted)", password: "Password", totp_secret: "2FA secret key", totp_hint: "The 2FA key is the text Google shows under 'can't scan the QR code'. The app generates the 6-digit code that changes every 30 seconds.",
+    backup_codes: "Backup codes", recovery: "Recovery email / phone", hint_f: "Hint", login_mode: "Auto sign-in mode", mode_full: "Fill email and password", mode_email_only: "Fill the email only", mode_manual: "Never sign in automatically",
+    auto_login: "Sign in again when the session is lost", auto_login_hint: "When a session check, a profile launch or a scheduled task finds it logged out", connection_section: "Connection",
+    secret_stored_ph: "•••• stored, leave empty to keep", secret_stored: "Stored", secret_clear: "Remove", secret_will_clear: "Will be removed on save", f_verify: "Needs verification", session_needs_verification: "Needs manual check",
     sync_auto: "Auto-sync", sync_auto_hint: "Pull a newer copy before launch and push when the profile stops",
     sync_button: "Sync profiles", tasks_button: "Tasks & groups",
     sync_title: "Sync profiles between machines", sync_sub: "Log in once, reuse the session on another machine without logging in again.",
@@ -539,6 +586,7 @@ const store = {
 let lang = store.get("foxprofile.lang") || "en";
 let token = store.get("foxprofile.token") || "";
 let profiles = [], running = new Set(), fingerprints = {};
+let view = "profiles";
 let filter = "all";
 const busy = new Map();          // name -> "starting" | "stopping"
 const failed = new Map();        // name -> error message of the last failed launch
@@ -557,6 +605,7 @@ function applyI18n() {
   document.querySelectorAll("[data-title]").forEach((el) => { el.title = t(el.dataset.title); el.setAttribute("aria-label", t(el.dataset.title)); });
   $("search").placeholder = t("search");
   $("search").setAttribute("aria-label", t("search"));
+  if (view === "accounts") renderAccounts(true);
   $("sheet").setAttribute("aria-label", t("your_profiles"));
   $("v-text").placeholder = t("type_hint");
   document.querySelectorAll("[data-lang]").forEach((b) => b.classList.toggle("active", b.dataset.lang === lang));
@@ -647,6 +696,7 @@ const FILTERS = [
   ["direct", "f_direct", (p) => !p.proxy],
   ["chrome", "f_chrome", (p) => p.engine === "chrome"],
   ["loggedout", "f_loggedout", (p) => p.session_state === "logged_out"],
+  ["verify", "f_verify", (p) => p.session_state === "needs_verification"],
 ];
 function visible() {
   const q = $("search").value.trim().toLowerCase();
@@ -656,6 +706,7 @@ function visible() {
 
 let lastRender = "";
 function render() {
+  if (view === "accounts") { renderFilters(); return renderAccounts(); }
   const q = $("search").value.trim();
   const shown = visible();
   // Rebuilding the list replaces every button; skip it when nothing changed so a
@@ -746,7 +797,9 @@ function row(p) {
     h("div", { class: "c-sel", role: "cell" }, box),
     h("div", { class: "c-name stack", role: "cell" },
       h("span", { class: "name", title: p.name }, sessionDot(p), p.name),
-      h("span", { class: "minor", title: [p.purpose, p.notes].filter(Boolean).join("\n") }, [engine, p.email, p.purpose].filter(Boolean).join(" · ")),
+      h("span", { class: "minor", title: [p.purpose, p.notes].filter(Boolean).join("\n") }, engine,
+        p.email ? [" · ", h("a", { href: "#", title: t("copy_email"), onclick: (e) => { e.preventDefault(); copyEmail(p); } }, p.email)] : null,
+        p.purpose ? " · " + p.purpose : null),
       (p.tags && p.tags.length) ? h("span", { class: "tags" }, p.tags.map((tg) => h("span", { class: "tag" }, tg))) : null),
     h("div", { class: "c-device device", role: "cell" }, h("span", { class: "os", title: p.os_type }, os),
       h("div", { class: "stack" }, h("span", { class: p.engine === "chrome" ? "engine chrome" : "engine" }, engine),
@@ -761,6 +814,7 @@ function row(p) {
       h("span", { class: "minor" + (p.locale ? " data" : "") }, p.locale || t("follow_ip"))),
     h("div", { class: "c-stamp", role: "cell" }, stamp(p)),
     h("div", { class: "actions", role: "cell" }, main,
+      iconBtn("mail", t("open_gmail"), () => openGmail(p), "", isBusy),
       iconBtn("monitor", t("view"), () => openViewer(p.name), "", !on || isBusy),
       iconBtn("cookie", t("cookies"), () => openCookies(p), "", on),
       iconBtn("edit", t("edit"), () => openEditor(p)),
@@ -885,6 +939,28 @@ function openEditor(p) {
     const tags = h("input", { id: "f-tags", value: p && p.tags ? p.tags.join(", ") : "", placeholder: "gmail, free, vps-1", autocomplete: "off" });
     const notes = h("textarea", { id: "f-notes", rows: 4, maxlength: 5000, placeholder: t("notes_hint") });
     notes.value = p && p.notes ? p.notes : "";
+    const clearSecret = new Set();
+    const secretInput = (id, key, multiline = false) => {
+      const stored = p && p["has_" + key];
+      const el = multiline ? h("textarea", { id, rows: 3, autocomplete: "off" }) : h("input", { id, type: key === "hint" || key === "recovery" ? "text" : "password", autocomplete: "new-password" });
+      el.placeholder = stored ? t("secret_stored_ph") : "";
+      const note = h("div", { class: "stored" });
+      if (stored) {
+        const x = h("a", { href: "#", onclick: (e) => { e.preventDefault(); if (clearSecret.has(key)) { clearSecret.delete(key); note.firstChild.textContent = t("secret_stored"); x.textContent = t("secret_clear"); } else { clearSecret.add(key); note.firstChild.textContent = t("secret_will_clear"); x.textContent = t("cancel"); } } }, t("secret_clear"));
+        note.append(h("span", {}, t("secret_stored")), " · ", x);
+      }
+      return { el, note };
+    };
+    const sPass = secretInput("f-pass", "password");
+    const sTotp = secretInput("f-totp", "totp_secret");
+    const sBackup = secretInput("f-backup", "backup_codes", true);
+    const sRecovery = secretInput("f-recovery", "recovery");
+    const sHint = secretInput("f-hint", "hint");
+    const loginMode = h("select", { id: "f-mode" }, [["full", t("mode_full")], ["email_only", t("mode_email_only")], ["manual", t("mode_manual")]].map(([v, label]) =>
+      h("option", { value: v, selected: (p ? p.login_mode : "full") === v }, label)));
+    const autoLogin = h("input", { type: "checkbox", id: "f-autologin" });
+    autoLogin.checked = !!(p && p.auto_login);
+    const secretField = (label, s) => h("div", { class: "field secret-field" }, h("label", { for: s.el.id }, label), s.el, s.note);
     const msg = h("div", { class: "msg", role: "status" });
     const geo = h("div");
     const say = (cls, text) => { msg.className = "msg " + cls; msg.textContent = text; };
@@ -913,11 +989,24 @@ function openEditor(p) {
       const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null,
         timezone: tz.value.trim(), locale: loc.value.trim(),
         email: email.value.trim(), purpose: purpose.value.trim(), notes: notes.value.trim(),
-        tags: tags.value.split(",").map((x) => x.trim()).filter(Boolean) };
+        tags: tags.value.split(",").map((x) => x.trim()).filter(Boolean),
+        login_mode: loginMode.value, auto_login: autoLogin.checked };
+      const secrets = {};
+      for (const [key, s] of [["password", sPass], ["totp_secret", sTotp], ["backup_codes", sBackup], ["recovery", sRecovery], ["hint", sHint]]) {
+        if (clearSecret.has(key)) secrets[key] = null;
+        else if (s.el.value.trim()) secrets[key] = s.el.value.trim();
+      }
       if (!p) body.engine = engine.value;
       try {
         if (p) { await api("PATCH", `/profiles/${enc(p.name)}`, body); delete fingerprints[p.name]; toast(t("saved")); }
         else { await api("POST", "/profiles", body); toast(t("created", { name: body.name })); }
+        if (Object.keys(secrets).length) {
+          try { await api("PUT", `/profiles/${enc(body.name)}/secrets`, secrets); }
+          catch (se) {
+            if (se.status === 423) { toast(se.message, true); close(); refresh(); return openVaultDialog(() => toast(t("vault_retry"))); }
+            throw se;
+          }
+        }
         close(); refresh();
       } catch (ex) { say("err", ex.message); }
       finally { if (submitBtn) submitBtn.disabled = false; }
@@ -931,6 +1020,14 @@ function openEditor(p) {
         h("div", { class: "field-row" }, field(t("purpose"), purpose), field(t("tags"), tags, t("tags_hint"))),
         field(t("notes"), notes),
         p ? h("div", { class: "hint" }, sessionDot(p), ` ${t("session_" + (p.session_state || "none"))} · ${p.session_checked_at ? fmtTime(p.session_checked_at) : t("session_never")}`) : null,
+        h("div", { class: "fieldset-title" }, t("secrets_section")),
+        h("div", { class: "field-row" }, secretField(t("password"), sPass), secretField(t("totp_secret"), sTotp)),
+        h("div", { class: "hint", style: "margin:-4px 0 8px" }, t("totp_hint")),
+        h("div", { class: "field-row" }, secretField(t("recovery"), sRecovery), secretField(t("hint_f"), sHint)),
+        secretField(t("backup_codes"), sBackup),
+        h("div", { class: "field-row" }, field(t("login_mode"), loginMode),
+          h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:26px;color:var(--ink-2)", title: t("auto_login_hint") }, autoLogin, t("auto_login"))),
+        h("div", { class: "fieldset-title" }, t("connection_section")),
         field(t("proxy_label"), proxy, t("proxy_hint")),
         h("div", { class: "inline-btns" }, check, checkIp),
         msg,
@@ -1050,6 +1147,157 @@ async function copyText(text) {
   area.value = text; document.body.append(area); area.select();
   let ok = false; try { ok = document.execCommand("copy"); } catch {}
   area.remove(); return ok;
+}
+
+
+// ---- Accounts page: open, copy, 2FA code, re-login ----------------------------------------
+const INBOX = "https://mail.google.com/mail/u/0/#inbox";
+const totpCache = {};
+let vaultUnlocked = null;
+let accKey = "";
+
+async function loadVault() {
+  try { vaultUnlocked = (await api("GET", "/vault")).unlocked; } catch { vaultUnlocked = null; }
+}
+
+function openVaultDialog(done) {
+  modal((close) => {
+    const pass = h("input", { id: "v-pass", type: "password", autocomplete: "new-password", required: true });
+    const persist = h("input", { type: "checkbox" }); persist.checked = true;
+    const msg = h("div", { class: "msg", role: "status" });
+    return h("form", { onsubmit: async (e) => {
+      e.preventDefault();
+      try {
+        const r = await api("POST", "/vault/passphrase", { passphrase: pass.value, persist: persist.checked });
+        vaultUnlocked = true; close(); toast(t("vault_saved", { where: r.kept_in })); if (done) done(); render(); renderAccounts(true);
+      } catch (ex) { msg.className = "msg err"; msg.textContent = ex.message; }
+    } },
+      modalHead(t("vault_title"), t("vault_hint"), close),
+      h("div", { class: "modal-body" }, field(t("vault_pass"), pass),
+        h("label", { style: "display:flex;gap:8px;align-items:center;color:var(--ink-2)" }, persist, t("vault_persist")), msg),
+      h("div", { class: "modal-foot" },
+        h("button", { type: "button", class: "btn btn-line", onclick: close }, t("cancel")),
+        h("button", { class: "btn btn-act" }, t("save"))));
+  });
+}
+
+async function withVault(fn) {
+  try { return await fn(); }
+  catch (e) { if (e.status === 423) { vaultUnlocked = false; openVaultDialog(); } else toast(e.message, true); }
+}
+
+let clipTimer = null;
+async function copySecret(text, label) {
+  if (!(await copyText(text))) return toast(t("copy_failed"), true);
+  toast(t("copied_clear", { what: label }));
+  clearTimeout(clipTimer);
+  clipTimer = setTimeout(() => { copyText(" "); }, 30000);
+}
+async function copyEmail(p) {
+  if (!p.email) return toast(t("no_email"), true);
+  if (await copyText(p.email)) toast(t("copied", { what: p.email }));
+}
+async function copyPassword(p) {
+  await withVault(async () => { const r = await api("GET", `/profiles/${enc(p.name)}/secrets/password`); await copySecret(r.value, t("password")); });
+}
+async function copyTotp(p) {
+  await withVault(async () => { const r = await api("GET", `/profiles/${enc(p.name)}/totp`); await copySecret(r.code, t("col_2fa")); });
+}
+
+async function openGmail(p) {
+  try {
+    if (!running.has(p.name)) {
+      busy.set(p.name, "starting"); render();
+      try { await api("POST", `/browser/${enc(p.name)}/launch`); } finally { busy.delete(p.name); }
+      await refresh();
+    }
+    await api("POST", `/browser/${enc(p.name)}/page/navigate`, { url: INBOX });
+    toast(t("gmail_opened", { name: p.name }));
+  } catch (e) { toast(e.message, true); }
+}
+async function relogin(p) {
+  try { await api("POST", `/automation/relogin/${enc(p.name)}`); toast(t("relogin_started", { name: p.name })); }
+  catch (e) { return toast(e.message, true); }
+  for (let i = 0; i < 12; i++) { await new Promise((r) => setTimeout(r, 8000)); await refresh(); }
+}
+
+async function fetchTotp(p) {
+  const c = totpCache[p.name];
+  if (c && c.pending) return;
+  totpCache[p.name] = { ...(c || {}), pending: true };
+  try {
+    const r = await api("GET", `/profiles/${enc(p.name)}/totp`);
+    totpCache[p.name] = { code: r.code, until: Date.now() + r.remaining * 1000 };
+  } catch (e) { totpCache[p.name] = { error: e.status === 423 ? "locked" : "error", until: Date.now() + 15000 }; }
+  paintTotp();
+}
+function paintTotp() {
+  document.querySelectorAll("[data-totp]").forEach((el) => {
+    const p = profiles.find((x) => x.name === el.dataset.totp);
+    const c = totpCache[el.dataset.totp];
+    if (!p) return;
+    if (!c || (c.until && c.until <= Date.now())) { fetchTotp(p); }
+    if (c && c.code && c.until > Date.now()) el.replaceChildren(c.code.slice(0, 3) + " " + c.code.slice(3), h("small", {}, Math.max(0, Math.ceil((c.until - Date.now()) / 1000)) + "s"));
+    else if (c && c.error) el.textContent = c.error === "locked" ? t("vault_locked_short") : "—";
+    else el.textContent = "…";
+  });
+}
+setInterval(() => { if (view === "accounts" && !document.hidden) paintTotp(); }, 1000);
+
+function setView(v) {
+  view = v;
+  document.body.classList.toggle("view-accounts", v === "accounts");
+  if (v === "accounts") { loadVault().then(() => renderAccounts(true)); }
+  else render();
+}
+
+function sessionLabel(p) {
+  const st = p.session_state || "none";
+  return h("span", {}, sessionDot(p), t("session_" + st), h("div", { class: "sub" }, p.session_checked_at ? fmtTime(p.session_checked_at) : t("session_never")));
+}
+
+function accountRow(p) {
+  const on = running.has(p.name);
+  const btn = (iconName, label, fn, disabled = false) => h("button", { class: "icon-btn", title: label, "aria-label": `${label}: ${p.name}`, disabled, onclick: fn }, icon(iconName));
+  return h("div", { class: "acc-row" },
+    h("div", {}, h("div", { class: "mail" }, p.email || h("span", { class: "sub" }, t("no_email"))), h("div", { class: "sub" }, p.name + (p.purpose ? " · " + p.purpose : ""))),
+    h("div", {}, (p.tags && p.tags.length) ? h("span", { class: "tags" }, p.tags.map((tg) => h("span", { class: "tag" }, tg))) : h("span", { class: "sub" }, "—"),
+      p.auto_login ? h("div", { class: "sub" }, t("auto_login_on")) : null),
+    h("div", {}, sessionLabel(p)),
+    h("div", { class: "code" }, p.has_totp_secret ? h("span", { "data-totp": p.name }, "…") : h("span", { class: "sub" }, "—")),
+    h("div", { class: "acc-actions" },
+      h("button", { class: "btn btn-act", onclick: () => openGmail(p), title: t("open_gmail") }, icon("mail", true), t("open_gmail_short")),
+      btn("copy", t("copy_email"), () => copyEmail(p), !p.email),
+      btn("key", t("copy_password"), () => copyPassword(p), !p.has_password),
+      h("button", { class: "icon-btn", title: t("copy_2fa"), disabled: !p.has_totp_secret, onclick: () => copyTotp(p) }, "2FA"),
+      btn("reload", t("relogin"), () => relogin(p), !p.has_password && p.login_mode === "full"),
+      btn("check", t("check_one"), () => checkSessions([p.name])),
+      btn("edit", t("edit"), () => openEditor(p))));
+}
+
+function renderAccounts(force = false) {
+  if (view !== "accounts") return;
+  const q = $("search").value.trim().toLowerCase();
+  const list = profiles.filter((p) => !q || [p.name, p.email, p.purpose, (p.tags || []).join(" ")].some((v) => (v || "").toLowerCase().includes(q)))
+    .sort((a, b) => (a.email || a.name).localeCompare(b.email || b.name));
+  const key = JSON.stringify([lang, q, vaultUnlocked, list, [...running].sort()]);
+  if (!force && key === accKey) return;
+  accKey = key;
+  const root = $("accounts-view");
+  root.replaceChildren(
+    h("div", { class: "acc-head" },
+      h("div", {}, h("h1", {}, t("accounts_title")), h("div", { class: "counts" }, t("accounts_sub", { n: list.length }))),
+      h("div", { class: "vault" },
+        vaultUnlocked === false ? h("span", { class: "msg err", style: "padding:4px 10px" }, t("vault_locked")) : (vaultUnlocked ? h("span", {}, t("vault_open")) : null),
+        h("button", { class: "btn btn-line", onclick: () => openVaultDialog() }, icon("key", true), t("vault_set")),
+        h("button", { class: "btn btn-line", onclick: () => checkSessions(list.map((p) => p.name)) }, icon("check", true), t("check_all")),
+        h("button", { class: "btn btn-ghost", onclick: () => setView("profiles") }, icon("back", true), t("back_profiles")))),
+    list.length
+      ? h("div", { class: "acc-table", role: "table" },
+          h("div", { class: "acc-row acc-headrow" }, h("div", {}, t("col_account")), h("div", {}, t("tags")), h("div", {}, t("col_session")), h("div", {}, t("col_2fa")), h("div", {})),
+          ...list.map(accountRow))
+      : h("p", { class: "hint" }, t("no_accounts")));
+  paintTotp();
 }
 
 function fmtTime(ts) { return ts ? new Date(ts * 1000).toLocaleString() : "—"; }
@@ -1299,6 +1547,7 @@ $("login-form").onsubmit = async (e) => {
 $("logout-btn").onclick = () => { token = ""; store.set("foxprofile.token", null); showLogin(); };
 $("new-btn").onclick = () => openEditor(null);
 $("mcp-btn").onclick = openMcpGuide;
+$("accounts-btn").onclick = () => setView("accounts");
 $("sync-btn").onclick = openSync;
 $("tasks-btn").onclick = openTasks;
 $("search").oninput = render;

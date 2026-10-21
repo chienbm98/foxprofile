@@ -157,3 +157,30 @@ def test_pull_over_leftover_data_dir_without_profile_entry(tmp_path, monkeypatch
     svc2.pull("p")
     assert (stale / "cookies.sqlite").read_bytes() == b"NEW"
     assert not (stale / "old.txt").exists()
+
+
+def test_slim_pack_keeps_logins_and_drops_rebuildable_data(tmp_path):
+    import zipfile
+
+    from src.models.profile import Profile
+    from src.services.profile.transfer import export_to_zip
+
+    d = tmp_path / "data"
+    keep = ["cookies.sqlite", "storage/default/https+++mail.google.com/idb/x.sqlite"]
+    drop = [
+        "gmp-widevinecdm/4.10/widevinecdm.dll",
+        "storage/default/https+++mail.google.com/cache/morgue/1/a.final",
+        "storage/default/moz-extension+++abc/idb/x.sqlite",
+        "favicons.sqlite",
+        "startupCache/scriptCache.bin",
+    ]
+    for rel in keep + drop:
+        f = d / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(b"x")
+    ok, z = export_to_zip(
+        Profile(name="p"), str(d), str(tmp_path), True, slim=True, filename="p.zip"
+    )
+    names = {n.removeprefix("data/") for n in zipfile.ZipFile(z).namelist()}
+    assert set(keep) <= names
+    assert not names & set(drop)

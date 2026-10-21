@@ -15,9 +15,9 @@ from ...utils.validation import (
 )
 from ..browser.fingerprint import CHROME_PERSONA_FILE
 
-# Extension storage (uBlock Origin's downloaded filter lists, tens of MB) and favicons are
-# re-created by the browser; they dwarf the logins in a synced profile.
-REBUILT_PREFIXES = ("moz-extension+++",)
+# Extension storage (uBlock Origin's downloaded filter lists, tens of MB), Widevine/OpenH264
+# downloads (gmp-*), service-worker caches and favicons are re-created by the browser; they dwarf the logins in a synced profile.
+REBUILT_PREFIXES = ("moz-extension+++", "gmp-")
 REBUILT_FILES = ("favicons.sqlite", "favicons.sqlite-wal", "favicons.sqlite-shm")
 
 
@@ -75,10 +75,15 @@ def export_to_zip(
             if include_data and pathlib.Path(profile_data_dir).exists():
                 for root, dirs, files in os.walk(profile_data_dir):
                     if slim:
+                        parts = pathlib.PurePath(os.path.relpath(root, profile_data_dir)).parts
+                        # Cache API storage of a site (service-worker assets, 100+ MB for Gmail).
+                        in_origin = len(parts) == 3 and parts[:2] == ("storage", "default")
                         dirs[:] = [
                             d
                             for d in dirs
-                            if d not in CACHE_DIRS and not d.startswith(REBUILT_PREFIXES)
+                            if d not in CACHE_DIRS
+                            and not d.startswith(REBUILT_PREFIXES)
+                            and not (in_origin and d == "cache")
                         ]
                     for file in files:
                         if file in ("lock", ".parentlock", "parent.lock", "SingletonLock"):
