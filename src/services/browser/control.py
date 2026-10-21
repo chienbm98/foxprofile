@@ -97,6 +97,9 @@ class PageController:
 
     async def navigate(self, url: str, wait_until: str = "load") -> dict[str, Any]:
         page = await self._page()
+        # A tab that was never shown reports outerHeight == innerHeight and
+        # screenX/Y == 0 to the page it loads, which detectors flag.
+        await page.bring_to_front()
         await page.goto(_check_url(url), wait_until=wait_until)
         return await self._describe(page)
 
@@ -195,6 +198,7 @@ class PageController:
     async def tab_new(self, url: str | None = None) -> dict[str, Any]:
         self._current = await self._context.new_page()
         if url:
+            await self._current.bring_to_front()
             await self._current.goto(_check_url(url))
         return await self.tabs()
 

@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### 修复
+- 通过 REST/MCP 打开网址（`navigate`、带 URL 的新标签页）时先把该标签页切到前台。之前可能在一个从未显示过的后台标签页里加载，网页读到的 `outerHeight` 等于 `innerHeight`、`screenX`/`screenY` 为 0，容易被检测脚本识别。
+
 ## [2.6.3] - 2026-10-18
 
 ### 新增

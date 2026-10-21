@@ -39,6 +39,7 @@ class FakePage:
     def __init__(self, url="about:blank"):
         self.url = url
         self.closed = False
+        self.in_front = False
 
     def is_closed(self):
         return self.closed
@@ -47,13 +48,14 @@ class FakePage:
         return "T"
 
     async def goto(self, url, wait_until="load"):
+        assert self.in_front, "navigated a background tab"
         self.url = url
 
     async def close(self):
         self.closed = True
 
     async def bring_to_front(self):
-        pass
+        self.in_front = True
 
 
 class FakeContext:
