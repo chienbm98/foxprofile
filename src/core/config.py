@@ -1,8 +1,11 @@
 import os
 
 try:
-    from dotenv import load_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
+    # The .env next to the profiles (the working directory) wins over the one in the
+    # install folder, so each machine keeps its own sync settings beside its data.
+    load_dotenv(find_dotenv(usecwd=True))
     load_dotenv()
 except ImportError:
     pass
