@@ -15,6 +15,11 @@ from ...utils.validation import (
 )
 from ..browser.fingerprint import CHROME_PERSONA_FILE
 
+# Extension storage (uBlock Origin's downloaded filter lists, tens of MB) and favicons are
+# re-created by the browser; they dwarf the logins in a synced profile.
+REBUILT_PREFIXES = ("moz-extension+++",)
+REBUILT_FILES = ("favicons.sqlite", "favicons.sqlite-wal", "favicons.sqlite-shm")
+
 
 def _meta_from(data: dict) -> dict:
     from .manager import _meta_from as meta
@@ -70,9 +75,15 @@ def export_to_zip(
             if include_data and pathlib.Path(profile_data_dir).exists():
                 for root, dirs, files in os.walk(profile_data_dir):
                     if slim:
-                        dirs[:] = [d for d in dirs if d not in CACHE_DIRS]
+                        dirs[:] = [
+                            d
+                            for d in dirs
+                            if d not in CACHE_DIRS and not d.startswith(REBUILT_PREFIXES)
+                        ]
                     for file in files:
                         if file in ("lock", ".parentlock", "parent.lock", "SingletonLock"):
+                            continue
+                        if slim and file in REBUILT_FILES:
                             continue
                         file_path = os.path.join(root, file)
                         arcname = os.path.join(

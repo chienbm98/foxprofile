@@ -100,6 +100,9 @@ def list_profiles(
     bl: IBrowserLauncher = Depends(get_browser_launcher),
 ) -> ProfileListResponse:
     profiles = [profile_response(p, bl) for p in pm.list_profiles()]
+    for item in profiles:
+        info = fingerprint.summary(os.path.join(DATA_DIR, item.name))
+        item.fingerprint = {"name": item.name, "exists": info is not None, **(info or {})}
     return ProfileListResponse(profiles=profiles, total=len(profiles))
 
 

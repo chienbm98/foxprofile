@@ -56,7 +56,7 @@ def pull(
     request: Request,
     name: str,
     force: bool = False,
-    check: bool = True,
+    check: bool = False,
     svc: SyncService = Depends(get_sync),
 ) -> dict:
     """Pull a profile; with check=true also verify in the background that its Gmail

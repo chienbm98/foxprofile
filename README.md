@@ -183,7 +183,7 @@ python -m src.sync_cli status
 
 The same is available as REST (`/api/v1/sync`) and MCP tools (`sync_status`, `sync_push`, `sync_pull`). Tick **Auto-sync** on a profile in the panel (or `PUT /api/v1/sync/<name>/auto`), or set `FOXPROFILE_SYNC_AUTO=true` for all profiles: FoxProfile then pulls a newer copy before every launch (desktop app, panel, API, MCP, tasks) and pushes when the profile stops.
 
-There is no lock. Each push bumps a version; a push is refused if the store has a newer version than your last sync (pull first, or `--force`). A pull keeps the previous local data as `<name>.syncbak`. Never run the same profile on two machines at once.
+There is no lock. Each push bumps a version; a push is refused if the store has a newer version than your last sync (pull first, or `--force`). A pull keeps the previous local data as `<name>.syncbak`. `POST /api/v1/sync/<name>/pull?check=true` (the panel does this) also re-checks the Gmail session in the background after the pull. Never run the same profile on two machines at once.
 
 Google ties a session to the device and the network. Keep the same proxy (or at least country) and the same `os_type` on every machine, or Google may ask you to verify again. S3 needs `pip install boto3`.
 

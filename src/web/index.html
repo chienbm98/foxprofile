@@ -632,7 +632,7 @@ async function refresh() {
     running = now;
     for (const name of [...selected]) if (!profiles.some((p) => p.name === name)) selected.delete(name);
     for (const name of [...failed.keys()]) if (now.has(name) || !profiles.some((p) => p.name === name)) failed.delete(name);
-    await Promise.all(profiles.filter((p) => !(p.name in fingerprints)).map(loadFingerprint));
+    for (const p of profiles) if (p.fingerprint) fingerprints[p.name] = p.fingerprint;
     render();
   } catch (e) { if (e.status !== 401) toast(e.message, true); }
 }
@@ -1061,7 +1061,7 @@ async function openSync() {
   const run = async (method, path, okMsg, withForce = true) => {
     msg.className = "msg"; msg.textContent = "…";
     try {
-      const r = await api(method, path + (withForce && state.force ? "?force=true" : ""));
+      const r = await api(method, path + (withForce && state.force ? (path.includes("?") ? "&" : "?") + "force=true" : ""));
       const failed = r && r.failed ? Object.entries(r.failed) : [];
       msg.className = "msg " + (failed.length ? "err" : "ok");
       msg.textContent = failed.length ? failed.map(([n, e]) => `${n}: ${e}`).join(" · ") : okMsg;
@@ -1081,7 +1081,7 @@ async function openSync() {
         h("input", { type: "checkbox", checked: r.auto, disabled: r.state === "remote-only",
           onchange: (e) => run("PUT", `/sync/${enc(r.name)}/auto?enabled=${e.target.checked}`, t("saved"), false) }), t("sync_auto")),
       h("button", { class: "btn btn-line", disabled: r.state === "remote-only", onclick: () => run("POST", `/sync/${enc(r.name)}/push`, t("sync_pushed", { name: r.name })) }, t("sync_push")),
-      h("button", { class: "btn btn-line", disabled: r.state === "local-only", onclick: () => run("POST", `/sync/${enc(r.name)}/pull`, t("sync_pulled", { name: r.name })) }, t("sync_pull")))));
+      h("button", { class: "btn btn-line", disabled: r.state === "local-only", onclick: () => run("POST", `/sync/${enc(r.name)}/pull?check=true`, t("sync_pulled", { name: r.name })) }, t("sync_pull")))));
   }
   modal((close) => {
     const box = h("div", {},

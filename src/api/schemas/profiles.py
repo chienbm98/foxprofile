@@ -52,6 +52,8 @@ class ProfileResponse(BaseModel):
     tags: list[str] = []
     session_state: str | None = None
     session_checked_at: float | None = None
+    # Only filled in by the list endpoint, so the panel needs no request per profile.
+    fingerprint: dict | None = None
 
 
 class ProfileListResponse(BaseModel):
