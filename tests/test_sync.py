@@ -131,3 +131,14 @@ def test_wrong_passphrase_keeps_local_data(tmp_path, monkeypatch):
     with pytest.raises(SyncError):
         svc2.pull("p")
     assert "p" not in pm2.profiles
+
+
+def test_auto_flag_persists_and_shows_in_status(tmp_path, monkeypatch):
+    pm, _, svc = _machine(tmp_path / "A", monkeypatch, tmp_path / "s")
+    pm.add_profile("p", "", "linux")
+    svc.push("p")
+    assert not svc.is_auto("p")
+    svc.set_auto("p", True)
+    assert svc.is_auto("p") and svc.status()[0]["auto"] is True
+    svc.set_auto("p", False)
+    assert not svc.is_auto("p")

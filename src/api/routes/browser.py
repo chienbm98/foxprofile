@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import threading
-import time
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
@@ -25,14 +24,6 @@ if TYPE_CHECKING:
 logger = get_logger("api.browser")
 
 router = APIRouter(prefix="/browser", tags=["browser"])
-
-
-def _push_after_stop(sync, name: str) -> None:
-    time.sleep(2)  # let the browser release its files
-    try:
-        sync.push(name)
-    except Exception as e:
-        logger.warning("Auto-push of %s failed: %s", name, e)
 
 
 def _api_log(msg: str) -> None:
@@ -93,8 +84,8 @@ def launch_browser(
     def _on_ready() -> None:
         bus.emit()
 
-    sync = request.app.state.container.sync_service if SYNC_AUTO else None
-    if sync is not None and sync.configured:
+    sync = request.app.state.container.sync_service
+    if sync.configured and (SYNC_AUTO or sync.is_auto(name)):
         try:
             sync.pull(name)
         except Exception as e:
@@ -106,7 +97,7 @@ def launch_browser(
     def _on_stop() -> None:
         bus.emit()
         if sync is not None:
-            threading.Thread(target=_push_after_stop, args=(sync, name), daemon=True).start()
+            threading.Thread(target=sync.push_after_stop, args=(name,), daemon=True).start()
 
     try:
         started = bl.start_thread(profile, _api_log, on_ready=_on_ready, on_stop=_on_stop)
@@ -141,6 +132,7 @@ def launch_browser(
 )
 def stop_browser(
     name: str,
+    request: Request,
     pm: IProfileManager = Depends(get_profile_manager),
     bl: IBrowserLauncher = Depends(get_browser_launcher),
     bus: EventBus = Depends(get_event_bus),
@@ -151,5 +143,8 @@ def stop_browser(
 
     bl.stop_profile(name)
     logger.info("API stopped browser for: %s", name)
+    sync = request.app.state.container.sync_service
+    if sync.configured and (SYNC_AUTO or sync.is_auto(name)):
+        threading.Thread(target=sync.push_after_stop, args=(name,), daemon=True).start()
     bus.emit()
     return SuccessResponse(message=f"Browser stopped for '{name}'")

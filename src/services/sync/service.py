@@ -86,6 +86,29 @@ class SyncService:
         tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
         os.replace(tmp, self.state_file)
 
+    @property
+    def _auto_file(self) -> pathlib.Path:
+        return self.state_file.with_suffix(".auto.json")
+
+    def auto_profiles(self) -> set[str]:
+        try:
+            return set(json.loads(self._auto_file.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            return set()
+
+    def is_auto(self, name: str) -> bool:
+        return name in self.auto_profiles()
+
+    def set_auto(self, name: str, enabled: bool) -> bool:
+        """Pull before launch and push after stop for this profile (API/server launches)."""
+        with self._lock:
+            names = self.auto_profiles()
+            names.add(name) if enabled else names.discard(name)
+            tmp = self._auto_file.with_suffix(".tmp")
+            tmp.write_text(json.dumps(sorted(names)), encoding="utf-8")
+            os.replace(tmp, self._auto_file)
+        return enabled
+
     def remote_meta(self, name: str) -> dict[str, Any] | None:
         raw = self.backend.read(f"{name}.json")
         return json.loads(raw) if raw else None
@@ -141,6 +164,18 @@ class SyncService:
             logger.info("Pushed %s v%d (%d bytes)", name, version, size)
             return meta
 
+    def push_after_stop(self, name: str) -> None:
+        """Background push once a profile has stopped; coalesces the two stop paths."""
+        time.sleep(2)  # let the browser release its files
+        with self._lock:
+            last = self._state().get(name, {}).get("synced_at", 0)
+            if time.time() - last < 15:
+                return
+            try:
+                self.push(name)
+            except Exception as e:
+                logger.warning("Auto-push of %s failed: %s", name, e)
+
     def pull(self, name: str, force: bool = False) -> dict[str, Any]:
         self._need_passphrase()
         with self._lock:
@@ -190,6 +225,7 @@ class SyncService:
                 except ValueError:
                     continue
         rows = []
+        auto = self.auto_profiles()
         for name in sorted(set(remote) | set(self.pm.profiles)):
             r, local = remote.get(name), name in self.pm.profiles
             known = state.get(name, {}).get("version", 0)
@@ -205,6 +241,7 @@ class SyncService:
                 {
                     "name": name,
                     "state": st,
+                    "auto": name in auto,
                     "local_version": known,
                     "remote_version": r["version"] if r else None,
                     "pushed_by": r.get("pushed_by") if r else None,

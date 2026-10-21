@@ -56,6 +56,12 @@ def pull(name: str, force: bool = False, svc: SyncService = Depends(get_sync)) -
     return _call(svc.pull, name, force)
 
 
+@router.put("/{name}/auto")
+def set_auto(name: str, enabled: bool = True, svc: SyncService = Depends(get_sync)) -> dict:
+    """Per-profile: pull a newer copy before launch and push when the profile stops."""
+    return {"name": name, "auto": svc.set_auto(name, enabled)}
+
+
 @router.delete("/{name}")
 def remove_remote(name: str, svc: SyncService = Depends(get_sync)) -> dict:
     """Remove a profile from the store only; local data is untouched."""
