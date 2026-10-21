@@ -338,6 +338,8 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
     </nav>
     <div class="grow"></div>
     <div class="rail-foot">
+      <button class="rail-link" id="sync-btn"><svg class="i"><use href="#i-upload"/></svg><span data-t="sync_button"></span></button>
+      <button class="rail-link" id="tasks-btn"><svg class="i"><use href="#i-tab"/></svg><span data-t="tasks_button"></span></button>
       <button class="rail-link" id="mcp-btn"><svg class="i"><use href="#i-bot"/></svg><span data-t="mcp_button"></span></button>
       <a class="rail-link" href="/docs" target="_blank" rel="noopener"><svg class="i"><use href="#i-docs"/></svg><span data-t="api_docs"></span></a>
       <button class="rail-link hidden" id="logout-btn"><svg class="i"><use href="#i-logout"/></svg><span data-t="logout"></span></button>
@@ -409,6 +411,21 @@ const I18N = {
     confirm_reset: "Tạo fingerprint mới cho “{name}”? Trang web sẽ thấy đây là một máy khác.", close: "Đóng",
     launching: "Đang mở {name}...", started: "Đã mở {name}", stopped: "Đã dừng {name}", created: "Đã tạo {name}", saved: "Đã lưu",
     deleted: "Đã xoá {name}", deleted_n: "Đã xoá {n} profile", exported: "Đã xuất {n} cookie", imported: "Đã nhập {n} cookie", fp_reset: "Đã tạo fingerprint mới",
+    sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
+    sync_title: "Đồng bộ profile giữa các máy", sync_sub: "Đăng nhập một lần, dùng ở máy khác mà không phải đăng nhập lại.",
+    sync_empty: "Chưa có profile nào trong kho đồng bộ hoặc trên máy này.", sync_push: "Đẩy lên", sync_pull: "Kéo về",
+    sync_push_all: "Đẩy tất cả", sync_pull_all: "Kéo tất cả", sync_force: "Ghi đè dù kho có bản mới hơn (force)",
+    sync_pushed: "Đã đẩy {name}", sync_pulled: "Đã kéo {name}", sync_all_done: "Hoàn tất",
+    sync_note: "Dừng profile trước khi đẩy hoặc kéo. Không chạy cùng một profile trên hai máy cùng lúc. Giữ cùng proxy/quốc gia để Google không hỏi xác minh lại.",
+    sync_state_synced: "Đã đồng bộ", sync_state_remote_newer: "Kho có bản mới hơn", sync_state_local_only: "Chỉ có trên máy này", sync_state_remote_only: "Chỉ có trong kho",
+    tasks_title: "Tác vụ theo lịch và nhóm profile", tasks_sub: "Tự mở profile, chạy các bước rồi tắt.",
+    task_list: "Tác vụ", task_none: "Chưa có tác vụ nào.", task_run: "Chạy ngay", task_pause: "Tạm dừng", task_resume: "Bật lại",
+    task_on: "đang bật", task_off: "đang tắt", task_last: "lần cuối", task_next: "lần tới", task_started: "Đã bắt đầu chạy",
+    task_every: "mỗi {n} phút", task_daily: "hằng ngày {at}", task_manual: "chạy tay", task_confirm_delete: "Xoá tác vụ “{name}”?",
+    groups: "Nhóm profile", group_name: "Tên nhóm", group_profiles: "profile-1, profile-2", save_group: "Lưu nhóm",
+    task_new: "Tạo tác vụ", task_name: "Tên tác vụ", task_targets: "Tên nhóm, hoặc danh sách profile cách nhau bằng dấu phẩy",
+    task_every_ph: "Lặp lại mỗi N phút (để trống = chạy tay)", task_jitter_ph: "Độ lệch ngẫu nhiên (giây)",
+    task_sync: "Kéo trước và đẩy sau mỗi lần chạy", task_create: "Tạo tác vụ", activity: "Nhật ký hoạt động",
     mcp_button: "Kết nối AI (MCP)", mcp_title: "Kết nối AI agent qua MCP",
     mcp_intro: "Cho Claude, Cursor hay VS Code tự quản lý profile và lướt web giúp bạn: mở trang, đọc nội dung, click, gõ và chụp màn hình.",
     mcp_endpoint: "Địa chỉ MCP", mcp_pick: "1. Chọn ứng dụng AI bạn dùng", mcp_paste: "2. Dán vào: {where}",
@@ -461,6 +478,21 @@ const I18N = {
     confirm_reset: "Create a new fingerprint for “{name}”? Sites will see a different machine.", close: "Close",
     launching: "Launching {name}...", started: "Started {name}", stopped: "Stopped {name}", created: "Created {name}", saved: "Saved",
     deleted: "Deleted {name}", deleted_n: "Deleted {n} profiles", exported: "Exported {n} cookies", imported: "Imported {n} cookies", fp_reset: "New fingerprint created",
+    sync_button: "Sync profiles", tasks_button: "Tasks & groups",
+    sync_title: "Sync profiles between machines", sync_sub: "Log in once, reuse the session on another machine without logging in again.",
+    sync_empty: "No profiles in the sync store or on this machine yet.", sync_push: "Push", sync_pull: "Pull",
+    sync_push_all: "Push all", sync_pull_all: "Pull all", sync_force: "Overwrite even if the store has a newer version (force)",
+    sync_pushed: "Pushed {name}", sync_pulled: "Pulled {name}", sync_all_done: "Done",
+    sync_note: "Stop a profile before pushing or pulling it. Never run the same profile on two machines at once. Keep the same proxy/country so Google does not ask to verify again.",
+    sync_state_synced: "In sync", sync_state_remote_newer: "Store has a newer version", sync_state_local_only: "Only on this machine", sync_state_remote_only: "Only in the store",
+    tasks_title: "Scheduled tasks and profile groups", tasks_sub: "Launch profiles, run steps, then stop them.",
+    task_list: "Tasks", task_none: "No tasks yet.", task_run: "Run now", task_pause: "Pause", task_resume: "Resume",
+    task_on: "enabled", task_off: "paused", task_last: "last", task_next: "next", task_started: "Started",
+    task_every: "every {n} min", task_daily: "daily at {at}", task_manual: "manual", task_confirm_delete: "Delete task “{name}”?",
+    groups: "Profile groups", group_name: "Group name", group_profiles: "profile-1, profile-2", save_group: "Save group",
+    task_new: "New task", task_name: "Task name", task_targets: "A group name, or comma-separated profile names",
+    task_every_ph: "Repeat every N minutes (empty = manual)", task_jitter_ph: "Random jitter (seconds)",
+    task_sync: "Pull before and push after each run", task_create: "Create task", activity: "Activity log",
     mcp_button: "Connect AI (MCP)", mcp_title: "Connect an AI agent over MCP",
     mcp_intro: "Let Claude, Cursor or VS Code manage profiles and browse for you: open pages, read them, click, type and take screenshots.",
     mcp_endpoint: "MCP endpoint", mcp_pick: "1. Pick your AI app", mcp_paste: "2. Paste into: {where}",
@@ -980,6 +1012,116 @@ async function copyText(text) {
   area.remove(); return ok;
 }
 
+function fmtTime(ts) { return ts ? new Date(ts * 1000).toLocaleString() : "—"; }
+
+async function openSync() {
+  const state = { force: false };
+  const list = h("div", { class: "sheet" });
+  const msg = h("div", { class: "msg", role: "status" });
+  const run = async (method, path, okMsg) => {
+    msg.className = "msg"; msg.textContent = "…";
+    try {
+      const r = await api(method, path + (state.force ? "?force=true" : ""));
+      const failed = r && r.failed ? Object.entries(r.failed) : [];
+      msg.className = "msg " + (failed.length ? "err" : "ok");
+      msg.textContent = failed.length ? failed.map(([n, e]) => `${n}: ${e}`).join(" · ") : okMsg;
+    } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+    await draw();
+    refresh();
+  };
+  async function draw() {
+    let data;
+    try { data = await api("GET", "/sync"); }
+    catch (e) { list.replaceChildren(h("p", { class: "msg err" }, e.message)); return; }
+    if (!data.profiles.length) { list.replaceChildren(h("p", {}, t("sync_empty"))); return; }
+    list.replaceChildren(...data.profiles.map((r) => h("div", { class: "row", style: "display:flex;gap:10px;align-items:center;padding:8px 0" },
+      h("b", { style: "flex:1" }, r.name),
+      h("span", { style: "flex:1;color:var(--ink-2)" }, t("sync_state_" + r.state.replace("-", "_")), r.pushed_by ? ` · ${r.pushed_by} · ${fmtTime(r.pushed_at)}` : ""),
+      h("button", { class: "btn btn-line", disabled: r.state === "remote-only", onclick: () => run("POST", `/sync/${enc(r.name)}/push`, t("sync_pushed", { name: r.name })) }, t("sync_push")),
+      h("button", { class: "btn btn-line", disabled: r.state === "local-only", onclick: () => run("POST", `/sync/${enc(r.name)}/pull`, t("sync_pulled", { name: r.name })) }, t("sync_pull")))));
+  }
+  modal((close) => {
+    const box = h("div", {},
+      modalHead(t("sync_title"), t("sync_sub"), close),
+      h("div", { class: "modal-body" },
+        list, msg,
+        h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink-2)" },
+          h("input", { type: "checkbox", onchange: (e) => { state.force = e.target.checked; } }), t("sync_force")),
+        h("p", { class: "hint" }, t("sync_note"))),
+      h("div", { class: "modal-foot" },
+        h("button", { class: "btn btn-line", onclick: () => run("POST", "/sync/pull", t("sync_all_done")) }, t("sync_pull_all")),
+        h("button", { class: "btn btn-act", onclick: () => run("POST", "/sync/push", t("sync_all_done")) }, t("sync_push_all"))));
+    draw();
+    return box;
+  }, { wide: true });
+}
+
+async function openTasks() {
+  const state = { template: "keepalive-gmail" };
+  const body = h("div", { class: "modal-body" });
+  const msg = h("div", { class: "msg", role: "status" });
+  const say = (text, bad) => { msg.className = "msg " + (bad ? "err" : "ok"); msg.textContent = text; };
+  const act = async (fn, okMsg) => {
+    try { await fn(); say(okMsg, false); } catch (e) { say(e.message, true); }
+    draw();
+  };
+  async function draw() {
+    let tasks, groups, tpl, events;
+    try {
+      [tasks, groups, tpl, events] = await Promise.all([
+        api("GET", "/automation/tasks"), api("GET", "/automation/groups"),
+        api("GET", "/automation/templates"), api("GET", "/automation/activity?limit=15")]);
+    } catch (e) { body.replaceChildren(h("p", { class: "msg err" }, e.message)); return; }
+    const sched = (x) => x.every_minutes ? t("task_every", { n: x.every_minutes }) : x.daily_at ? t("task_daily", { at: x.daily_at }) : t("task_manual");
+    const taskRows = tasks.tasks.length ? tasks.tasks.map((x) => h("div", { style: "display:flex;gap:8px;align-items:center;padding:6px 0" },
+      h("div", { style: "flex:1" }, h("b", {}, x.name), h("div", { class: "hint" },
+        `${x.group ? "[" + x.group + "] " : ""}${(x.profiles || []).join(", ")} · ${sched(x)} · ${x.enabled ? t("task_on") : t("task_off")} · ${t("task_last")}: ${x.last_status || "—"} · ${t("task_next")}: ${fmtTime(x.next_run)}`)),
+      h("button", { class: "btn btn-line", onclick: () => act(() => api("POST", `/automation/tasks/${x.id}/run`), t("task_started")) }, t("task_run")),
+      h("button", { class: "btn btn-line", onclick: () => act(() => api("POST", `/automation/tasks/${x.id}/enable?enabled=${!x.enabled}`), t("saved")) }, x.enabled ? t("task_pause") : t("task_resume")),
+      h("button", { class: "btn btn-line", onclick: async () => { if (await confirmDialog(t("task_confirm_delete", { name: x.name }), t("delete"), true)) act(() => api("DELETE", `/automation/tasks/${x.id}`), t("deleted", { name: x.name })); } }, t("delete"))))
+      : [h("p", { class: "hint" }, t("task_none"))];
+
+    const gName = h("input", { id: "g-name", placeholder: t("group_name"), maxlength: 60 });
+    const gProfiles = h("input", { id: "g-profiles", placeholder: t("group_profiles") });
+    const groupRows = Object.entries(groups.groups).map(([g, ps]) => h("div", { class: "hint" }, `${g}: ${ps.join(", ")} `,
+      h("a", { href: "#", onclick: (e) => { e.preventDefault(); act(() => api("DELETE", `/automation/groups/${enc(g)}`), t("deleted", { name: g })); } }, t("delete"))));
+
+    const tName = h("input", { id: "t-name", placeholder: t("task_name"), maxlength: 80 });
+    const tTpl = h("select", { id: "t-tpl", onchange: (e) => { state.template = e.target.value; } },
+      Object.keys(tpl.templates).map((k) => h("option", { value: k, selected: k === state.template }, k)));
+    const tTargets = h("input", { id: "t-targets", placeholder: t("task_targets") });
+    const tEvery = h("input", { id: "t-every", type: "number", min: 1, placeholder: t("task_every_ph") });
+    const tJit = h("input", { id: "t-jit", type: "number", min: 0, placeholder: t("task_jitter_ph") });
+    const tSync = h("input", { type: "checkbox", id: "t-sync" });
+    const create = () => {
+      const names = tTargets.value.split(",").map((s) => s.trim()).filter(Boolean);
+      const isGroup = names.length === 1 && groups.groups[names[0]];
+      act(() => api("POST", "/automation/tasks", {
+        name: tName.value.trim(), template: state.template,
+        group: isGroup ? names[0] : null, profiles: isGroup ? null : names,
+        every_minutes: tEvery.value ? Number(tEvery.value) : null,
+        jitter_seconds: tJit.value ? Number(tJit.value) : 0, sync: tSync.checked }), t("created", { name: tName.value.trim() }));
+    };
+    body.replaceChildren(
+      h("h3", {}, t("task_list")), ...taskRows,
+      h("h3", { style: "margin-top:16px" }, t("groups")), ...groupRows,
+      h("div", { style: "display:flex;gap:8px;margin-top:6px" }, gName, gProfiles,
+        h("button", { class: "btn btn-line", onclick: () => act(() => api("PUT", `/automation/groups/${enc(gName.value.trim())}`, { profiles: gProfiles.value.split(",").map((s) => s.trim()).filter(Boolean) }), t("saved")) }, t("save_group"))),
+      h("h3", { style: "margin-top:16px" }, t("task_new")),
+      h("div", { style: "display:grid;gap:8px" }, tName, tTpl, tTargets, tEvery, tJit,
+        h("label", { style: "display:flex;gap:8px;align-items:center;color:var(--ink-2)" }, tSync, t("task_sync")),
+        h("button", { class: "btn btn-act", onclick: create }, t("task_create"))),
+      h("h3", { style: "margin-top:16px" }, t("activity")),
+      h("pre", { class: "code", style: "max-height:160px;overflow:auto" }, events.events.map((e) => `${fmtTime(e.t)}  ${e.event}  ${e.profile || ""} ${e.step || e.status || e.error || ""}`).join("\n") || "—"),
+      msg);
+  }
+  modal((close) => {
+    draw();
+    return h("div", {}, modalHead(t("tasks_title"), t("tasks_sub"), close), body,
+      h("div", { class: "modal-foot" }, h("button", { class: "btn btn-line", onclick: close }, t("close"))));
+  }, { wide: true });
+}
+
 async function openMcpGuide() {
   let setup;
   try { setup = await api("GET", `/mcp/setup?base_url=${enc(location.origin)}`); }
@@ -1114,6 +1256,8 @@ $("login-form").onsubmit = async (e) => {
 $("logout-btn").onclick = () => { token = ""; store.set("foxprofile.token", null); showLogin(); };
 $("new-btn").onclick = () => openEditor(null);
 $("mcp-btn").onclick = openMcpGuide;
+$("sync-btn").onclick = openSync;
+$("tasks-btn").onclick = openTasks;
 $("search").oninput = render;
 document.querySelectorAll("[data-lang]").forEach((b) => { b.onclick = () => { lang = b.dataset.lang; store.set("foxprofile.lang", lang); applyI18n(); lastRender = ""; render(); }; });
 document.addEventListener("keydown", (e) => {

@@ -362,3 +362,6 @@ async def browser_tab_close(profile: str, index: int) -> dict:
 
 def main() -> None:
     mcp.run(transport="stdio")
+
+
+from . import sync_automation_tools  # noqa: E402,F401  (registers sync/automation tools)

@@ -46,3 +46,18 @@ class Container:
         from ..services.proxy.service import ProxyService
 
         return self._get("ps", ProxyService)
+
+    @property
+    def sync_service(self):
+        from ..services.sync.service import SyncService
+
+        return self._get("sync", lambda: SyncService(self.profile_manager, self.browser_launcher))
+
+    @property
+    def automation(self):
+        from ..services.automation.engine import Automation
+
+        return self._get(
+            "auto",
+            lambda: Automation(self.profile_manager, self.browser_launcher, self.sync_service),
+        )

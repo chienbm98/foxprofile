@@ -14,11 +14,13 @@ from . import mcp_http
 from .auth import require_token
 from .guard import LocalOnlyGuard
 from .routes import (
+    automation_router,
     browser_router,
     mcp_setup_router,
     page_router,
     profiles_router,
     proxy_router,
+    sync_router,
 )
 from .schemas.common import SuccessResponse
 
@@ -48,8 +50,13 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        async with mcp_lifespan:
-            yield
+        automation = container.automation
+        automation.start()
+        try:
+            async with mcp_lifespan:
+                yield
+        finally:
+            automation.shutdown()
 
     app = FastAPI(
         lifespan=lifespan,
@@ -70,6 +77,8 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
     app.include_router(browser_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(page_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(proxy_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(sync_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(automation_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(mcp_setup_router, prefix=API_PREFIX, dependencies=protected)
     app.router.routes.append(mcp_route)
 

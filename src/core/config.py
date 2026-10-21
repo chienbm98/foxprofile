@@ -46,3 +46,15 @@ RESTORE_TABS = _env("RESTORE_TABS", "true").strip().lower() in ("1", "true", "ye
 # Shared secret for the REST API, the web panel and the MCP server. Required
 # whenever the API listens on anything other than the loopback interface.
 API_TOKEN = _env("API_TOKEN", "")
+
+# Profile sync: a folder path, webdav(s)://host/path or s3://bucket/prefix. Archives are
+# encrypted with FOXPROFILE_SYNC_PASSPHRASE (read from the environment only).
+SYNC_URL = _env("SYNC_URL", "")
+SYNC_PASSPHRASE = _env("SYNC_PASSPHRASE", "")
+SYNC_STATE_FILE = _env("SYNC_STATE_FILE", "sync_state.json")
+MACHINE_NAME = _env("MACHINE_NAME", "")
+AUTOMATION_FILE = _env("AUTOMATION_FILE", "automation.json")
+ACTIVITY_LOG = _env("ACTIVITY_LOG", "activity.jsonl")
+
+# "true": pull a newer copy before launching a profile and push it when it stops.
+SYNC_AUTO = _env("SYNC_AUTO", "false").strip().lower() in ("1", "true", "yes")

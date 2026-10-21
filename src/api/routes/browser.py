@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import threading
+import time
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from ...core.config import LAUNCH_WAIT_TIMEOUT
+from ...core.config import LAUNCH_WAIT_TIMEOUT, SYNC_AUTO
 from ...core.logging import get_logger
 from ...services.browser.launcher import ProfileBusyError
 from ..dependencies import get_browser_launcher, get_event_bus, get_profile_manager
@@ -23,6 +25,14 @@ if TYPE_CHECKING:
 logger = get_logger("api.browser")
 
 router = APIRouter(prefix="/browser", tags=["browser"])
+
+
+def _push_after_stop(sync, name: str) -> None:
+    time.sleep(2)  # let the browser release its files
+    try:
+        sync.push(name)
+    except Exception as e:
+        logger.warning("Auto-push of %s failed: %s", name, e)
 
 
 def _api_log(msg: str) -> None:
@@ -62,6 +72,7 @@ def browser_status(
 )
 def launch_browser(
     name: str,
+    request: Request,
     response: Response,
     wait: bool = Query(
         True,
@@ -82,8 +93,20 @@ def launch_browser(
     def _on_ready() -> None:
         bus.emit()
 
+    sync = request.app.state.container.sync_service if SYNC_AUTO else None
+    if sync is not None and sync.configured:
+        try:
+            sync.pull(name)
+        except Exception as e:
+            logger.warning("Auto-pull of %s skipped: %s", name, e)
+        profile = require_profile(name, pm)
+    else:
+        sync = None
+
     def _on_stop() -> None:
         bus.emit()
+        if sync is not None:
+            threading.Thread(target=_push_after_stop, args=(sync, name), daemon=True).start()
 
     try:
         started = bl.start_thread(profile, _api_log, on_ready=_on_ready, on_stop=_on_stop)

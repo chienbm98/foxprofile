@@ -190,3 +190,9 @@ e2e-output/
 .impeccable/decision/
 .impeccable/questions/
 .impeccable/mocks/
+
+# Sync / automation runtime files
+sync_state.json
+automation.json
+activity.jsonl
+screenshots/
