@@ -63,6 +63,8 @@ class BrowserLauncher:
         self._launch_results: dict[str, _LaunchResult] = {}
         self._busy: set[str] = set()
         self._controls: dict[str, tuple[int, str]] = {}
+        # Optional AutoSyncHook: pull before a launch, push after a stop.
+        self.sync_hook: Any = None
         atexit.register(self.shutdown_all)
 
     @contextlib.contextmanager
@@ -147,6 +149,8 @@ class BrowserLauncher:
                         self._stop_notifiers.pop(profile.name, None)
                 log_callback(get_string("session_ended", name=profile.name))
                 logger.info(f"Session ended for profile: {profile.name}")
+                if self.sync_hook:
+                    self.sync_hook.after_stop(profile.name)
                 if on_stop:
                     on_stop()
 
@@ -160,6 +164,8 @@ class BrowserLauncher:
                 on_start()
 
             try:
+                if self.sync_hook:
+                    profile = self.sync_hook.before_launch(profile)
                 proc = spawn_browser(profile)
                 with self._lock:
                     self._active_sessions[profile.name] = proc
@@ -204,6 +210,8 @@ class BrowserLauncher:
             notifier.set()
         terminate(proc, profile_name, timeout)
         logger.info("Stopped browser for profile: %s", profile_name)
+        if self.sync_hook:
+            self.sync_hook.after_stop(profile_name)
         return True
 
     def control(

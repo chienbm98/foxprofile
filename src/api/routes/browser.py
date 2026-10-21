@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import threading
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
-from ...core.config import LAUNCH_WAIT_TIMEOUT, SYNC_AUTO
+from ...core.config import LAUNCH_WAIT_TIMEOUT
 from ...core.logging import get_logger
 from ...services.browser.launcher import ProfileBusyError
 from ..dependencies import get_browser_launcher, get_event_bus, get_profile_manager
@@ -63,7 +62,6 @@ def browser_status(
 )
 def launch_browser(
     name: str,
-    request: Request,
     response: Response,
     wait: bool = Query(
         True,
@@ -84,20 +82,8 @@ def launch_browser(
     def _on_ready() -> None:
         bus.emit()
 
-    sync = request.app.state.container.sync_service
-    if sync.configured and (SYNC_AUTO or sync.is_auto(name)):
-        try:
-            sync.pull(name)
-        except Exception as e:
-            logger.warning("Auto-pull of %s skipped: %s", name, e)
-        profile = require_profile(name, pm)
-    else:
-        sync = None
-
     def _on_stop() -> None:
         bus.emit()
-        if sync is not None:
-            threading.Thread(target=sync.push_after_stop, args=(name,), daemon=True).start()
 
     try:
         started = bl.start_thread(profile, _api_log, on_ready=_on_ready, on_stop=_on_stop)
@@ -132,7 +118,6 @@ def launch_browser(
 )
 def stop_browser(
     name: str,
-    request: Request,
     pm: IProfileManager = Depends(get_profile_manager),
     bl: IBrowserLauncher = Depends(get_browser_launcher),
     bus: EventBus = Depends(get_event_bus),
@@ -143,8 +128,5 @@ def stop_browser(
 
     bl.stop_profile(name)
     logger.info("API stopped browser for: %s", name)
-    sync = request.app.state.container.sync_service
-    if sync.configured and (SYNC_AUTO or sync.is_auto(name)):
-        threading.Thread(target=sync.push_after_stop, args=(name,), daemon=True).start()
     bus.emit()
     return SuccessResponse(message=f"Browser stopped for '{name}'")

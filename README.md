@@ -181,7 +181,7 @@ python -m src.sync_cli pull --all        # on the other machine
 python -m src.sync_cli status
 ```
 
-The same is available as REST (`/api/v1/sync`) and MCP tools (`sync_status`, `sync_push`, `sync_pull`). Tick **Auto-sync** on a profile in the panel (or `PUT /api/v1/sync/<name>/auto`), or set `FOXPROFILE_SYNC_AUTO=true` for all profiles: the API then pulls a newer copy before a launch and pushes when the profile stops.
+The same is available as REST (`/api/v1/sync`) and MCP tools (`sync_status`, `sync_push`, `sync_pull`). Tick **Auto-sync** on a profile in the panel (or `PUT /api/v1/sync/<name>/auto`), or set `FOXPROFILE_SYNC_AUTO=true` for all profiles: FoxProfile then pulls a newer copy before every launch (desktop app, panel, API, MCP, tasks) and pushes when the profile stops.
 
 There is no lock. Each push bumps a version; a push is refused if the store has a newer version than your last sync (pull first, or `--force`). A pull keeps the previous local data as `<name>.syncbak`. Never run the same profile on two machines at once.
 

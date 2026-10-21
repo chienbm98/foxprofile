@@ -39,7 +39,14 @@ class Container:
     def browser_launcher(self) -> IBrowserLauncher:
         from ..services.browser.launcher import BrowserLauncher
 
-        return self._get("bl", BrowserLauncher)
+        def build() -> BrowserLauncher:
+            from ..services.sync.service import AutoSyncHook
+
+            launcher = BrowserLauncher()
+            launcher.sync_hook = AutoSyncHook(lambda: self.sync_service)
+            return launcher
+
+        return self._get("bl", build)
 
     @property
     def proxy_service(self) -> IProxyService:

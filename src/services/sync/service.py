@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 from ...core.config import (
     DATA_DIR,
     MACHINE_NAME,
+    SYNC_AUTO,
     SYNC_PASSPHRASE,
     SYNC_STATE_FILE,
     SYNC_URL,
@@ -270,3 +271,30 @@ class SyncService:
             except (SyncError, OSError) as e:
                 failed[n] = str(e)
         return {"done": done, "failed": failed}
+
+
+class AutoSyncHook:
+    """Called by the browser launcher on every launch and stop, whoever triggers it
+    (desktop app, panel, API, MCP, tasks). Acts only for profiles with auto-sync on."""
+
+    def __init__(self, get_service) -> None:
+        self._get = get_service
+
+    def _active(self, name: str):
+        svc = self._get()
+        return svc if svc.configured and (SYNC_AUTO or svc.is_auto(name)) else None
+
+    def before_launch(self, profile):
+        svc = self._active(profile.name)
+        if svc is None:
+            return profile
+        try:
+            svc.pull(profile.name)
+        except Exception as e:
+            logger.warning("Auto-pull of %s skipped: %s", profile.name, e)
+        return svc.pm.profiles.get(profile.name, profile)
+
+    def after_stop(self, name: str) -> None:
+        svc = self._active(name)
+        if svc is not None:
+            threading.Thread(target=svc.push_after_stop, args=(name,), daemon=True).start()

@@ -142,3 +142,18 @@ def test_auto_flag_persists_and_shows_in_status(tmp_path, monkeypatch):
     assert svc.is_auto("p") and svc.status()[0]["auto"] is True
     svc.set_auto("p", False)
     assert not svc.is_auto("p")
+
+
+def test_pull_over_leftover_data_dir_without_profile_entry(tmp_path, monkeypatch):
+    store = tmp_path / "store"
+    pm, _, svc = _machine(tmp_path / "A", monkeypatch, store)
+    pm.add_profile("p", "", "linux")
+    (tmp_path / "A" / "camoufox_data" / "p" / "cookies.sqlite").write_bytes(b"NEW")
+    svc.push("p")
+    pm2, _, svc2 = _machine(tmp_path / "B", monkeypatch, store)
+    stale = tmp_path / "B" / "camoufox_data" / "p"
+    stale.mkdir(parents=True)
+    (stale / "old.txt").write_text("stale")
+    svc2.pull("p")
+    assert (stale / "cookies.sqlite").read_bytes() == b"NEW"
+    assert not (stale / "old.txt").exists()
