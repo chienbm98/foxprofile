@@ -182,7 +182,7 @@ def build_sidebar(
 
 
 def _language_switch(active: str, on_language: Callable[[str], None] | None) -> ft.Container:
-    """Segmented Tiếng Việt / English switch, as in the web panel."""
+    """Segmented language switch, as in the web panel."""
 
     def seg(code: str, label: str) -> ft.Container:
         on = code == active
@@ -206,5 +206,8 @@ def _language_switch(active: str, on_language: Callable[[str], None] | None) -> 
         padding=3,
         border_radius=8,
         bgcolor=COLORS["cover_deep"],
-        content=ft.Row(spacing=0, controls=[seg("vi", "Tiếng Việt"), seg("en", "English")]),
+        content=ft.Row(
+            spacing=0,
+            controls=[seg("vi", "Tiếng Việt"), seg("en", "English"), seg("zh", "中文")],
+        ),
     )

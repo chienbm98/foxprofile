@@ -47,7 +47,8 @@ Cảm ơn bạn đã muốn đóng góp! Mọi đóng góp đều được chào
 
 - Python ≥ 3.10, có type hint cho hàm mới.
 - Định dạng và lint bằng `ruff` (cấu hình trong `pyproject.toml`).
-- **Chữ hiển thị trên giao diện không viết cứng** mà thêm vào `src/core/strings.py` ở **cả** `en` và `vi`, rồi gọi `get_string("key")`. Test sẽ báo lỗi nếu thiếu khóa ở một trong hai ngôn ngữ.
+- **Chữ hiển thị trên giao diện không viết cứng** mà thêm vào `src/core/strings.py` ở cả `en`, `vi` và `zh`, rồi gọi `get_string("key")`. Test sẽ báo lỗi nếu thiếu khóa hoặc placeholder ở bất kỳ ngôn ngữ nào.
+- Thông báo lỗi API mới cần có bản dịch ở `src/api/i18n.py`; ngôn ngữ được chọn theo `Accept-Language` trong từng request.
 - Tên profile luôn phải đi qua `validate_profile_name` trước khi dùng làm đường dẫn.
 - Không commit `profiles.json`, `camoufox_data/`, `logs/` hay file `.env`: chúng chứa cookie và proxy thật.
 

@@ -2,7 +2,7 @@
   <img src="src/assets/icon.png" width="112" alt="FoxProfile logo" />
   <h1>FoxProfile</h1>
   <p><strong>Quản lý nhiều profile trình duyệt chống phát hiện, miễn phí và mã nguồn mở</strong></p>
-  <p>Mỗi profile có fingerprint thiết bị, cookie và proxy riêng · Hai engine: Camoufox (Firefox) và Chrome · Giao diện tiếng Anh và tiếng Việt · REST API và MCP cho tự động hóa</p>
+  <p>Mỗi profile có fingerprint thiết bị, cookie và proxy riêng · Hai engine: Camoufox (Firefox) và Chrome · Giao diện tiếng Anh, tiếng Việt và tiếng Trung giản thể · REST API và MCP cho tự động hóa</p>
 
   <p>
     <a href="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml"><img src="https://github.com/chienbm98/foxprofile/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -13,7 +13,7 @@
     <a href="https://buymeacoffee.com/chienbm98"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" /></a>
   </p>
 
-  <p><a href="README.md">English</a> · Tiếng Việt</p>
+  <p><a href="README.md">English</a> · Tiếng Việt · <a href="README.zh-CN.md">简体中文</a></p>
   <p>
     <a href="#bắt-đầu-nhanh">Bắt đầu nhanh</a> ·
     <a href="#tính-năng">Tính năng</a> ·
@@ -61,7 +61,7 @@ FoxProfile quản lý các profile trình duyệt chống phát hiện: mỗi pr
 - **MCP server**: Claude, Cursor... tự mở profile, lướt web, click, gõ, chụp màn hình.
 - **Chế độ server + web panel**: chạy trên VPS, quản lý và xem màn hình từ xa qua trình duyệt, có token bảo vệ.
 - **REST API** để điều khiển bằng script, có trang tài liệu Swagger.
-- Giao diện **tiếng Anh** (mặc định) và tiếng Việt, đổi ngay trong app. Font đóng gói sẵn, không cần mạng.
+- Giao diện **tiếng Anh** (mặc định), tiếng Việt và tiếng Trung giản thể, đổi ngay trong app. Font đóng gói sẵn, không cần mạng.
 
 ## Yêu cầu
 
@@ -91,7 +91,7 @@ Chạy ứng dụng:
 python -m src.main
 ```
 
-Trên Windows có thể bấm đúp `run_foxprofile.bat`. Ứng dụng mở cửa sổ quản lý và đồng thời chạy API tại `http://127.0.0.1:8000`; tài liệu API ở `http://127.0.0.1:8000/docs`. Đặt `FOXPROFILE_LANG=vi` để dùng giao diện tiếng Việt.
+Trên Windows có thể bấm đúp `run_foxprofile.bat`. Ứng dụng mở cửa sổ quản lý và đồng thời chạy API tại `http://127.0.0.1:8000`; tài liệu API ở `http://127.0.0.1:8000/docs`. Đặt `FOXPROFILE_LANG=vi` để dùng giao diện tiếng Việt hoặc `FOXPROFILE_LANG=zh` để dùng tiếng Trung giản thể.
 
 ## Timezone, locale và Kiểm tra IP
 
@@ -187,7 +187,7 @@ Mọi cấu hình đều không bắt buộc. Muốn đổi thì sao chép `.env
 
 | Biến | Mặc định | Ý nghĩa |
 | --- | --- | --- |
-| `FOXPROFILE_LANG` | `en` | Ngôn ngữ giao diện: `en` hoặc `vi` |
+| `FOXPROFILE_LANG` | `en` | Ngôn ngữ giao diện: `en`, `vi` hoặc `zh` |
 | `FOXPROFILE_PROFILES_FILE` | `profiles.json` | File lưu danh sách profile |
 | `FOXPROFILE_DATA_DIR` | `camoufox_data` | Thư mục dữ liệu, mỗi profile một thư mục con |
 | `FOXPROFILE_LOG_DIR` | `logs` | Thư mục log |
@@ -220,7 +220,7 @@ logs/foxprofile_YYYYMMDD.log                      log theo ngày
 
 ## REST API
 
-Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang chạy.
+Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang chạy. Gửi `Accept-Language: zh` (hoặc `zh-CN`) để nhận thông báo lỗi và lỗi xác thực bằng tiếng Trung; panel web tự gửi ngôn ngữ đang chọn.
 
 | Method | Đường dẫn | Mô tả |
 | --- | --- | --- |

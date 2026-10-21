@@ -101,7 +101,7 @@ input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(-
 .rail-foot { display: flex; flex-direction: column; gap: 8px; }
 .rail-link { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 7px; border: 0; background: transparent; color: var(--cover-ink); text-decoration: none; cursor: pointer; font-weight: 500; }
 .rail-link:hover { background: var(--cover-deep); }
-.seg { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 8px; background: var(--cover-deep); }
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 3px; border-radius: 8px; background: var(--cover-deep); }
 .seg button { height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--cover-muted); cursor: pointer; font-size: 13px; font-weight: 500; }
 .seg button.active { background: var(--cover); color: var(--cover-ink); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
 
@@ -341,7 +341,7 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
       <button class="rail-link" id="mcp-btn"><svg class="i"><use href="#i-bot"/></svg><span data-t="mcp_button"></span></button>
       <a class="rail-link" href="/docs" target="_blank" rel="noopener"><svg class="i"><use href="#i-docs"/></svg><span data-t="api_docs"></span></a>
       <button class="rail-link hidden" id="logout-btn"><svg class="i"><use href="#i-logout"/></svg><span data-t="logout"></span></button>
-      <div class="seg" role="group" aria-label="Language"><button data-lang="vi">Tiếng Việt</button><button data-lang="en">English</button></div>
+      <div class="seg" role="group" aria-label="Language"><button data-lang="zh">中文</button><button data-lang="vi">Tiếng Việt</button><button data-lang="en">English</button></div>
     </div>
   </aside>
   <main>
@@ -484,6 +484,58 @@ const I18N = {
     back: "Back", reload: "Reload",
     retry: "Retry", boot_error: "Cannot reach the server",
   },
+  zh: {
+    tagline: "反检测浏览器配置管理", new_profile: "新建配置", filters: "筛选",
+    f_all: "全部", f_running: "运行中", f_proxy: "使用 Proxy", f_direct: "直连", f_chrome: "Chrome 内核",
+    api_docs: "API 文档", logout: "退出登录", your_profiles: "浏览器配置", search: "按名称或 Proxy 搜索",
+    counts: "共 {n} 个配置 · {r} 个运行中", counts_none: "共 {n} 个配置 · 当前没有配置运行",
+    col_profile: "配置", col_device: "设备", col_proxy: "Proxy", col_geo: "Timezone · Locale", col_status: "状态",
+    empty_title: "还没有配置", empty: "每个配置都有独立的身份信息：指纹、Cookie 和 Proxy。创建第一个配置即可开始使用。",
+    no_match_title: "没有找到配置", no_match: "当前筛选条件下没有匹配“{q}”的配置。", clear_filters: "清除筛选条件",
+    launch: "启动", stop: "停止", view: "查看屏幕", cookies: "Cookie 和指纹", edit: "编辑", delete: "删除",
+    stamp_live: "运行中", stamp_starting: "正在启动", stamp_stopping: "正在停止", stamp_failed: "失败", idle: "已停止",
+    direct: "直连", follow_ip: "跟随 IP", no_fp_short: "暂无指纹", no_proxy_short: "无 Proxy", selected: "已选择 {n} 项", bulk_launch: "启动", bulk_stop: "停止", bulk_delete: "删除", clear_sel: "取消选择",
+    select_all: "全选", select_row: "选择 {name}",
+    confirm_bulk_delete: "确定删除已选的 {n} 个配置吗？它们的 Cookie 和数据将被永久删除。", bulk_skip_running: "已跳过 {n} 个运行中的配置",
+    login_side: "此服务器正在运行 FoxProfile。使用 API 令牌登录，以远程管理浏览器配置。",
+    login_hint: "输入服务器的 API 令牌（FOXPROFILE_API_TOKEN）。", token: "API 令牌", login: "登录",
+    bad_token: "令牌无效", create: "创建配置", edit_title: "编辑配置", edit_sub: "正在编辑 {name}", create_sub: "每个配置都代表独立身份，拥有自己的设备、Proxy 和位置。",
+    name: "配置名称", os: "操作系统", engine: "内核",
+    engine_camoufox: "Camoufox（Firefox）", engine_chrome: "Chrome（实验性）", engine_locked: "创建后内核固定。",
+    engine_note: "Chromium 内核仍处于实验阶段。首次使用时会自动下载到运行 FoxProfile 的机器（约 150 MB）。请根据该机器选择正确的操作系统；选择其他系统可能暴露字体信息。创建后内核固定。",
+    proxy_label: "Proxy", proxy_hint: "user:pass@host:port、host:port:user:pass 或 socks5://... 留空表示直连。",
+    check_proxy: "检查 Proxy", cancel: "取消", save: "保存更改", checking: "正在检查...",
+    confirm_delete: "确定删除配置“{name}”吗？它的 Cookie 和数据将被永久删除。", confirm_title: "确认", stop_first: "请先停止浏览器",
+    cookie_hint: "此配置的浏览器必须处于停止状态。", export_json: "导出为 JSON Cookie", export_json_hint: "Cookie-Editor、GoLogin、GPM",
+    export_txt: "导出 cookies.txt", export_txt_hint: "Netscape 格式：yt-dlp、curl、wget", import: "导入 Cookie", import_hint: "从 JSON 或 cookies.txt 文件导入",
+    reset_fp: "生成新指纹", reset_fp_hint: "下次启动时，网站会看到一台不同的设备", fp_title: "当前指纹", no_fp: "暂无指纹。首次启动时会自动生成。",
+    fp_platform: "平台", fp_screen: "屏幕", fp_cpu: "CPU",
+    confirm_reset: "确定为“{name}”生成新指纹吗？网站会将其识别为另一台设备。", close: "关闭",
+    launching: "正在启动 {name}...", started: "已启动 {name}", stopped: "已停止 {name}", created: "已创建 {name}", saved: "已保存",
+    deleted: "已删除 {name}", deleted_n: "已删除 {n} 个配置", exported: "已导出 {n} 个 Cookie", imported: "已导入 {n} 个 Cookie", fp_reset: "已生成新指纹",
+    mcp_button: "连接 AI（MCP）", mcp_title: "通过 MCP 连接 AI 智能体",
+    mcp_intro: "让 Claude、Cursor 或 VS Code 帮你管理配置并浏览网页：打开页面、读取内容、点击、输入和截屏。",
+    mcp_endpoint: "MCP 端点", mcp_pick: "1. 选择你使用的 AI 应用", mcp_paste: "2. 粘贴到：{where}",
+    mcp_copy: "复制", mcp_copied: "已复制", mcp_insert_token: "将当前登录所用的令牌填入配置",
+    mcp_restart: "3. 重启 AI 应用，保持 FoxProfile 运行，然后尝试发送：",
+    mcp_example: "打开配置 {name}，在 google.com 搜索“河内天气”，并截图发给我。",
+    mcp_remote_note: "Claude Desktop 只能启动本地 MCP server，因此此配置通过 mcp-remote 建立桥接（需要 Node.js）。",
+    mcp_security: "网页内容不可信：AI 会忽略网页内的指令。MCP 的配置删除功能已关闭。",
+    mcp_http_warn: "当前使用未加密的 HTTP：令牌可能在传输过程中被窃听。建议将服务器置于 HTTPS 之后。",
+    timezone: "Timezone", locale: "Locale", geo_hint: "留空则根据 Proxy 的 IP 自动设置。", check_ip: "检查 IP", tz_hint: "Asia/Ho_Chi_Minh", locale_hint: "vi-VN",
+    geo_exit: "出口 IP：{ip} · {country}", geo_tz: "Timezone：{v}（{m}）", geo_locale: "Locale：{v}（{m}）",
+    geo_auto: "自动", geo_pinned: "固定", geo_random: "每次启动时随机", geo_ok: "未发现不匹配项",
+    geo_failed: "出口 IP 获取失败：{e}", geo_use: "使用 {v}",
+    geo_warn_country_mismatch: "{source} 判断 IP 位于 {got}，浏览器当前使用 {expected}",
+    geo_warn_timezone_mismatch: "{source} 报告的时区为 {got}，浏览器当前使用 {expected}",
+    geo_warn_hosting: "{source} 将此 IP 标记为数据中心/托管服务 IP：可能更容易遇到验证码或访问拦截",
+    geo_warn_ip_differs: "双栈 Proxy：Timezone 根据 {exit_ip} 设置，但网站看到的是 {seen_ip}",
+    geo_warn_locale_country: "Locale {locale} 与 IP 所在国家（{country}）不匹配",
+    geo_warn_locale_random: "自动 Locale 会在每次启动时重新随机选择（{suggested} 仅约占 {share}%）；建议固定设置",
+    go: "前往", new_tab: "新标签页", type: "输入", type_hint: "在当前焦点所在的输入框中输入（点击屏幕可选择输入框）", working: "处理中...",
+    back: "返回", reload: "重新加载",
+    retry: "重试", boot_error: "服务器连接失败",
+  },
 };
 
 const store = {
@@ -546,7 +598,7 @@ function toast(msg, isError = false) {
 
 class ApiError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 async function api(method, path, body, { raw = false } = {}) {
-  const headers = {};
+  const headers = { "Accept-Language": lang };
   if (token) headers.Authorization = "Bearer " + token;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const res = await fetch("/api/v1" + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
