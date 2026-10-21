@@ -65,6 +65,8 @@ class BrowserLauncher:
         self._controls: dict[str, tuple[int, str]] = {}
         # Optional AutoSyncHook: pull before a launch, push after a stop.
         self.sync_hook: Any = None
+        # Callables taking a profile name, run when a browser reports ready.
+        self.ready_hooks: list[Any] = []
         atexit.register(self.shutdown_all)
 
     @contextlib.contextmanager
@@ -294,6 +296,8 @@ class BrowserLauncher:
                     continue
                 if msg == "BROWSER_STARTED":
                     result.settle(True)
+                    for hook in self.ready_hooks:
+                        hook(name)
                     if not ready_notified:
                         ready_notified = True
                         if on_ready:

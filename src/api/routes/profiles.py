@@ -69,6 +69,7 @@ def _require_engine(engine: str) -> None:
 
 
 META_INPUT = ("email", "purpose", "notes", "tags")
+STORE_INPUT = (*META_INPUT, "login_mode", "auto_login")
 
 
 def _current_meta(profile) -> dict:
@@ -76,13 +77,15 @@ def _current_meta(profile) -> dict:
 
 
 def _require_meta(values: dict) -> None:
+    if values.get("login_mode") not in (None, "full", "email_only", "manual"):
+        raise HTTPException(status_code=400, detail="login_mode must be full, email_only or manual")
     valid, msg = validate_meta(*(values.get(k) for k in META_INPUT))
     if not valid:
         raise HTTPException(status_code=400, detail=msg)
 
 
 def _store_meta(pm, name: str, supplied: dict) -> None:
-    meta = {k: supplied[k] for k in META_INPUT if k in supplied}
+    meta = {k: supplied[k] for k in STORE_INPUT if k in supplied}
     if meta:
         pm.update_meta(name, **meta)
 
@@ -208,7 +211,7 @@ def update_profile(
         if not valid:
             raise HTTPException(status_code=400, detail=msg)
 
-    meta = {k: v for k, v in supplied.items() if k in META_INPUT}
+    meta = {k: v for k, v in supplied.items() if k in STORE_INPUT}
     if meta:
         _require_meta({**_current_meta(profile), **meta})
 

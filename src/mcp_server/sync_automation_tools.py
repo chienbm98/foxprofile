@@ -114,3 +114,11 @@ async def check_sessions(profiles: list[str]) -> dict:
     session_state (alive / logged_out / unknown), session_checked_at and the detected email;
     read them with list_profiles."""
     return await _arequest("POST", "/automation/session-check", {"profiles": profiles})
+
+
+@mcp.tool()
+async def relogin(profile: str) -> dict:
+    """Sign a profile back in to Gmail with the credentials stored for it (background; launches
+    the profile if it is closed). The outcome shows as session_state on the profile. Secrets are
+    never readable through MCP."""
+    return await _arequest("POST", f"/automation/relogin/{_quote(profile)}")

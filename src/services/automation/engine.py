@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 
 logger = get_logger("automation")
 
+# Seconds between automatic sign-in attempts for one profile.
+LOGIN_COOLDOWN = int(os.getenv("FOXPROFILE_LOGIN_COOLDOWN", "600"))
 MAX_PARALLEL = int(os.getenv("FOXPROFILE_AUTOMATION_PARALLEL", "3"))
 TICK_SECONDS = 20
 SCREENSHOT_DIR = os.getenv("FOXPROFILE_SCREENSHOT_DIR", "screenshots")
@@ -155,12 +157,16 @@ class Automation:
         pm: IProfileManager,
         launcher: IBrowserLauncher,
         sync: Any = None,
+        vault: Any = None,
         path: str | None = None,
         log: ActivityLog | None = None,
     ) -> None:
         self.pm = pm
         self.launcher = launcher
         self.sync = sync
+        self.vault = vault
+        self._last_login: dict[str, float] = {}
+        self._busy_login: set[str] = set()
         self.path = pathlib.Path(path or AUTOMATION_FILE)
         self.log = log or ActivityLog()
         self._lock = threading.RLock()
@@ -350,6 +356,8 @@ class Automation:
                 ok, error = self.launcher.wait_for_launch(name, LAUNCH_WAIT_TIMEOUT)
                 if not ok:
                     return f"error: launch failed: {error}"
+            if getattr(profile, "auto_login", False):
+                self._check_running(name)
             self.run_steps(name, task["steps"], task["id"])
             return "ok"
         except Exception as e:
@@ -420,7 +428,111 @@ class Automation:
             fields["email"] = result["email"]
         self.pm.update_meta(name, **fields)
         self.log.add("session_check", name, state=result["state"], email=result["email"])
+        profile = self.pm.profiles.get(name)
+        if (
+            result["state"] == "logged_out"
+            and profile is not None
+            and getattr(profile, "auto_login", False)
+        ):
+            relogin = self._relogin_running(name, manual=False)
+            if relogin is not None:
+                result = {
+                    **result,
+                    "state": "alive" if relogin["state"] == "logged_in" else relogin["state"],
+                    "login": relogin,
+                }
         return result
+
+    def _relogin_running(self, name: str, manual: bool) -> dict[str, Any] | None:
+        """Sign in again in the running profile. Automatic triggers wait out a cooldown so a
+        wrong password or a Google challenge is tried once, not in a loop."""
+        from ..browser import login
+
+        profile = self.pm.profiles.get(name)
+        if profile is None or self.vault is None:
+            return None
+        now = time.time()
+        with self._lock:
+            if name in self._busy_login:
+                return None
+            if not manual and now - self._last_login.get(name, 0) < LOGIN_COOLDOWN:
+                return None
+            self._busy_login.add(name)
+            self._last_login[name] = now
+        try:
+            mode = profile.login_mode
+            password = totp_secret = None
+            try:
+                if "password" in profile.secrets:
+                    password = self.vault.reveal(name, "password")
+                if "totp_secret" in profile.secrets:
+                    totp_secret = self.vault.reveal(name, "totp_secret")
+            except Exception as e:
+                result = {"state": "failed", "detail": f"vault: {e}"}
+            else:
+                from ..vault import vault as vault_mod
+
+                code = (lambda: vault_mod.totp(totp_secret)[0]) if totp_secret else None
+                result = login.sign_in(
+                    self.launcher.control, name, profile.email or "", password, code, mode
+                )
+            state = {"logged_in": "alive", "needs_verification": "needs_verification"}.get(
+                result["state"], "logged_out"
+            )
+            self.pm.update_meta(name, session_state=state, session_checked_at=time.time())
+            self.log.add("relogin", name, state=result["state"], detail=result["detail"])
+            return result
+        finally:
+            with self._lock:
+                self._busy_login.discard(name)
+
+    def relogin(self, name: str) -> dict[str, Any]:
+        """Sign a profile back in now (the button); launches it first if it is closed."""
+        profile = self.pm.profiles.get(name)
+        if profile is None:
+            raise AutomationError(f"profile {name} not found")
+        launched_here = False
+        try:
+            if not self.launcher.is_running(name):
+                if not self.launcher.start_thread(profile, lambda m: None):
+                    raise AutomationError("could not start the profile")
+                launched_here = True
+                ok, error = self.launcher.wait_for_launch(name, LAUNCH_WAIT_TIMEOUT)
+                if not ok:
+                    raise AutomationError(f"launch failed: {error}")
+            result = self._relogin_running(name, manual=True)
+            if result is None:
+                raise AutomationError("a login for this profile is already in progress")
+            return result
+        finally:
+            if launched_here:
+                self.launcher.stop_profile(name)
+
+    def relogin_async(self, name: str) -> None:
+        if name not in self.pm.profiles:
+            raise AutomationError(f"profile {name} not found")
+
+        def run() -> None:
+            try:
+                self.relogin(name)
+            except Exception as e:
+                self.log.add("relogin_error", name, error=str(e)[:200])
+
+        self._pool.submit(run)
+
+    def on_launched(self, name: str) -> None:
+        """Launcher hook: a profile with auto-login on is checked as soon as it opens."""
+        profile = self.pm.profiles.get(name)
+        if profile is None or not getattr(profile, "auto_login", False):
+            return
+
+        def run() -> None:
+            try:
+                self._check_running(name)
+            except Exception as e:
+                self.log.add("session_check_error", name, error=str(e)[:200])
+
+        threading.Thread(target=run, daemon=True).start()
 
     def check_session(self, name: str) -> dict[str, Any]:
         """Check one profile's Gmail session, launching it first if it is closed."""

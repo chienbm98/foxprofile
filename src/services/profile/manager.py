@@ -8,13 +8,14 @@ import time
 
 from ...core.config import DATA_DIR, PROFILES_FILE
 from ...core.logging import get_logger
-from ...models.profile import ENGINES, SESSION_STATES, Profile
+from ...models.profile import ENGINES, LOGIN_MODES, SESSION_STATES, Profile
 from ...utils.validation import (
     valid_or_none,
     validate_locale,
     validate_profile_name,
     validate_timezone,
 )
+from ..vault.vault import PREFIX, SECRET_FIELDS
 from .transfer import export_to_zip, import_from_zip, read_profile_meta
 
 logger = get_logger("profile.manager")
@@ -37,7 +38,28 @@ def _replace(src: pathlib.Path, dst: pathlib.Path, attempts: int = 10) -> None:
             time.sleep(0.02 * (i + 1))
 
 
-META_FIELDS = ("email", "purpose", "notes", "tags", "session_state", "session_checked_at")
+META_FIELDS = (
+    "email",
+    "purpose",
+    "notes",
+    "tags",
+    "session_state",
+    "session_checked_at",
+    "secrets",
+    "login_mode",
+    "auto_login",
+)
+
+
+def _secrets_from(value: object) -> dict[str, str]:
+    """Only well-formed encrypted tokens survive loading or importing."""
+    if not isinstance(value, dict):
+        return {}
+    return {
+        k: v
+        for k, v in value.items()
+        if k in SECRET_FIELDS and isinstance(v, str) and v.startswith(PREFIX)
+    }
 
 
 def _meta_from(data: dict) -> dict:
@@ -52,6 +74,9 @@ def _meta_from(data: dict) -> dict:
         "tags": [t for t in tags if isinstance(t, str)] if isinstance(tags, list) else [],
         "session_state": state if state in SESSION_STATES else None,
         "session_checked_at": checked if isinstance(checked, (int, float)) else None,
+        "secrets": _secrets_from(data.get("secrets")),
+        "login_mode": data.get("login_mode") if data.get("login_mode") in LOGIN_MODES else "full",
+        "auto_login": bool(data.get("auto_login")),
     }
 
 
@@ -228,6 +253,12 @@ class ProfileManager:
             for key, value in fields.items():
                 if key == "tags":
                     value = sorted({t.strip() for t in value or []})
+                elif key == "secrets":
+                    value = _secrets_from(value)
+                elif key == "auto_login":
+                    value = bool(value)
+                elif key == "login_mode":
+                    value = value if value in LOGIN_MODES else "full"
                 elif not value:
                     value = None
                 setattr(profile, key, value)

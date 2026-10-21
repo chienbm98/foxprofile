@@ -44,6 +44,7 @@ class Container:
 
             launcher = BrowserLauncher()
             launcher.sync_hook = AutoSyncHook(lambda: self.sync_service)
+            launcher.ready_hooks.append(lambda name: self.automation.on_launched(name))
             return launcher
 
         return self._get("bl", build)
@@ -61,10 +62,21 @@ class Container:
         return self._get("sync", lambda: SyncService(self.profile_manager, self.browser_launcher))
 
     @property
+    def account_vault(self):
+        from ..services.vault.accounts import AccountVault
+
+        return self._get("vault", lambda: AccountVault(self.profile_manager))
+
+    @property
     def automation(self):
         from ..services.automation.engine import Automation
 
         return self._get(
             "auto",
-            lambda: Automation(self.profile_manager, self.browser_launcher, self.sync_service),
+            lambda: Automation(
+                self.profile_manager,
+                self.browser_launcher,
+                self.sync_service,
+                self.account_vault,
+            ),
         )
