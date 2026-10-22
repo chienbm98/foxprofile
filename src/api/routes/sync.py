@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse
 
 from ...services.sync.backends import SyncError
 from ...services.sync.service import SyncConflict, SyncService
@@ -73,7 +74,51 @@ def sync_log(
     limit: int = 100, profile: str | None = None, svc: SyncService = Depends(get_sync)
 ) -> dict:
     """Newest first: every push, pull and auto-sync decision with its timings and sizes."""
-    return {"path": str(svc.log.path), "events": svc.log.tail(max(1, min(limit, 1000)), profile)}
+    return {
+        "path": str(svc.log.path),
+        "text_path": str(svc.text_log_path.resolve()),
+        "events": svc.log.tail(max(1, min(limit, 1000)), profile),
+    }
+
+
+@router.post("/log/save")
+def save_log(svc: SyncService = Depends(get_sync)) -> dict:
+    """Write the log to a file in the app's top folder; returns its path to copy or send."""
+    path = svc.save_snapshot()
+    return {
+        "path": str(path.resolve()),
+        "name": path.name,
+        "folder": str(path.resolve().parent),
+        "bytes": path.stat().st_size,
+        "auto_path": str(svc.text_log_path.resolve()),
+    }
+
+
+@router.get("/log/file")
+def log_file(svc: SyncService = Depends(get_sync)) -> FileResponse:
+    """Download a fresh snapshot of the log as a text file."""
+    path = svc.save_snapshot()
+    return FileResponse(path, media_type="text/plain", filename=path.name)
+
+
+@router.post("/log/open-folder")
+def open_log_folder(request: Request, svc: SyncService = Depends(get_sync)) -> dict:
+    """Show the folder in Explorer. Only for a browser on the same PC as the server."""
+    if (request.client.host if request.client else "") not in ("127.0.0.1", "::1", "localhost"):
+        raise HTTPException(
+            status_code=403, detail="Only possible from the PC that runs FoxProfile"
+        )
+    import subprocess
+    import sys
+
+    folder = str(__import__("pathlib").Path(svc.app_root).resolve())
+    if sys.platform == "win32":
+        subprocess.Popen(["explorer", folder])  # noqa: S603, S607
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", folder])  # noqa: S603, S607
+    else:
+        subprocess.Popen(["xdg-open", folder])  # noqa: S603, S607
+    return {"folder": folder}
 
 
 @router.put("/{name}/auto")

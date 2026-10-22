@@ -254,3 +254,33 @@ def test_every_sync_action_is_logged_with_timings(tmp_path, monkeypatch):
     assert events[2]["trigger"] == "auto-launch" and "download_s" in events[2]
     assert events[1]["skipped"] == "already up to date"
     assert "not found" in events[0]["error"]
+
+
+def test_text_log_snapshot_and_api(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    store = tmp_path / "store"
+    pm, _, svc = _machine(tmp_path / "A", monkeypatch, store)
+    pm.add_profile("p", "", "windows")
+    svc.push("p", trigger="auto-stop")
+    text = (tmp_path / "A" / "sync-log.txt").read_text(encoding="utf-8")
+    assert "push" in text and "[auto-stop]" in text and "total=" in text and "pack=" in text
+
+    snap = svc.save_snapshot()
+    assert snap.parent == tmp_path / "A" and snap.name.startswith("sync-log-")
+    body = snap.read_text(encoding="utf-8")
+    assert "FoxProfile sync log" in body and "profile:  p" in body and "v1" in body
+
+    from src.api.app import create_app
+    from src.api.routes import sync as sync_routes
+    from src.core.container import Container
+
+    app = create_app(Container())
+    app.dependency_overrides[sync_routes.get_sync] = lambda: svc
+    with TestClient(app, base_url="http://127.0.0.1:8000") as c:
+        saved = c.post("/api/v1/sync/log/save").json()
+        assert saved["path"].endswith(".txt") and saved["folder"] == str(tmp_path / "A")
+        assert saved["auto_path"].endswith("sync-log.txt")
+        dl = c.get("/api/v1/sync/log/file")
+        assert dl.status_code == 200 and "FoxProfile sync log" in dl.text
+        assert c.post("/api/v1/sync/log/open-folder").status_code == 403

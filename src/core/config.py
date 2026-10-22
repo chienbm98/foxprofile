@@ -57,6 +57,10 @@ SYNC_PASSPHRASE = _env("SYNC_PASSPHRASE", "")
 SYNC_STATE_FILE = _env("SYNC_STATE_FILE", "sync_state.json")
 # One JSON line per sync action: what, when, why, how long each step took, how big.
 SYNC_LOG = _env("SYNC_LOG", "sync_log.jsonl")
+# The app's top folder (where start-foxprofile.bat lives). A readable copy of the sync log is
+# kept there, easy to find and send. Empty = the working directory at the time of use.
+APP_ROOT = _env("ROOT", "")
+SYNC_LOG_TEXT = _env("SYNC_LOG_TEXT", "true").strip().lower() in ("1", "true", "yes")
 MACHINE_NAME = _env("MACHINE_NAME", "")
 AUTOMATION_FILE = _env("AUTOMATION_FILE", "automation.json")
 ACTIVITY_LOG = _env("ACTIVITY_LOG", "activity.jsonl")

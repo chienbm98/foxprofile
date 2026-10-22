@@ -466,6 +466,8 @@ const I18N = {
     transfer_pick_file: "Hoặc chọn file .fpbundle", transfer_inside: "Trong file có {n} profile (xuất từ {machine})", transfer_exists: "đã có ở đây", transfer_import_selected: "Nhập đã chọn", transfer_import_all: "Nhập tất cả",
     sync_auto_all_btn_on: "Bật Auto-sync cho tất cả", sync_auto_all_btn_off: "Tắt Auto-sync cho tất cả", sync_auto_all_on: "Đã bật Auto-sync cho mọi profile", sync_auto_all_off: "Đã tắt Auto-sync",
     sync_log_title: "Nhật ký đồng bộ (đầy đủ, để tối ưu)", sync_log_refresh: "Làm mới nhật ký", sync_log_copy: "Copy nhật ký", sync_log_empty: "Chưa có hoạt động đồng bộ nào.",
+    sync_log_save: "Lưu file log vào thư mục gốc", sync_log_download: "Tải file log", sync_log_saved: "Đã lưu:", sync_log_copy_path: "Copy đường dẫn", sync_log_open_folder: "Mở thư mục",
+    sync_log_auto: "Tự động ghi vào file:",
     sync_store: "Kho đang dùng: {s}",
     sync_auto: "Tự đồng bộ", sync_auto_hint: "Kéo bản mới trước khi mở và tự đẩy lên khi profile dừng",
     sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
@@ -558,6 +560,8 @@ const I18N = {
     transfer_pick_file: "Or choose a .fpbundle file", transfer_inside: "The file holds {n} profile(s) (exported from {machine})", transfer_exists: "already here", transfer_import_selected: "Import selected", transfer_import_all: "Import all",
     sync_auto_all_btn_on: "Turn Auto-sync on for all", sync_auto_all_btn_off: "Turn Auto-sync off for all", sync_auto_all_on: "Auto-sync is on for every profile", sync_auto_all_off: "Auto-sync is off",
     sync_log_title: "Sync log (full, for tuning)", sync_log_refresh: "Refresh log", sync_log_copy: "Copy log", sync_log_empty: "No sync activity yet.",
+    sync_log_save: "Save the log file to the app folder", sync_log_download: "Download log file", sync_log_saved: "Saved:", sync_log_copy_path: "Copy path", sync_log_open_folder: "Open folder",
+    sync_log_auto: "Written automatically to:",
     sync_store: "Store in use: {s}",
     sync_auto: "Auto-sync", sync_auto_hint: "Pull a newer copy before launch and push when the profile stops",
     sync_button: "Sync profiles", tasks_button: "Tasks & groups",
@@ -1466,9 +1470,30 @@ async function openSync() {
   const storeLine = h("div", { class: "hint" });
   const logBox = h("pre", { class: "code", style: "max-height:220px;overflow:auto;font-size:11px;white-space:pre-wrap" });
   let logText = "";
+  const autoPath = h("div", { class: "hint" });
+  const savedBox = h("div", { class: "hint", style: "word-break:break-all" });
+  let textPath = "";
+  const saveLogFile = async () => {
+    try {
+      const r = await api("POST", "/sync/log/save");
+      savedBox.replaceChildren(h("b", {}, t("sync_log_saved")), " ", r.path, " ",
+        h("button", { class: "btn btn-line", onclick: async () => { if (await copyText(r.path)) toast(t("copied", { what: r.name })); } }, t("sync_log_copy_path")),
+        " ", h("button", { class: "btn btn-ghost", onclick: () => api("POST", "/sync/log/open-folder").catch((e) => toast(e.message, true)) }, t("sync_log_open_folder")));
+    } catch (e) { savedBox.textContent = e.message; }
+  };
+  const downloadLogFile = async () => {
+    try {
+      const res = await api("GET", "/sync/log/file", undefined, { raw: true });
+      const m = (res.headers.get("content-disposition") || "").match(/filename="?([^";]+)"?/);
+      saveBlob(await res.blob(), m ? m[1] : "sync-log.txt");
+    } catch (e) { toast(e.message, true); }
+  };
   async function drawLog() {
     try {
       const r = await api("GET", "/sync/log?limit=60");
+      textPath = r.text_path || "";
+      autoPath.replaceChildren(t("sync_log_auto"), " ", h("b", {}, textPath), " ",
+        h("button", { class: "btn btn-line", onclick: async () => { if (await copyText(textPath)) toast(t("copied", { what: "sync-log.txt" })); } }, t("sync_log_copy_path")));
       const f = (v) => (v === undefined || v === null ? "" : v);
       logText = r.events.map((e) => {
         const steps = ["check_s", "pack_s", "encrypt_s", "upload_s", "download_s", "decrypt_s", "import_s"].filter((k) => e[k] !== undefined).map((k) => `${k.replace("_s", "")}=${e[k]}s`).join(" ");
@@ -1525,7 +1550,10 @@ async function openSync() {
         logBox,
         h("div", { class: "inline-btns", style: "margin-top:6px" },
           h("button", { class: "btn btn-line", onclick: drawLog }, t("sync_log_refresh")),
-          h("button", { class: "btn btn-line", onclick: async () => { if (await copyText(logText)) toast(t("copied", { what: t("sync_log_title") })); } }, t("sync_log_copy"))),
+          h("button", { class: "btn btn-line", onclick: async () => { if (await copyText(logText)) toast(t("copied", { what: t("sync_log_title") })); } }, t("sync_log_copy")),
+          h("button", { class: "btn btn-act", onclick: saveLogFile }, t("sync_log_save")),
+          h("button", { class: "btn btn-line", onclick: downloadLogFile }, t("sync_log_download"))),
+        autoPath, savedBox,
         h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink-2)" },
           h("input", { type: "checkbox", onchange: (e) => { state.force = e.target.checked; } }), t("sync_force")),
         h("p", { class: "hint" }, t("sync_note"))),

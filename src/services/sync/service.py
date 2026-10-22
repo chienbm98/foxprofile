@@ -19,10 +19,12 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from ...core.config import (
+    APP_ROOT,
     DATA_DIR,
     MACHINE_NAME,
     SYNC_AUTO,
     SYNC_LOG,
+    SYNC_LOG_TEXT,
     SYNC_PASSPHRASE,
     SYNC_STATE_FILE,
     SYNC_URL,
@@ -31,6 +33,7 @@ from ...core.logging import get_logger
 from ..automation.engine import ActivityLog
 from .backends import Backend, FolderBackend, SyncError, _reachable, resolve_backend
 from .crypto import DecryptError, decrypt_stream, encrypt_stream
+from .logfmt import format_event, snapshot_text
 
 if TYPE_CHECKING:
     from ...interfaces import IBrowserLauncher, IProfileManager
@@ -56,12 +59,14 @@ class SyncService:
         state_file: str | None = None,
         data_dir: str | None = None,
         sync_log: str | None = None,
+        app_root: str | None = None,
     ) -> None:
         self.pm = pm
         self.launcher = launcher
         self._backend = backend
         self._resolved = False
         self.log = ActivityLog(sync_log or SYNC_LOG)
+        self._app_root = app_root
         self.store_label = ""
         self.passphrase = SYNC_PASSPHRASE if passphrase is None else passphrase
         self.state_file = pathlib.Path(state_file or SYNC_STATE_FILE)
@@ -145,6 +150,43 @@ class SyncService:
         }
         self.log.add(event, name, **row)
         (logger.info if ok else logger.warning)("%s %s %s", event, name, row)
+        if SYNC_LOG_TEXT:
+            self._append_text_log({"t": time.time(), "event": event, "profile": name, **row})
+
+    @property
+    def app_root(self) -> str:
+        return self._app_root or APP_ROOT or os.getcwd()
+
+    @property
+    def text_log_path(self) -> pathlib.Path:
+        return pathlib.Path(self.app_root) / "sync-log.txt"
+
+    def _append_text_log(self, event: dict[str, Any]) -> None:
+        """sync-log.txt in the app's top folder: one readable line per action, kept to ~2 MB."""
+        try:
+            path = self.text_log_path
+            if path.exists() and path.stat().st_size > 2_000_000:
+                os.replace(path, path.with_suffix(".txt.1"))
+            with path.open("a", encoding="utf-8") as f:
+                f.write(format_event(event) + "\n")
+        except OSError as e:
+            logger.debug("Could not write %s: %s", self.text_log_path, e)
+
+    def save_snapshot(self, limit: int = 500) -> pathlib.Path:
+        """Write the latest events plus a status header to sync-log-<machine>-<time>.txt in the
+        app's top folder and return the path."""
+        try:
+            profiles = self.status()
+            store = self.store_label
+        except Exception as e:  # the store may be away; the log is still worth saving
+            profiles, store = [], f"unreachable: {e}"
+        text = snapshot_text(
+            self.log.tail(limit), {"machine": _machine(), "store": store, "profiles": profiles}
+        )
+        safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in _machine())
+        path = pathlib.Path(self.app_root) / f"sync-log-{safe}-{time.strftime('%Y%m%d-%H%M%S')}.txt"
+        path.write_text(text, encoding="utf-8")
+        return path
 
     def push(self, name: str, force: bool = False, trigger: str = "manual") -> dict[str, Any]:
         started = time.perf_counter()
