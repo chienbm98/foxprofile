@@ -16,6 +16,9 @@ from .process import spawn_browser, terminate, wait_for_exit
 
 logger = get_logger("browser.launcher")
 
+# Lines a starting runner prints while Camoufox fetches or unpacks itself.
+_PROGRESS_PREFIXES = ("Downloading", "Extracting", "Installing", "Cleaning")
+
 _NOISY_PREFIXES = (
     "- [pid=",
     "console.error:",
@@ -63,6 +66,8 @@ class BrowserLauncher:
         self._launch_results: dict[str, _LaunchResult] = {}
         self._busy: set[str] = set()
         self._controls: dict[str, tuple[int, str]] = {}
+        # What a starting browser reports (a browser download, an add-on...), for the panel.
+        self._notes: dict[str, str] = {}
         # Optional AutoSyncHook: pull before a launch, push after a stop.
         self.sync_hook: Any = None
         # Callables taking a profile name, run when a browser reports ready.
@@ -149,6 +154,7 @@ class BrowserLauncher:
                         self._controls.pop(profile.name, None)
                         self._active_sessions.pop(profile.name, None)
                         self._stop_notifiers.pop(profile.name, None)
+                self._notes.pop(profile.name, None)
                 log_callback(get_string("session_ended", name=profile.name))
                 logger.info(f"Session ended for profile: {profile.name}")
                 if self.sync_hook:
@@ -257,6 +263,11 @@ class BrowserLauncher:
                 self._controls.pop(n, None)
             return set(self._active_sessions.keys())
 
+    def start_notes(self) -> dict[str, str]:
+        """Latest progress line of each browser that has not finished starting."""
+        with self._lock:
+            return {n: t for n, t in self._notes.items() if n not in self._controls}
+
     def running_count(self) -> int:
         return len(self.running_profile_names())
 
@@ -295,6 +306,7 @@ class BrowserLauncher:
                         self._controls[name] = (int(port), token)
                     continue
                 if msg == "BROWSER_STARTED":
+                    self._notes.pop(name, None)
                     result.settle(True)
                     for hook in self.ready_hooks:
                         hook(name)
@@ -317,6 +329,8 @@ class BrowserLauncher:
                     notify_stopped()
                     terminate(proc, name, timeout=1)
                     break
+                if msg.startswith(_PROGRESS_PREFIXES) or "GB" in msg and "/" in msg:
+                    self._notes[name] = msg[:160]
                 if msg.startswith(_NOISY_PREFIXES):
                     logger.debug("[%s] %s", name, msg)
                     continue

@@ -468,6 +468,7 @@ const I18N = {
     sync_log_title: "Nhật ký đồng bộ (đầy đủ, để tối ưu)", sync_log_refresh: "Làm mới nhật ký", sync_log_copy: "Copy nhật ký", sync_log_empty: "Chưa có hoạt động đồng bộ nào.",
     sync_log_save: "Lưu file log vào thư mục gốc", sync_log_download: "Tải file log", sync_log_saved: "Đã lưu:", sync_log_copy_path: "Copy đường dẫn", sync_log_open_folder: "Mở thư mục",
     sync_log_auto: "Tự động ghi vào file:",
+    starting_note_hint: "Lần đầu, hoặc khi cache trình duyệt bị xoá, trình duyệt Camoufox (~1,3 GB) được tải về: mất vài phút, không bị treo.",
     sync_store: "Kho đang dùng: {s}",
     sync_auto: "Tự đồng bộ", sync_auto_hint: "Kéo bản mới trước khi mở và tự đẩy lên khi profile dừng",
     sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
@@ -562,6 +563,7 @@ const I18N = {
     sync_log_title: "Sync log (full, for tuning)", sync_log_refresh: "Refresh log", sync_log_copy: "Copy log", sync_log_empty: "No sync activity yet.",
     sync_log_save: "Save the log file to the app folder", sync_log_download: "Download log file", sync_log_saved: "Saved:", sync_log_copy_path: "Copy path", sync_log_open_folder: "Open folder",
     sync_log_auto: "Written automatically to:",
+    starting_note_hint: "On the first launch, or when the browser cache was deleted, the Camoufox browser (~1.3 GB) is downloaded: it takes a few minutes and is not stuck.",
     sync_store: "Store in use: {s}",
     sync_auto: "Auto-sync", sync_auto_hint: "Pull a newer copy before launch and push when the profile stops",
     sync_button: "Sync profiles", tasks_button: "Tasks & groups",
@@ -612,6 +614,7 @@ let lang = store.get("foxprofile.lang") || "en";
 let token = store.get("foxprofile.token") || "";
 let profiles = [], running = new Set(), fingerprints = {};
 let view = "profiles";
+let startingNotes = {};
 let filter = "all";
 const busy = new Map();          // name -> "starting" | "stopping"
 const failed = new Map();        // name -> error message of the last failed launch
@@ -704,6 +707,7 @@ async function refresh() {
     for (const name of now) if (!liveSince.has(name)) liveSince.set(name, new Date());
     for (const name of [...liveSince.keys()]) if (!now.has(name)) liveSince.delete(name);
     running = now;
+    startingNotes = run.starting || {};
     for (const name of [...selected]) if (!profiles.some((p) => p.name === name)) selected.delete(name);
     for (const name of [...failed.keys()]) if (now.has(name) || !profiles.some((p) => p.name === name)) failed.delete(name);
     for (const p of profiles) if (p.fingerprint) fingerprints[p.name] = p.fingerprint;
@@ -737,7 +741,7 @@ function render() {
   // Rebuilding the list replaces every button; skip it when nothing changed so a
   // periodic refresh cannot swap the button under the user's cursor mid-click.
   const key = JSON.stringify([lang, q, filter, profiles, [...running].sort(), [...busy], [...failed], [...selected].sort(),
-    [...justLanded], shown.map((p) => fingerprints[p.name] || null)]);
+    [...justLanded], shown.map((p) => fingerprints[p.name] || null), startingNotes]);
   if (key === lastRender) return;
   lastRender = key;
 
@@ -787,7 +791,12 @@ function headRow(shown) {
 
 function stamp(p) {
   const state = busy.get(p.name);
-  if (state) return h("span", { class: "stamp pending" }, t(state === "stopping" ? "stamp_stopping" : "stamp_starting"));
+  const note = startingNotes[p.name];
+  if (state || note) {
+    return h("span", { class: "stamp pending", title: note ? t("starting_note_hint") : "" },
+      t(state === "stopping" ? "stamp_stopping" : "stamp_starting"),
+      note ? h("small", { style: "display:block;max-width:190px;white-space:normal;font-weight:400" }, note) : null);
+  }
   if (running.has(p.name)) {
     const since = liveSince.get(p.name);
     return h("span", { class: "stamp" + (justLanded.has(p.name) ? " land" : "") },
