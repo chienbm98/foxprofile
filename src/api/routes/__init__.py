@@ -6,6 +6,7 @@ from .page import router as page_router
 from .profiles import router as profiles_router
 from .proxy import router as proxy_router
 from .sync import router as sync_router
+from .transfer import router as transfer_router
 
 __all__ = [
     "accounts_router",
@@ -16,4 +17,5 @@ __all__ = [
     "profiles_router",
     "proxy_router",
     "sync_router",
+    "transfer_router",
 ]

@@ -368,6 +368,7 @@ body.view-accounts #sheet, body.view-accounts .head { display: none; }
     <div class="grow"></div>
     <div class="rail-foot">
       <button class="rail-link" id="accounts-btn"><svg class="i"><use href="#i-mail"/></svg><span data-t="accounts_button"></span></button>
+      <button class="rail-link" id="transfer-btn"><svg class="i"><use href="#i-download"/></svg><span data-t="transfer_button"></span></button>
       <button class="rail-link" id="sync-btn"><svg class="i"><use href="#i-upload"/></svg><span data-t="sync_button"></span></button>
       <button class="rail-link" id="tasks-btn"><svg class="i"><use href="#i-tab"/></svg><span data-t="tasks_button"></span></button>
       <button class="rail-link" id="mcp-btn"><svg class="i"><use href="#i-bot"/></svg><span data-t="mcp_button"></span></button>
@@ -456,6 +457,10 @@ const I18N = {
     backup_codes: "Mã dự phòng", recovery: "Email/số điện thoại khôi phục", hint_f: "Gợi ý", login_mode: "Cách tự đăng nhập", mode_full: "Điền email và mật khẩu", mode_email_only: "Chỉ điền email", mode_manual: "Không tự đăng nhập",
     auto_login: "Tự đăng nhập lại khi mất phiên", auto_login_hint: "Khi kiểm tra phiên, mở profile hoặc tác vụ theo lịch thấy mất đăng nhập", connection_section: "Kết nối",
     secret_stored_ph: "•••• đã lưu, để trống để giữ nguyên", secret_stored: "Đã lưu", secret_clear: "Xoá", secret_will_clear: "Sẽ xoá khi lưu", f_verify: "Cần xác minh", session_needs_verification: "Cần xác minh tay",
+    transfer_button: "Xuất / Nhập profile", transfer_title: "Xuất và nhập profile", transfer_sub: "Mang profile (đăng nhập, cookie, fingerprint, mật khẩu mã hoá) sang PC khác bằng một file đã mã hoá.",
+    transfer_export: "Xuất", transfer_export_btn: "Xuất ra file .fpbundle", transfer_import: "Nhập", transfer_import_btn: "Nhập từ file", transfer_overwrite: "Ghi đè profile trùng tên",
+    transfer_running: "đang chạy, hãy dừng trước", transfer_pick: "Chọn ít nhất một profile", transfer_choose_file: "Chọn file .fpbundle", transfer_exported: "Đã xuất {n} profile", transfer_imported: "Đã nhập {n} profile",
+    transfer_note: "File được mã hoá bằng passphrase của kho mật khẩu: đặt cùng một passphrase trên PC nhận (Tài khoản Gmail, Đặt passphrase). Giữ cùng proxy hoặc quốc gia để Google không hỏi xác minh lại.",
     sync_store: "Kho đang dùng: {s}",
     sync_auto: "Tự đồng bộ", sync_auto_hint: "Kéo bản mới trước khi mở và tự đẩy lên khi profile dừng",
     sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
@@ -539,6 +544,10 @@ const I18N = {
     backup_codes: "Backup codes", recovery: "Recovery email / phone", hint_f: "Hint", login_mode: "Auto sign-in mode", mode_full: "Fill email and password", mode_email_only: "Fill the email only", mode_manual: "Never sign in automatically",
     auto_login: "Sign in again when the session is lost", auto_login_hint: "When a session check, a profile launch or a scheduled task finds it logged out", connection_section: "Connection",
     secret_stored_ph: "•••• stored, leave empty to keep", secret_stored: "Stored", secret_clear: "Remove", secret_will_clear: "Will be removed on save", f_verify: "Needs verification", session_needs_verification: "Needs manual check",
+    transfer_button: "Export / Import profiles", transfer_title: "Export and import profiles", transfer_sub: "Carry profiles (logins, cookies, fingerprint, encrypted passwords) to another PC in one encrypted file.",
+    transfer_export: "Export", transfer_export_btn: "Export to a .fpbundle file", transfer_import: "Import", transfer_import_btn: "Import from file", transfer_overwrite: "Overwrite profiles with the same name",
+    transfer_running: "running, stop it first", transfer_pick: "Pick at least one profile", transfer_choose_file: "Choose a .fpbundle file", transfer_exported: "Exported {n} profile(s)", transfer_imported: "Imported {n} profile(s)",
+    transfer_note: "The file is encrypted with the vault passphrase: set the same passphrase on the receiving PC (Gmail accounts, Set passphrase). Keep the same proxy or country so Google does not ask to verify again.",
     sync_store: "Store in use: {s}",
     sync_auto: "Auto-sync", sync_auto_hint: "Pull a newer copy before launch and push when the profile stops",
     sync_button: "Sync profiles", tasks_button: "Tasks & groups",
@@ -1302,6 +1311,69 @@ function renderAccounts(force = false) {
   paintTotp();
 }
 
+// ---- Export / import profiles as one encrypted file -----------------------------------------
+function openTransfer() {
+  modal((close) => {
+    const msg = h("div", { class: "msg", role: "status" });
+    const say = (cls, text) => { msg.className = "msg " + cls; msg.textContent = text; };
+    const boxes = profiles.map((p) => {
+      const box = h("input", { type: "checkbox", value: p.name, disabled: running.has(p.name) });
+      box.checked = !running.has(p.name);
+      return { p, box };
+    });
+    const list = h("div", { style: "max-height:200px;overflow:auto;border:1px solid var(--rule);border-radius:8px;padding:6px 10px" },
+      boxes.length ? boxes.map(({ p, box }) => h("label", { style: "display:flex;gap:8px;align-items:center;padding:3px 0" },
+        box, h("b", {}, p.name), h("span", { class: "sub" }, [p.email, running.has(p.name) ? t("transfer_running") : null].filter(Boolean).join(" · "))))
+        : h("span", { class: "sub" }, t("no_accounts")));
+    const doExport = async () => {
+      const names = boxes.filter(({ box }) => box.checked).map(({ p }) => p.name);
+      if (!names.length) return say("err", t("transfer_pick"));
+      say("info", t("working"));
+      try {
+        const res = await api("POST", "/transfer/export", { names }, { raw: true });
+        const blob = await res.blob();
+        const cd = res.headers.get("content-disposition") || "";
+        const m = cd.match(/filename="?([^";]+)"?/);
+        const url = URL.createObjectURL(blob);
+        const a = h("a", { href: url, download: m ? m[1] : "foxprofile.fpbundle" });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        say("ok", t("transfer_exported", { n: names.length }));
+      } catch (e) {
+        if (e.status === 423) { say("err", e.message); openVaultDialog(); } else say("err", e.message);
+      }
+    };
+    const file = h("input", { type: "file", accept: ".fpbundle", id: "t-file" });
+    const overwrite = h("input", { type: "checkbox" });
+    const doImport = async () => {
+      if (!file.files.length) return say("err", t("transfer_choose_file"));
+      say("info", t("working"));
+      try {
+        const headers = { "Content-Type": "application/octet-stream" };
+        if (token) headers.Authorization = "Bearer " + token;
+        const res = await fetch("/api/v1/transfer/import?overwrite=" + overwrite.checked, { method: "POST", headers, body: file.files[0] });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 423) { say("err", data.detail || ""); return openVaultDialog(); }
+        if (!res.ok) return say("err", typeof data.detail === "string" ? data.detail : res.statusText);
+        const skipped = Object.entries(data.skipped || {});
+        say(skipped.length ? "err" : "ok", t("transfer_imported", { n: data.imported.length }) + (skipped.length ? " · " + skipped.map(([n, why]) => `${n}: ${why}`).join(" · ") : ""));
+        refresh();
+      } catch (e) { say("err", e.message); }
+    };
+    return h("div", {},
+      modalHead(t("transfer_title"), t("transfer_sub"), close),
+      h("div", { class: "modal-body" },
+        h("div", { class: "fieldset-title" }, t("transfer_export")), list,
+        h("div", { style: "margin-top:8px" }, h("button", { class: "btn btn-act", onclick: doExport }, icon("download", true), t("transfer_export_btn"))),
+        h("div", { class: "fieldset-title" }, t("transfer_import")),
+        h("div", { class: "field" }, file),
+        h("label", { style: "display:flex;gap:8px;align-items:center;color:var(--ink-2);margin:6px 0" }, overwrite, t("transfer_overwrite")),
+        h("button", { class: "btn btn-line", onclick: doImport }, icon("upload", true), t("transfer_import_btn")),
+        h("p", { class: "hint" }, t("transfer_note")), msg),
+      h("div", { class: "modal-foot" }, h("button", { class: "btn btn-line", onclick: close }, t("close"))));
+  }, { wide: true });
+}
+
 function fmtTime(ts) { return ts ? new Date(ts * 1000).toLocaleString() : "—"; }
 
 async function openSync() {
@@ -1551,6 +1623,7 @@ $("login-form").onsubmit = async (e) => {
 $("logout-btn").onclick = () => { token = ""; store.set("foxprofile.token", null); showLogin(); };
 $("new-btn").onclick = () => openEditor(null);
 $("mcp-btn").onclick = openMcpGuide;
+$("transfer-btn").onclick = openTransfer;
 $("accounts-btn").onclick = () => setView("accounts");
 $("sync-btn").onclick = openSync;
 $("tasks-btn").onclick = openTasks;
