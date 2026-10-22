@@ -145,3 +145,24 @@ def test_api_launch_answers_409_when_the_browser_appeared_meanwhile(tmp_path, mo
 
     assert r.status_code == 409
     assert r.json()["detail"] == "Browser already running"
+
+
+class _Hook:
+    def __init__(self):
+        self.events = []
+
+    def before_launch(self, profile):
+        self.events.append(("pull", profile.name))
+        return profile
+
+    def after_stop(self, name):
+        self.events.append(("push", name))
+
+
+def test_sync_hook_runs_for_launch_and_stop_whoever_triggers_it(bl):
+    hook = _Hook()
+    bl.sync_hook = hook
+    bl.start_thread(Profile(name="p"), lambda m: None)
+    assert hook.events == [("pull", "p")]
+    bl.stop_profile("p")
+    assert hook.events == [("pull", "p"), ("push", "p")]

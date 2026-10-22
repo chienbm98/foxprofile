@@ -9,11 +9,12 @@ sys.path.insert(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
 )
 
+import src  # noqa: F401,E402,I001  (FOXPROFILE_CAMOUFOX_HOME must be applied before camoufox loads)
 from camoufox.async_api import AsyncCamoufox
 from camoufox.virtdisplay import VirtualDisplay
 
 from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
-from src.services.browser import control, session
+from src.services.browser import browser_cache, control, session
 from src.services.browser import display as xvfb
 from src.services.browser.fingerprint import load_or_create
 from src.services.proxy.geo_check import requests_proxy_url
@@ -149,6 +150,8 @@ async def run_browser(
     locale: str = "",
 ) -> int:
     profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
+    # Keep Camoufox from deleting a good browser cache and downloading 1.3 GB again.
+    browser_cache.repair_marker()
 
     launch_config = {
         "headless": HEADLESS,

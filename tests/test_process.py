@@ -331,3 +331,22 @@ def test_a_run_dir_others_can_read_is_not_trusted(monkeypatch, tmp_path):
     path.mkdir(mode=0o755)
     path.chmod(0o755)
     assert display._run_dir() is None
+
+
+def test_terminate_leaves_no_process_behind_even_when_the_runner_dies_first():
+    import psutil
+
+    code = (
+        "import subprocess, sys, time\n"
+        "c = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'])\n"
+        "print(c.pid, flush=True)\n"
+        "time.sleep(120)\n"
+    )
+    proc = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE, text=True)
+    child_pid = int(proc.stdout.readline())
+    assert psutil.pid_exists(child_pid)
+    process.terminate(proc, "t", timeout=5, grace=3)
+    deadline = time.time() + 5
+    while psutil.pid_exists(child_pid) and time.time() < deadline:
+        time.sleep(0.1)
+    assert not psutil.pid_exists(child_pid)

@@ -34,7 +34,20 @@ def list_running(
     bl: IBrowserLauncher = Depends(get_browser_launcher),
 ) -> RunningBrowsersResponse:
     names = sorted(bl.running_profile_names())
-    return RunningBrowsersResponse(running=names, count=len(names))
+    notes = bl.start_notes() if hasattr(bl, "start_notes") else {}
+    return RunningBrowsersResponse(running=names, count=len(names), starting=notes)
+
+
+@router.get("/engine")
+def browser_engine() -> dict:
+    """Where Camoufox keeps its browser and whether one is installed (a first launch with
+    none downloads about 1.3 GB)."""
+    from ...services.browser import browser_cache
+
+    try:
+        return browser_cache.status()
+    except Exception as e:
+        return {"installed": False, "error": str(e)}
 
 
 @router.get(

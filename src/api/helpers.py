@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException
 
 from ..core.config import DATA_DIR
+from ..services.vault.vault import SECRET_FIELDS
 from .schemas.profiles import ProfileResponse
 
 if TYPE_CHECKING:
@@ -43,4 +44,13 @@ def profile_response(profile: Profile, bl: IBrowserLauncher) -> ProfileResponse:
         engine=profile.engine,
         data_dir=os.path.join(os.getcwd(), DATA_DIR, profile.name),
         is_running=bl.is_running(profile.name),
+        email=profile.email,
+        purpose=profile.purpose,
+        notes=profile.notes,
+        tags=list(profile.tags),
+        session_state=profile.session_state,
+        session_checked_at=profile.session_checked_at,
+        login_mode=profile.login_mode,
+        auto_login=profile.auto_login,
+        **{f"has_{k}": k in profile.secrets for k in SECRET_FIELDS},
     )

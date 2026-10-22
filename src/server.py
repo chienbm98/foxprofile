@@ -26,8 +26,9 @@ def main() -> None:
     # Must be decided before src.core.config is imported; runner subprocesses
     # inherit it through the environment. Load .env first so its
     # FOXPROFILE_HEADLESS (e.g. "virtual") wins over the server default.
-    from dotenv import load_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
+    load_dotenv(find_dotenv(usecwd=True))
     load_dotenv()
     if args.headed:
         os.environ["FOXPROFILE_HEADLESS"] = "false"

@@ -8,13 +8,14 @@ import time
 
 from ...core.config import DATA_DIR, PROFILES_FILE
 from ...core.logging import get_logger
-from ...models.profile import ENGINES, Profile
+from ...models.profile import ENGINES, LOGIN_MODES, SESSION_STATES, Profile
 from ...utils.validation import (
     valid_or_none,
     validate_locale,
     validate_profile_name,
     validate_timezone,
 )
+from ..vault.vault import PREFIX, SECRET_FIELDS
 from .transfer import export_to_zip, import_from_zip, read_profile_meta
 
 logger = get_logger("profile.manager")
@@ -35,6 +36,48 @@ def _replace(src: pathlib.Path, dst: pathlib.Path, attempts: int = 10) -> None:
             if i == attempts - 1:
                 raise
             time.sleep(0.02 * (i + 1))
+
+
+META_FIELDS = (
+    "email",
+    "purpose",
+    "notes",
+    "tags",
+    "session_state",
+    "session_checked_at",
+    "secrets",
+    "login_mode",
+    "auto_login",
+)
+
+
+def _secrets_from(value: object) -> dict[str, str]:
+    """Only well-formed encrypted tokens survive loading or importing."""
+    if not isinstance(value, dict):
+        return {}
+    return {
+        k: v
+        for k, v in value.items()
+        if k in SECRET_FIELDS and isinstance(v, str) and v.startswith(PREFIX)
+    }
+
+
+def _meta_from(data: dict) -> dict:
+    """The labels of a stored profile, tolerating files written before they existed."""
+    tags = data.get("tags")
+    state = data.get("session_state")
+    checked = data.get("session_checked_at")
+    return {
+        "email": data.get("email") or None,
+        "purpose": data.get("purpose") or None,
+        "notes": data.get("notes") or None,
+        "tags": [t for t in tags if isinstance(t, str)] if isinstance(tags, list) else [],
+        "session_state": state if state in SESSION_STATES else None,
+        "session_checked_at": checked if isinstance(checked, (int, float)) else None,
+        "secrets": _secrets_from(data.get("secrets")),
+        "login_mode": data.get("login_mode") if data.get("login_mode") in LOGIN_MODES else "full",
+        "auto_login": bool(data.get("auto_login")),
+    }
 
 
 class ProfileManager:
@@ -76,6 +119,7 @@ class ProfileManager:
                             "timezone": valid_or_none(p_data.get("timezone"), validate_timezone),
                             "locale": valid_or_none(p_data.get("locale"), validate_locale),
                             "engine": _engine_or_default(p_data.get("engine")),
+                            **_meta_from(p_data),
                         }
                         self.profiles[name] = Profile(**clean_data)
                 logger.info("Loaded %d profiles", len(self.profiles))
@@ -195,6 +239,30 @@ class ProfileManager:
 
             self.save_profiles()
             logger.info("Updated profile: %s -> %s", original_name, new_name)
+            return True
+
+    def update_meta(self, name: str, **fields: object) -> bool:
+        """Set email/purpose/notes/tags/session fields; None or empty clears one."""
+        unknown = set(fields) - set(META_FIELDS)
+        if unknown:
+            raise ValueError(f"unknown fields: {', '.join(sorted(unknown))}")
+        with self._lock:
+            profile = self.profiles.get(name)
+            if profile is None:
+                return False
+            for key, value in fields.items():
+                if key == "tags":
+                    value = sorted({t.strip() for t in value or []})
+                elif key == "secrets":
+                    value = _secrets_from(value)
+                elif key == "auto_login":
+                    value = bool(value)
+                elif key == "login_mode":
+                    value = value if value in LOGIN_MODES else "full"
+                elif not value:
+                    value = None
+                setattr(profile, key, value)
+            self.save_profiles()
             return True
 
     def delete_profile(self, name: str) -> bool:

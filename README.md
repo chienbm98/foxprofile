@@ -166,6 +166,48 @@ Then just ask, e.g. *"Open profile tiktok-us-02, go to tiktok.com and send me a 
 
 There is deliberately **no** delete tool, so an agent cannot wipe an account's cookies by mistake. Only `http`, `https` and `about:blank` can be opened; `file://` and `about:config` are blocked.
 
+## Sync: log in once, use the profile on any machine
+
+Push a profile (cookies, logins, fingerprint; caches skipped) to a shared store and pull it on another PC or VPS. Archives are encrypted with a passphrase (scrypt + AES-256-GCM) before they leave the machine, so the store never sees your sessions.
+
+```bash
+# .env on every machine (same passphrase everywhere; there is no recovery if you lose it)
+FOXPROFILE_SYNC_URL=/mnt/shared/foxprofile          # folder (a USB stick works: E:oxprofile), webdav(s)://user:pass@host/path, or s3://bucket/prefix
+FOXPROFILE_SYNC_PASSPHRASE=your-long-passphrase
+FOXPROFILE_MACHINE_NAME=vps-1
+
+python -m src.sync_cli push gmail-1      # after logging in by hand and closing the profile
+python -m src.sync_cli pull --all        # on the other machine
+python -m src.sync_cli status
+```
+
+The same is available as REST (`/api/v1/sync`) and MCP tools (`sync_status`, `sync_push`, `sync_pull`). Tick **Auto-sync** on a profile in the panel (or `PUT /api/v1/sync/<name>/auto`), or set `FOXPROFILE_SYNC_AUTO=true` for all profiles: FoxProfile then pulls a newer copy before every launch (desktop app, panel, API, MCP, tasks) and pushes when the profile stops.
+
+There is no lock. Each push bumps a version; a push is refused if the store has a newer version than your last sync (pull first, or `--force`). A pull keeps the previous local data as `<name>.syncbak`. `POST /api/v1/sync/<name>/pull?check=true` (the panel does this) also re-checks the Gmail session in the background after the pull. Never run the same profile on two machines at once.
+
+Google ties a session to the device and the network. Keep the same proxy (or at least country) and the same `os_type` on every machine, or Google may ask you to verify again. S3 needs `pip install boto3`.
+
+## Gmail accounts: email, password, 2FA and automatic re-login
+
+The **Gmail accounts** page (left sidebar) lists every profile that has an email: session state, the live 6-digit 2FA code with a countdown, and one-click buttons: **Open Gmail** (launches the profile and goes straight to the inbox), copy email, copy password (the clipboard is cleared after 30 seconds), copy 2FA code, sign in again, check session, edit.
+
+Edit a profile to store, encrypted: password, 2FA secret key (the text Google shows under "can't scan the QR code"), backup codes, recovery email/phone, a hint. They are saved as scrypt + AES-256-GCM tokens in `profiles.json` (never plain text), travel with the profile through export and sync, and are never returned by the profile list or by MCP. The passphrase is the sync passphrase: the panel stores it in the OS credential store (Windows Credential Manager, macOS Keychain, Secret Service), and a VPS can use `FOXPROFILE_SYNC_PASSPHRASE`.
+
+Automatic re-login (per profile, switch **Sign in again when the session is lost**) runs when a session check, a profile launch or a scheduled task finds the profile logged out. It types like a person and stops on anything it does not recognise (a phone prompt, "is it you", CAPTCHA) and marks the profile **Needs manual check**. Modes: fill email and password, fill the email only, or never. An automatic attempt per profile waits `FOXPROFILE_LOGIN_COOLDOWN` seconds (default 600) so a wrong password is not retried in a loop. Automating Google sign-in may still trigger Google's own checks; the account is yours to manage and Google's terms apply.
+
+## Groups, scheduled tasks and the activity log
+
+Group profiles, then schedule steps (`goto`, `wait`, `scroll`, `click`, `type`, `press`, `wait_for`, `evaluate`, `screenshot`, `text`) to run in each: the task launches the profile (or reuses an open one), runs the steps with random waits and jitter, and stops it. Templates: `keepalive-gmail`, `browse-warmup`.
+
+```bash
+curl -X PUT  localhost:8000/api/v1/automation/groups/gmail -H 'Content-Type: application/json' -d '{"profiles":["gmail-1","gmail-2"]}'
+curl -X POST localhost:8000/api/v1/automation/tasks -H 'Content-Type: application/json' \
+  -d '{"name":"keepalive","template":"keepalive-gmail","group":"gmail","every_minutes":720,"jitter_seconds":1800,"sync":true}'
+curl localhost:8000/api/v1/automation/activity
+```
+
+`sync: true` pulls before and pushes after each run. The scheduler runs inside `python -m src.server` (and the desktop app's API); `FOXPROFILE_AUTOMATION_PARALLEL` caps concurrent browsers. MCP tools: `list_groups`, `set_group`, `list_tasks`, `create_task`, `run_task`, `set_task_enabled`, `activity_log`.
+
 ## Chrome engine (experimental)
 
 Besides Camoufox (Firefox), a profile can run on the **Chrome** engine: a Chromium build with fingerprint spoofing patched in C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), BSD-3 license). Pick it in **Engine** when creating a profile; it cannot be changed afterwards. The browser build (~140-190 MB depending on the OS, fetched from fingerprint-chromium's GitHub releases and verified by SHA-256) is downloaded in the background as soon as the first Chrome profile is created, or on launch if it is still missing; progress shows in the log. To fetch it ahead of time: `python -m chrome_engine fetch`.

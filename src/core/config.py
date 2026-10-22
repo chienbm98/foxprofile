@@ -1,8 +1,11 @@
 import os
 
 try:
-    from dotenv import load_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
+    # The .env next to the profiles (the working directory) wins over the one in the
+    # install folder, so each machine keeps its own sync settings beside its data.
+    load_dotenv(find_dotenv(usecwd=True))
     load_dotenv()
 except ImportError:
     pass
@@ -46,3 +49,21 @@ RESTORE_TABS = _env("RESTORE_TABS", "true").strip().lower() in ("1", "true", "ye
 # Shared secret for the REST API, the web panel and the MCP server. Required
 # whenever the API listens on anything other than the loopback interface.
 API_TOKEN = _env("API_TOKEN", "")
+
+# Profile sync: a folder path, webdav(s)://host/path or s3://bucket/prefix. Archives are
+# encrypted with FOXPROFILE_SYNC_PASSPHRASE (read from the environment only).
+SYNC_URL = _env("SYNC_URL", "")
+SYNC_PASSPHRASE = _env("SYNC_PASSPHRASE", "")
+SYNC_STATE_FILE = _env("SYNC_STATE_FILE", "sync_state.json")
+# One JSON line per sync action: what, when, why, how long each step took, how big.
+SYNC_LOG = _env("SYNC_LOG", "sync_log.jsonl")
+# The app's top folder (where start-foxprofile.bat lives). A readable copy of the sync log is
+# kept there, easy to find and send. Empty = the working directory at the time of use.
+APP_ROOT = _env("ROOT", "")
+SYNC_LOG_TEXT = _env("SYNC_LOG_TEXT", "true").strip().lower() in ("1", "true", "yes")
+MACHINE_NAME = _env("MACHINE_NAME", "")
+AUTOMATION_FILE = _env("AUTOMATION_FILE", "automation.json")
+ACTIVITY_LOG = _env("ACTIVITY_LOG", "activity.jsonl")
+
+# "true": pull a newer copy before launching a profile and push it when it stops.
+SYNC_AUTO = _env("SYNC_AUTO", "false").strip().lower() in ("1", "true", "yes")

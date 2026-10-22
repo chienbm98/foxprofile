@@ -15,7 +15,41 @@ from ...utils.validation import (
 )
 from ..browser.fingerprint import CHROME_PERSONA_FILE
 
+# Extension storage (uBlock Origin's downloaded filter lists, tens of MB), Widevine/OpenH264
+# downloads (gmp-*), service-worker caches and favicons are re-created by the browser; they dwarf the logins in a synced profile.
+REBUILT_PREFIXES = ("moz-extension+++", "gmp-")
+REBUILT_FILES = ("favicons.sqlite", "favicons.sqlite-wal", "favicons.sqlite-shm")
+
+
+def _meta_from(data: dict) -> dict:
+    from .manager import _meta_from as meta
+
+    return meta(data)
+
+
 logger = get_logger("profile.transfer")
+
+# Rebuilt by the browser on demand; leaving them out keeps a synced profile small
+# without touching cookies, logins, local storage or the session.
+CACHE_DIRS = frozenset(
+    {
+        "cache2",
+        "startupCache",
+        "shader-cache",
+        "GPUCache",
+        "Code Cache",
+        "crashes",
+        "minidumps",
+        "datareporting",
+        "safebrowsing",
+        "thumbnails",
+        "Crashpad",
+        "ShaderCache",
+        "GrShaderCache",
+        "DawnCache",
+        "component_crx_cache",
+    }
+)
 
 
 def export_to_zip(
@@ -23,25 +57,48 @@ def export_to_zip(
     profile_data_dir: str,
     export_path: str,
     include_data: bool = True,
+    slim: bool = False,
+    filename: str | None = None,
 ) -> tuple[bool, str]:
-    """Create a ZIP archive of a profile and optionally its browser data."""
+    """Create a ZIP archive of a profile and optionally its browser data.
+
+    `slim` skips browser caches; `filename` replaces the timestamped default.
+    """
     try:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        zip_filename = f"{profile.name}_{timestamp}.zip"
+        zip_filename = filename or f"{profile.name}_{timestamp}.zip"
         zip_path = os.path.join(export_path, zip_filename)
 
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             zipf.writestr("profile.json", json.dumps(profile.to_dict(), indent=2))
 
             if include_data and pathlib.Path(profile_data_dir).exists():
-                for root, _dirs, files in os.walk(profile_data_dir):
+                for root, dirs, files in os.walk(profile_data_dir):
+                    if slim:
+                        parts = pathlib.PurePath(os.path.relpath(root, profile_data_dir)).parts
+                        # Cache API storage of a site (service-worker assets, 100+ MB for Gmail).
+                        in_origin = len(parts) == 3 and parts[:2] == ("storage", "default")
+                        dirs[:] = [
+                            d
+                            for d in dirs
+                            if d not in CACHE_DIRS
+                            and not d.startswith(REBUILT_PREFIXES)
+                            and not (in_origin and d == "cache")
+                        ]
                     for file in files:
+                        if file in ("lock", ".parentlock", "parent.lock", "SingletonLock"):
+                            continue
+                        if slim and file in REBUILT_FILES:
+                            continue
                         file_path = os.path.join(root, file)
                         arcname = os.path.join(
                             "data",
                             os.path.relpath(file_path, profile_data_dir),
                         )
-                        zipf.write(file_path, arcname)
+                        try:
+                            zipf.write(file_path, arcname)
+                        except FileNotFoundError:
+                            continue  # the browser removed it while shutting down
             else:
                 # The fingerprint is the profile's identity, not browser data:
                 # keep it so the imported profile presents the same device.
@@ -98,6 +155,7 @@ def import_from_zip(
                 engine=profile_data.get("engine")
                 if profile_data.get("engine") in ENGINES
                 else "camoufox",
+                **_meta_from(profile_data),
             )
 
             data_files = [f for f in zipf.namelist() if f.startswith("data/")]

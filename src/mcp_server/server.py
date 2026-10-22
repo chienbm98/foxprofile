@@ -138,8 +138,12 @@ async def create_profile(
     timezone: str | None = None,
     locale: str | None = None,
     engine: Literal["camoufox", "chrome"] = "camoufox",
+    email: str | None = None,
+    purpose: str | None = None,
+    notes: str | None = None,
+    tags: list[str] | None = None,
 ) -> dict:
-    """Create a profile. proxy format: [scheme://][user:pass@]host:port or host:port:user:pass
+    """Create a profile. Optional labels: email (the account it logs in as), purpose, notes, tags. proxy format: [scheme://][user:pass@]host:port or host:port:user:pass
     (http, https, socks4, socks5). timezone (IANA, e.g. Asia/Ho_Chi_Minh) and locale (e.g. vi-VN)
     default to following the proxy's IP. engine: camoufox (Firefox, default) or chrome
     (experimental Chromium); it cannot be changed later."""
@@ -153,6 +157,10 @@ async def create_profile(
             "timezone": timezone,
             "locale": locale,
             "engine": engine,
+            "email": email,
+            "purpose": purpose,
+            "notes": notes,
+            "tags": tags,
         },
     )
 
@@ -165,8 +173,13 @@ async def update_profile(
     os_type: Literal["windows", "macos", "linux"] | None = None,
     timezone: str | None = None,
     locale: str | None = None,
+    email: str | None = None,
+    purpose: str | None = None,
+    notes: str | None = None,
+    tags: list[str] | None = None,
 ) -> dict:
-    """Rename a profile or change its proxy / OS / timezone / locale.
+    """Rename a profile or change its proxy / OS / timezone / locale / labels (email, purpose,
+    notes, tags; "" or [] clears one).
     Changing the OS generates a new fingerprint. Pass timezone="" or locale="" to follow the IP again."""
     # Use `is not None` so that proxy="" is included and clears the proxy on the
     # API side (the previous `if v` filter silently dropped an empty string).
@@ -176,7 +189,18 @@ async def update_profile(
         if v is not None
     }
     body.update(
-        {k: v for k, v in {"timezone": timezone, "locale": locale}.items() if v is not None}
+        {
+            k: v
+            for k, v in {
+                "timezone": timezone,
+                "locale": locale,
+                "email": email,
+                "purpose": purpose,
+                "notes": notes,
+                "tags": tags,
+            }.items()
+            if v is not None
+        }
     )
     return await _arequest("PATCH", f"/profiles/{_quote(name)}", body)
 
@@ -362,3 +386,6 @@ async def browser_tab_close(profile: str, index: int) -> dict:
 
 def main() -> None:
     mcp.run(transport="stdio")
+
+
+from . import sync_automation_tools  # noqa: E402,F401  (registers sync/automation tools)

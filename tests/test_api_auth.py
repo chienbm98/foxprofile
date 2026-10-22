@@ -99,3 +99,20 @@ def _guarded_client():
 )
 def test_local_only_guard(headers, status):
     assert _guarded_client().post("/launch", headers=headers).status_code == status
+
+
+def test_info_identifies_the_data_folder_and_only_shows_the_path_locally(tmp_path, monkeypatch):
+    import hashlib
+
+    from src.api.app import create_app, instance_id
+    from src.core.container import Container
+
+    monkeypatch.chdir(tmp_path)
+    expected = hashlib.sha1(str(tmp_path).replace("/", "\\").lower().encode()).hexdigest()
+    assert instance_id(str(tmp_path)) == expected
+    assert instance_id(str(tmp_path) + "\\") == expected
+    assert instance_id(str(tmp_path).upper()) == expected
+    with TestClient(create_app(Container()), base_url="http://127.0.0.1:8000") as c:
+        info = c.get("/api/v1/info").json()
+    assert info["instance"] == expected
+    assert "data_dir" not in info  # the test client is not loopback to the server

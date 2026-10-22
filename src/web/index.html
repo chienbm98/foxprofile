@@ -26,7 +26,7 @@
   --ui: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
   --data: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
   --row-h: 58px;
-  --cols: 32px minmax(150px, 1.15fr) minmax(170px, 1.05fr) minmax(170px, 1.15fr) minmax(150px, 1fr) 112px 232px;
+  --cols: 32px minmax(150px, 1.15fr) minmax(170px, 1.05fr) minmax(170px, 1.15fr) minmax(150px, 1fr) 112px 300px;
   --ease-out: cubic-bezier(.16, 1, .3, 1);
 }
 * { box-sizing: border-box; }
@@ -244,7 +244,7 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
 /* The table follows its own width, not the viewport: all columns need about
    1140px, the version without Timezone · Locale about 870px. */
 @container sheet (max-width: 1150px) {
-  .row { --cols: 32px minmax(140px, 1.1fr) minmax(140px, 1fr) minmax(140px, 1.1fr) 108px 218px; column-gap: 12px; }
+  .row { --cols: 32px minmax(140px, 1.1fr) minmax(140px, 1fr) minmax(140px, 1.1fr) 108px 286px; column-gap: 12px; }
   .col-geo { display: none; }
   .geo-inline { display: block; }
 }
@@ -275,6 +275,32 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
   .login { grid-template-columns: 1fr; }
   .login .cover-side { padding: 24px; }
 }
+.sdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; background: var(--ink-3); vertical-align: baseline; }
+.sdot.alive { background: #2e9d57; }
+.sdot.logged_out { background: #c43b2f; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--paper-sunk); color: var(--ink-2); }
+textarea { width: 100%; resize: vertical; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--rule); background: var(--paper); color: inherit; }
+.sdot.needs_verification { background: #d89a1d; }
+.acc-wrap { display: none; }
+body.view-accounts .acc-wrap { display: block; }
+body.view-accounts #sheet, body.view-accounts .head { display: none; }
+.acc-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.acc-head h1 { margin: 0; }
+.acc-head .vault { display: flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 13px; }
+.acc-table { border: 1px solid var(--rule); border-radius: 12px; background: var(--paper); overflow: hidden; }
+.acc-row { display: grid; grid-template-columns: minmax(190px, 1.3fr) minmax(120px, .9fr) 150px 128px minmax(280px, auto); column-gap: 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+.acc-row:last-child { border-bottom: 0; }
+.acc-row.acc-headrow { color: var(--ink-3); font-size: 12px; font-weight: 600; min-height: 38px; }
+.acc-row .mail { font-weight: 600; word-break: break-all; }
+.acc-row .sub { color: var(--ink-3); font-size: 12px; }
+.acc-row .code { font-family: ui-monospace, Consolas, monospace; font-size: 17px; letter-spacing: .08em; }
+.acc-row .code small { font-size: 11px; color: var(--ink-3); margin-left: 6px; letter-spacing: 0; }
+.acc-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.secret-field { position: relative; }
+.secret-field .stored { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.fieldset-title { margin: 18px 0 4px; font-weight: 700; font-size: 13px; color: var(--ink-2); }
+@media (max-width: 980px) { .acc-row { grid-template-columns: 1fr; row-gap: 6px; } .acc-row.acc-headrow { display: none; } .acc-actions { justify-content: flex-start; } }
 </style>
 </head>
 <body>
@@ -309,6 +335,9 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
   <symbol id="i-fingerprint" viewBox="0 0 24 24"><path d="M12 10a2 2 0 0 0-2 2c0 1-.1 2.5-.3 4M14 13.1c0 2.4 0 6.4-1 8.9M17.3 21c.1-.6.4-2.3.5-3M2 12a10 10 0 0 1 18-6M21.8 16c.2-2 .1-5.4 0-6M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .3-2M8.7 22c.2-.7.4-1.3.6-2M9 6.8a6 6 0 0 1 9 5.2v2"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6.5L20.5 7"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4.5"/><path d="m11.2 11.8 8.8-8.8M16 7l3 3M14 9l2 2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
   <symbol id="i-tab" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M12 13v4M10 15h4"/></symbol>
 </svg>
 
@@ -338,6 +367,10 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
     </nav>
     <div class="grow"></div>
     <div class="rail-foot">
+      <button class="rail-link" id="accounts-btn"><svg class="i"><use href="#i-mail"/></svg><span data-t="accounts_button"></span></button>
+      <button class="rail-link" id="transfer-btn"><svg class="i"><use href="#i-download"/></svg><span data-t="transfer_button"></span></button>
+      <button class="rail-link" id="sync-btn"><svg class="i"><use href="#i-upload"/></svg><span data-t="sync_button"></span></button>
+      <button class="rail-link" id="tasks-btn"><svg class="i"><use href="#i-tab"/></svg><span data-t="tasks_button"></span></button>
       <button class="rail-link" id="mcp-btn"><svg class="i"><use href="#i-bot"/></svg><span data-t="mcp_button"></span></button>
       <a class="rail-link" href="/docs" target="_blank" rel="noopener"><svg class="i"><use href="#i-docs"/></svg><span data-t="api_docs"></span></a>
       <button class="rail-link hidden" id="logout-btn"><svg class="i"><use href="#i-logout"/></svg><span data-t="logout"></span></button>
@@ -350,6 +383,7 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
       <label class="search"><svg class="i s" aria-hidden="true"><use href="#i-search"/></svg><input id="search" type="search" autocomplete="off"></label>
     </div>
     <div class="sheet" id="sheet" role="table"></div>
+    <section class="acc-wrap" id="accounts-view" aria-label="Accounts"></section>
   </main>
 </div>
 
@@ -383,7 +417,7 @@ const I18N = {
   vi: {
     tagline: "Quản lý profile anti-detect", new_profile: "Tạo profile", filters: "Lọc",
     f_all: "Tất cả", f_running: "Đang chạy", f_proxy: "Có proxy", f_direct: "Không proxy", f_chrome: "Engine Chrome",
-    api_docs: "Tài liệu API", logout: "Đăng xuất", your_profiles: "Profile", search: "Tìm theo tên hoặc proxy",
+    api_docs: "Tài liệu API", logout: "Đăng xuất", your_profiles: "Profile", search: "Tìm theo tên, email, thẻ, ghi chú hoặc proxy",
     counts: "{n} profile · {r} đang chạy", counts_none: "{n} profile · chưa có profile nào chạy",
     col_profile: "Profile", col_device: "Thiết bị", col_proxy: "Proxy", col_geo: "Timezone · Locale", col_status: "Trạng thái",
     empty_title: "Chưa có profile nào", empty: "Mỗi profile là một danh tính riêng: fingerprint, cookie và proxy của nó. Tạo profile đầu tiên để bắt đầu.",
@@ -409,6 +443,49 @@ const I18N = {
     confirm_reset: "Tạo fingerprint mới cho “{name}”? Trang web sẽ thấy đây là một máy khác.", close: "Đóng",
     launching: "Đang mở {name}...", started: "Đã mở {name}", stopped: "Đã dừng {name}", created: "Đã tạo {name}", saved: "Đã lưu",
     deleted: "Đã xoá {name}", deleted_n: "Đã xoá {n} profile", exported: "Đã xuất {n} cookie", imported: "Đã nhập {n} cookie", fp_reset: "Đã tạo fingerprint mới",
+    f_loggedout: "Mất đăng nhập", session_alive: "Phiên còn sống", session_logged_out: "Đã mất đăng nhập", session_unknown: "Chưa rõ", session_none: "Chưa kiểm tra", session_never: "chưa kiểm tra lần nào",
+    check_sessions: "Kiểm tra phiên", check_started: "Đang kiểm tra {n} profile trong nền...",
+    account_email: "Tài khoản (email)", purpose: "Mục đích", purpose_hint: "vd: đăng ký web free, nuôi mail", tags: "Thẻ", tags_hint: "Cách nhau bằng dấu phẩy", notes: "Ghi chú", notes_hint: "Ghi chú nhiều dòng...",
+    accounts_button: "Tài khoản Gmail", accounts_title: "Tài khoản Gmail", accounts_sub: "{n} tài khoản · bấm Mở Gmail để vào thẳng hộp thư", back_profiles: "Về danh sách profile",
+    col_account: "Tài khoản", col_session: "Phiên", col_2fa: "Mã 2FA", check_all: "Kiểm tra tất cả", no_accounts: "Chưa có tài khoản nào. Sửa một profile và nhập email để nó hiện ở đây.", no_email: "chưa có email",
+    open_gmail: "Mở Gmail", open_gmail_short: "Mở Gmail", copy_email: "Copy email", copy_password: "Copy mật khẩu", copy_2fa: "Copy mã 2FA", relogin: "Tự đăng nhập lại", check_one: "Kiểm tra phiên",
+    copied: "Đã copy {what}", copied_clear: "Đã copy {what}, clipboard tự xoá sau 30 giây", copy_failed: "Không copy được", gmail_opened: "Đã mở Gmail trong {name}",
+    relogin_started: "Đang đăng nhập lại {name}...", auto_login_on: "tự đăng nhập bật",
+    vault_title: "Mở khoá kho mật khẩu", vault_hint: "Passphrase này mã hoá mật khẩu và mã 2FA, và là passphrase của đồng bộ. Dùng cùng một passphrase trên mọi máy.", vault_pass: "Passphrase",
+    vault_persist: "Nhớ trong kho khoá của hệ điều hành", vault_saved: "Đã mở khoá (lưu: {where})", vault_open: "Kho mật khẩu: đã mở", vault_locked: "Kho mật khẩu đang khoá", vault_locked_short: "khoá", vault_set: "Đặt passphrase", vault_retry: "Mật khẩu chưa được lưu. Mở lại profile, nhập lại rồi lưu.",
+    secrets_section: "Đăng nhập và bí mật (mã hoá)", password: "Mật khẩu", totp_secret: "Khoá bí mật 2FA", totp_hint: "Khoá 2FA là chuỗi chữ-số Google hiện khi chọn 'không quét được mã QR'. App sinh mã 6 số đổi mỗi 30 giây.",
+    backup_codes: "Mã dự phòng", recovery: "Email/số điện thoại khôi phục", hint_f: "Gợi ý", login_mode: "Cách tự đăng nhập", mode_full: "Điền email và mật khẩu", mode_email_only: "Chỉ điền email", mode_manual: "Không tự đăng nhập",
+    auto_login: "Tự đăng nhập lại khi mất phiên", auto_login_hint: "Khi kiểm tra phiên, mở profile hoặc tác vụ theo lịch thấy mất đăng nhập", connection_section: "Kết nối",
+    secret_stored_ph: "•••• đã lưu, để trống để giữ nguyên", secret_stored: "Đã lưu", secret_clear: "Xoá", secret_will_clear: "Sẽ xoá khi lưu", f_verify: "Cần xác minh", session_needs_verification: "Cần xác minh tay",
+    transfer_button: "Xuất / Nhập profile", transfer_title: "Xuất và nhập profile", transfer_sub: "Mang profile (đăng nhập, cookie, fingerprint, mật khẩu mã hoá) sang PC khác bằng một file đã mã hoá.",
+    transfer_export: "Xuất", transfer_export_btn: "Xuất ra file .fpbundle", transfer_import: "Nhập", transfer_import_btn: "Nhập từ file", transfer_overwrite: "Ghi đè profile trùng tên",
+    transfer_running: "đang chạy, hãy dừng trước", transfer_pick: "Chọn ít nhất một profile", transfer_choose_file: "Chọn file .fpbundle", transfer_exported: "Đã xuất {n} profile", transfer_imported: "Đã nhập {n} profile",
+    transfer_note: "File được mã hoá bằng passphrase của kho mật khẩu: đặt cùng một passphrase trên PC nhận (Tài khoản Gmail, Đặt passphrase). Giữ cùng proxy hoặc quốc gia để Google không hỏi xác minh lại.",
+    export_one: "Xuất profile này", transfer_saved: "Đã lưu {n} profile vào {path}", transfer_none: "Bỏ chọn hết", transfer_dl_sel: "Tải file (đã chọn)", transfer_dl_all: "Tải file (tất cả)",
+    transfer_usb_sel: "Lưu vào USB (đã chọn)", transfer_usb_all: "Lưu vào USB (tất cả)", transfer_local_sel: "Lưu vào thư mục exports", transfer_found: "Đã có sẵn trên USB hoặc thư mục exports:", transfer_local: "exports", transfer_open: "Mở",
+    transfer_pick_file: "Hoặc chọn file .fpbundle", transfer_inside: "Trong file có {n} profile (xuất từ {machine})", transfer_exists: "đã có ở đây", transfer_import_selected: "Nhập đã chọn", transfer_import_all: "Nhập tất cả",
+    sync_auto_all_btn_on: "Bật Auto-sync cho tất cả", sync_auto_all_btn_off: "Tắt Auto-sync cho tất cả", sync_auto_all_on: "Đã bật Auto-sync cho mọi profile", sync_auto_all_off: "Đã tắt Auto-sync",
+    sync_log_title: "Nhật ký đồng bộ (đầy đủ, để tối ưu)", sync_log_refresh: "Làm mới nhật ký", sync_log_copy: "Copy nhật ký", sync_log_empty: "Chưa có hoạt động đồng bộ nào.",
+    sync_log_save: "Lưu file log vào thư mục gốc", sync_log_download: "Tải file log", sync_log_saved: "Đã lưu:", sync_log_copy_path: "Copy đường dẫn", sync_log_open_folder: "Mở thư mục",
+    sync_log_auto: "Tự động ghi vào file:",
+    starting_note_hint: "Lần đầu, hoặc khi cache trình duyệt bị xoá, trình duyệt Camoufox (~1,3 GB) được tải về: mất vài phút, không bị treo.",
+    sync_store: "Kho đang dùng: {s}",
+    sync_auto: "Tự đồng bộ", sync_auto_hint: "Kéo bản mới trước khi mở và tự đẩy lên khi profile dừng",
+    sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
+    sync_title: "Đồng bộ profile giữa các máy", sync_sub: "Đăng nhập một lần, dùng ở máy khác mà không phải đăng nhập lại.",
+    sync_empty: "Chưa có profile nào trong kho đồng bộ hoặc trên máy này.", sync_push: "Đẩy lên", sync_pull: "Kéo về",
+    sync_push_all: "Đẩy tất cả", sync_pull_all: "Kéo tất cả", sync_force: "Ghi đè dù kho có bản mới hơn (force)",
+    sync_pushed: "Đã đẩy {name}", sync_pulled: "Đã kéo {name}", sync_all_done: "Hoàn tất",
+    sync_note: "Dừng profile trước khi đẩy hoặc kéo. Không chạy cùng một profile trên hai máy cùng lúc. Giữ cùng proxy/quốc gia để Google không hỏi xác minh lại.",
+    sync_state_synced: "Đã đồng bộ", sync_state_remote_newer: "Kho có bản mới hơn", sync_state_local_only: "Chỉ có trên máy này", sync_state_remote_only: "Chỉ có trong kho",
+    tasks_title: "Tác vụ theo lịch và nhóm profile", tasks_sub: "Tự mở profile, chạy các bước rồi tắt.",
+    task_list: "Tác vụ", task_none: "Chưa có tác vụ nào.", task_run: "Chạy ngay", task_pause: "Tạm dừng", task_resume: "Bật lại",
+    task_on: "đang bật", task_off: "đang tắt", task_last: "lần cuối", task_next: "lần tới", task_started: "Đã bắt đầu chạy",
+    task_every: "mỗi {n} phút", task_daily: "hằng ngày {at}", task_manual: "chạy tay", task_confirm_delete: "Xoá tác vụ “{name}”?",
+    groups: "Nhóm profile", group_name: "Tên nhóm", group_profiles: "profile-1, profile-2", save_group: "Lưu nhóm",
+    task_new: "Tạo tác vụ", task_name: "Tên tác vụ", task_targets: "Tên nhóm, hoặc danh sách profile cách nhau bằng dấu phẩy",
+    task_every_ph: "Lặp lại mỗi N phút (để trống = chạy tay)", task_jitter_ph: "Độ lệch ngẫu nhiên (giây)",
+    task_sync: "Kéo trước và đẩy sau mỗi lần chạy", task_create: "Tạo tác vụ", activity: "Nhật ký hoạt động",
     mcp_button: "Kết nối AI (MCP)", mcp_title: "Kết nối AI agent qua MCP",
     mcp_intro: "Cho Claude, Cursor hay VS Code tự quản lý profile và lướt web giúp bạn: mở trang, đọc nội dung, click, gõ và chụp màn hình.",
     mcp_endpoint: "Địa chỉ MCP", mcp_pick: "1. Chọn ứng dụng AI bạn dùng", mcp_paste: "2. Dán vào: {where}",
@@ -435,7 +512,7 @@ const I18N = {
   en: {
     tagline: "Anti-detect profile manager", new_profile: "New profile", filters: "Filter",
     f_all: "All", f_running: "Running", f_proxy: "With proxy", f_direct: "No proxy", f_chrome: "Chrome engine",
-    api_docs: "API docs", logout: "Log out", your_profiles: "Profiles", search: "Search by name or proxy",
+    api_docs: "API docs", logout: "Log out", your_profiles: "Profiles", search: "Search by name, email, tag, note or proxy",
     counts: "{n} profiles · {r} running", counts_none: "{n} profiles · none running",
     col_profile: "Profile", col_device: "Device", col_proxy: "Proxy", col_geo: "Timezone · Locale", col_status: "Status",
     empty_title: "No profiles yet", empty: "Each profile is its own identity: its fingerprint, cookies and proxy. Create the first one to get started.",
@@ -461,6 +538,49 @@ const I18N = {
     confirm_reset: "Create a new fingerprint for “{name}”? Sites will see a different machine.", close: "Close",
     launching: "Launching {name}...", started: "Started {name}", stopped: "Stopped {name}", created: "Created {name}", saved: "Saved",
     deleted: "Deleted {name}", deleted_n: "Deleted {n} profiles", exported: "Exported {n} cookies", imported: "Imported {n} cookies", fp_reset: "New fingerprint created",
+    f_loggedout: "Logged out", session_alive: "Session alive", session_logged_out: "Logged out", session_unknown: "Unknown", session_none: "Not checked", session_never: "never checked",
+    check_sessions: "Check sessions", check_started: "Checking {n} profile(s) in the background...",
+    account_email: "Account (email)", purpose: "Purpose", purpose_hint: "e.g. free signups, mail warm-up", tags: "Tags", tags_hint: "Comma separated", notes: "Notes", notes_hint: "Multi-line notes...",
+    accounts_button: "Gmail accounts", accounts_title: "Gmail accounts", accounts_sub: "{n} accounts · Open Gmail goes straight to the inbox", back_profiles: "Back to profiles",
+    col_account: "Account", col_session: "Session", col_2fa: "2FA code", check_all: "Check all", no_accounts: "No accounts yet. Edit a profile and enter its email to list it here.", no_email: "no email yet",
+    open_gmail: "Open Gmail", open_gmail_short: "Open Gmail", copy_email: "Copy email", copy_password: "Copy password", copy_2fa: "Copy 2FA code", relogin: "Sign in again", check_one: "Check session",
+    copied: "Copied {what}", copied_clear: "Copied {what}; the clipboard clears in 30 seconds", copy_failed: "Could not copy", gmail_opened: "Opened Gmail in {name}",
+    relogin_started: "Signing {name} back in...", auto_login_on: "auto sign-in on",
+    vault_title: "Unlock the password vault", vault_hint: "This passphrase encrypts passwords and 2FA keys, and is also the sync passphrase. Use the same one on every machine.", vault_pass: "Passphrase",
+    vault_persist: "Remember it in the OS credential store", vault_saved: "Unlocked (kept in: {where})", vault_open: "Vault: unlocked", vault_locked: "Vault is locked", vault_locked_short: "locked", vault_set: "Set passphrase", vault_retry: "The secrets were not saved. Edit the profile and save again.",
+    secrets_section: "Sign-in and secrets (encrypted)", password: "Password", totp_secret: "2FA secret key", totp_hint: "The 2FA key is the text Google shows under 'can't scan the QR code'. The app generates the 6-digit code that changes every 30 seconds.",
+    backup_codes: "Backup codes", recovery: "Recovery email / phone", hint_f: "Hint", login_mode: "Auto sign-in mode", mode_full: "Fill email and password", mode_email_only: "Fill the email only", mode_manual: "Never sign in automatically",
+    auto_login: "Sign in again when the session is lost", auto_login_hint: "When a session check, a profile launch or a scheduled task finds it logged out", connection_section: "Connection",
+    secret_stored_ph: "•••• stored, leave empty to keep", secret_stored: "Stored", secret_clear: "Remove", secret_will_clear: "Will be removed on save", f_verify: "Needs verification", session_needs_verification: "Needs manual check",
+    transfer_button: "Export / Import profiles", transfer_title: "Export and import profiles", transfer_sub: "Carry profiles (logins, cookies, fingerprint, encrypted passwords) to another PC in one encrypted file.",
+    transfer_export: "Export", transfer_export_btn: "Export to a .fpbundle file", transfer_import: "Import", transfer_import_btn: "Import from file", transfer_overwrite: "Overwrite profiles with the same name",
+    transfer_running: "running, stop it first", transfer_pick: "Pick at least one profile", transfer_choose_file: "Choose a .fpbundle file", transfer_exported: "Exported {n} profile(s)", transfer_imported: "Imported {n} profile(s)",
+    transfer_note: "The file is encrypted with the vault passphrase: set the same passphrase on the receiving PC (Gmail accounts, Set passphrase). Keep the same proxy or country so Google does not ask to verify again.",
+    export_one: "Export this profile", transfer_saved: "Saved {n} profile(s) to {path}", transfer_none: "Select none", transfer_dl_sel: "Download file (selected)", transfer_dl_all: "Download file (all)",
+    transfer_usb_sel: "Save to USB (selected)", transfer_usb_all: "Save to USB (all)", transfer_local_sel: "Save to the exports folder", transfer_found: "Already on a USB stick or in the exports folder:", transfer_local: "exports", transfer_open: "Open",
+    transfer_pick_file: "Or choose a .fpbundle file", transfer_inside: "The file holds {n} profile(s) (exported from {machine})", transfer_exists: "already here", transfer_import_selected: "Import selected", transfer_import_all: "Import all",
+    sync_auto_all_btn_on: "Turn Auto-sync on for all", sync_auto_all_btn_off: "Turn Auto-sync off for all", sync_auto_all_on: "Auto-sync is on for every profile", sync_auto_all_off: "Auto-sync is off",
+    sync_log_title: "Sync log (full, for tuning)", sync_log_refresh: "Refresh log", sync_log_copy: "Copy log", sync_log_empty: "No sync activity yet.",
+    sync_log_save: "Save the log file to the app folder", sync_log_download: "Download log file", sync_log_saved: "Saved:", sync_log_copy_path: "Copy path", sync_log_open_folder: "Open folder",
+    sync_log_auto: "Written automatically to:",
+    starting_note_hint: "On the first launch, or when the browser cache was deleted, the Camoufox browser (~1.3 GB) is downloaded: it takes a few minutes and is not stuck.",
+    sync_store: "Store in use: {s}",
+    sync_auto: "Auto-sync", sync_auto_hint: "Pull a newer copy before launch and push when the profile stops",
+    sync_button: "Sync profiles", tasks_button: "Tasks & groups",
+    sync_title: "Sync profiles between machines", sync_sub: "Log in once, reuse the session on another machine without logging in again.",
+    sync_empty: "No profiles in the sync store or on this machine yet.", sync_push: "Push", sync_pull: "Pull",
+    sync_push_all: "Push all", sync_pull_all: "Pull all", sync_force: "Overwrite even if the store has a newer version (force)",
+    sync_pushed: "Pushed {name}", sync_pulled: "Pulled {name}", sync_all_done: "Done",
+    sync_note: "Stop a profile before pushing or pulling it. Never run the same profile on two machines at once. Keep the same proxy/country so Google does not ask to verify again.",
+    sync_state_synced: "In sync", sync_state_remote_newer: "Store has a newer version", sync_state_local_only: "Only on this machine", sync_state_remote_only: "Only in the store",
+    tasks_title: "Scheduled tasks and profile groups", tasks_sub: "Launch profiles, run steps, then stop them.",
+    task_list: "Tasks", task_none: "No tasks yet.", task_run: "Run now", task_pause: "Pause", task_resume: "Resume",
+    task_on: "enabled", task_off: "paused", task_last: "last", task_next: "next", task_started: "Started",
+    task_every: "every {n} min", task_daily: "daily at {at}", task_manual: "manual", task_confirm_delete: "Delete task “{name}”?",
+    groups: "Profile groups", group_name: "Group name", group_profiles: "profile-1, profile-2", save_group: "Save group",
+    task_new: "New task", task_name: "Task name", task_targets: "A group name, or comma-separated profile names",
+    task_every_ph: "Repeat every N minutes (empty = manual)", task_jitter_ph: "Random jitter (seconds)",
+    task_sync: "Pull before and push after each run", task_create: "Create task", activity: "Activity log",
     mcp_button: "Connect AI (MCP)", mcp_title: "Connect an AI agent over MCP",
     mcp_intro: "Let Claude, Cursor or VS Code manage profiles and browse for you: open pages, read them, click, type and take screenshots.",
     mcp_endpoint: "MCP endpoint", mcp_pick: "1. Pick your AI app", mcp_paste: "2. Paste into: {where}",
@@ -493,6 +613,8 @@ const store = {
 let lang = store.get("foxprofile.lang") || "en";
 let token = store.get("foxprofile.token") || "";
 let profiles = [], running = new Set(), fingerprints = {};
+let view = "profiles";
+let startingNotes = {};
 let filter = "all";
 const busy = new Map();          // name -> "starting" | "stopping"
 const failed = new Map();        // name -> error message of the last failed launch
@@ -511,6 +633,7 @@ function applyI18n() {
   document.querySelectorAll("[data-title]").forEach((el) => { el.title = t(el.dataset.title); el.setAttribute("aria-label", t(el.dataset.title)); });
   $("search").placeholder = t("search");
   $("search").setAttribute("aria-label", t("search"));
+  if (view === "accounts") renderAccounts(true);
   $("sheet").setAttribute("aria-label", t("your_profiles"));
   $("v-text").placeholder = t("type_hint");
   document.querySelectorAll("[data-lang]").forEach((b) => b.classList.toggle("active", b.dataset.lang === lang));
@@ -584,9 +707,10 @@ async function refresh() {
     for (const name of now) if (!liveSince.has(name)) liveSince.set(name, new Date());
     for (const name of [...liveSince.keys()]) if (!now.has(name)) liveSince.delete(name);
     running = now;
+    startingNotes = run.starting || {};
     for (const name of [...selected]) if (!profiles.some((p) => p.name === name)) selected.delete(name);
     for (const name of [...failed.keys()]) if (now.has(name) || !profiles.some((p) => p.name === name)) failed.delete(name);
-    await Promise.all(profiles.filter((p) => !(p.name in fingerprints)).map(loadFingerprint));
+    for (const p of profiles) if (p.fingerprint) fingerprints[p.name] = p.fingerprint;
     render();
   } catch (e) { if (e.status !== 401) toast(e.message, true); }
 }
@@ -600,21 +724,24 @@ const FILTERS = [
   ["proxy", "f_proxy", (p) => !!p.proxy],
   ["direct", "f_direct", (p) => !p.proxy],
   ["chrome", "f_chrome", (p) => p.engine === "chrome"],
+  ["loggedout", "f_loggedout", (p) => p.session_state === "logged_out"],
+  ["verify", "f_verify", (p) => p.session_state === "needs_verification"],
 ];
 function visible() {
   const q = $("search").value.trim().toLowerCase();
   const pass = FILTERS.find((f) => f[0] === filter)[2];
-  return profiles.filter((p) => pass(p) && (!q || p.name.toLowerCase().includes(q) || (p.proxy || "").toLowerCase().includes(q)));
+  return profiles.filter((p) => pass(p) && (!q || [p.name, p.proxy, p.email, p.purpose, p.notes, (p.tags || []).join(" ")].some((v) => (v || "").toLowerCase().includes(q))));
 }
 
 let lastRender = "";
 function render() {
+  if (view === "accounts") { renderFilters(); return renderAccounts(); }
   const q = $("search").value.trim();
   const shown = visible();
   // Rebuilding the list replaces every button; skip it when nothing changed so a
   // periodic refresh cannot swap the button under the user's cursor mid-click.
   const key = JSON.stringify([lang, q, filter, profiles, [...running].sort(), [...busy], [...failed], [...selected].sort(),
-    [...justLanded], shown.map((p) => fingerprints[p.name] || null)]);
+    [...justLanded], shown.map((p) => fingerprints[p.name] || null), startingNotes]);
   if (key === lastRender) return;
   lastRender = key;
 
@@ -664,7 +791,12 @@ function headRow(shown) {
 
 function stamp(p) {
   const state = busy.get(p.name);
-  if (state) return h("span", { class: "stamp pending" }, t(state === "stopping" ? "stamp_stopping" : "stamp_starting"));
+  const note = startingNotes[p.name];
+  if (state || note) {
+    return h("span", { class: "stamp pending", title: note ? t("starting_note_hint") : "" },
+      t(state === "stopping" ? "stamp_stopping" : "stamp_starting"),
+      note ? h("small", { style: "display:block;max-width:190px;white-space:normal;font-weight:400" }, note) : null);
+  }
   if (running.has(p.name)) {
     const since = liveSince.get(p.name);
     return h("span", { class: "stamp" + (justLanded.has(p.name) ? " land" : "") },
@@ -672,6 +804,12 @@ function stamp(p) {
   }
   if (failed.has(p.name)) return h("span", { class: "stamp failed", title: failed.get(p.name) }, t("stamp_failed"));
   return h("span", { class: "idle" }, t("idle"));
+}
+
+function sessionDot(p) {
+  const st = p.session_state || "none";
+  const when = p.session_checked_at ? fmtTime(p.session_checked_at) : t("session_never");
+  return h("span", { class: "sdot " + st, title: `${t("session_" + st)} · ${when}`, role: "img", "aria-label": t("session_" + st) });
 }
 
 function row(p) {
@@ -692,8 +830,11 @@ function row(p) {
   return h("div", { class: "row body" + (on ? " live" : "") + (selected.has(p.name) ? " selected" : ""), role: "row" },
     h("div", { class: "c-sel", role: "cell" }, box),
     h("div", { class: "c-name stack", role: "cell" },
-      h("span", { class: "name", title: p.name }, p.name),
-      h("span", { class: "minor" }, engine)),
+      h("span", { class: "name", title: p.name }, sessionDot(p), p.name),
+      h("span", { class: "minor", title: [p.purpose, p.notes].filter(Boolean).join("\n") }, engine,
+        p.email ? [" · ", h("a", { href: "#", title: t("copy_email"), onclick: (e) => { e.preventDefault(); copyEmail(p); } }, p.email)] : null,
+        p.purpose ? " · " + p.purpose : null),
+      (p.tags && p.tags.length) ? h("span", { class: "tags" }, p.tags.map((tg) => h("span", { class: "tag" }, tg))) : null),
     h("div", { class: "c-device device", role: "cell" }, h("span", { class: "os", title: p.os_type }, os),
       h("div", { class: "stack" }, h("span", { class: p.engine === "chrome" ? "engine chrome" : "engine" }, engine),
         fp && fp.exists ? h("span", { class: "data minor" }, [fp.screen, `${fp.hardware_concurrency || "?"} CPU`].filter(Boolean).join(" · "))
@@ -707,6 +848,8 @@ function row(p) {
       h("span", { class: "minor" + (p.locale ? " data" : "") }, p.locale || t("follow_ip"))),
     h("div", { class: "c-stamp", role: "cell" }, stamp(p)),
     h("div", { class: "actions", role: "cell" }, main,
+      iconBtn("mail", t("open_gmail"), () => openGmail(p), "", isBusy),
+      iconBtn("download", t("export_one"), () => exportOne(p), "", on),
       iconBtn("monitor", t("view"), () => openViewer(p.name), "", !on || isBusy),
       iconBtn("cookie", t("cookies"), () => openCookies(p), "", on),
       iconBtn("edit", t("edit"), () => openEditor(p)),
@@ -719,8 +862,15 @@ function bulkBar() {
     h("span", { class: "n" }, t("selected", { n: names.length })),
     h("button", { class: "btn btn-act", onclick: () => bulk("launch") }, icon("play", true), t("bulk_launch")),
     h("button", { class: "btn btn-line", onclick: () => bulk("stop") }, icon("stop", true), t("bulk_stop")),
+    h("button", { class: "btn btn-line", onclick: () => checkSessions(names) }, icon("check", true), t("check_sessions")),
     h("button", { class: "btn btn-line", onclick: () => bulk("delete") }, icon("trash", true), t("bulk_delete")),
     h("button", { class: "btn btn-ghost", style: "margin-left:auto", onclick: () => { selected.clear(); render(); } }, t("clear_sel")));
+}
+
+async function checkSessions(names) {
+  try { await api("POST", "/automation/session-check", { profiles: names }); toast(t("check_started", { n: names.length })); }
+  catch (e) { return toast(e.message, true); }
+  for (let i = 0; i < 8; i++) { await new Promise((r) => setTimeout(r, 15000)); await refresh(); }
 }
 
 async function bulk(action) {
@@ -819,6 +969,33 @@ function openEditor(p) {
     const proxy = h("input", { id: "f-proxy", value: p && p.proxy ? p.proxy : "", placeholder: "socks5://user:pass@host:port", autocomplete: "off", class: "data" });
     const tz = h("input", { id: "f-tz", value: p && p.timezone ? p.timezone : "", placeholder: t("tz_hint"), autocomplete: "off", class: "data" });
     const loc = h("input", { id: "f-locale", value: p && p.locale ? p.locale : "", placeholder: t("locale_hint"), autocomplete: "off", class: "data" });
+    const email = h("input", { id: "f-email", type: "email", value: p && p.email ? p.email : "", placeholder: "name@gmail.com", autocomplete: "off" });
+    const purpose = h("input", { id: "f-purpose", value: p && p.purpose ? p.purpose : "", placeholder: t("purpose_hint"), maxlength: 200, autocomplete: "off" });
+    const tags = h("input", { id: "f-tags", value: p && p.tags ? p.tags.join(", ") : "", placeholder: "gmail, free, vps-1", autocomplete: "off" });
+    const notes = h("textarea", { id: "f-notes", rows: 4, maxlength: 5000, placeholder: t("notes_hint") });
+    notes.value = p && p.notes ? p.notes : "";
+    const clearSecret = new Set();
+    const secretInput = (id, key, multiline = false) => {
+      const stored = p && p["has_" + key];
+      const el = multiline ? h("textarea", { id, rows: 3, autocomplete: "off" }) : h("input", { id, type: key === "hint" || key === "recovery" ? "text" : "password", autocomplete: "new-password" });
+      el.placeholder = stored ? t("secret_stored_ph") : "";
+      const note = h("div", { class: "stored" });
+      if (stored) {
+        const x = h("a", { href: "#", onclick: (e) => { e.preventDefault(); if (clearSecret.has(key)) { clearSecret.delete(key); note.firstChild.textContent = t("secret_stored"); x.textContent = t("secret_clear"); } else { clearSecret.add(key); note.firstChild.textContent = t("secret_will_clear"); x.textContent = t("cancel"); } } }, t("secret_clear"));
+        note.append(h("span", {}, t("secret_stored")), " · ", x);
+      }
+      return { el, note };
+    };
+    const sPass = secretInput("f-pass", "password");
+    const sTotp = secretInput("f-totp", "totp_secret");
+    const sBackup = secretInput("f-backup", "backup_codes", true);
+    const sRecovery = secretInput("f-recovery", "recovery");
+    const sHint = secretInput("f-hint", "hint");
+    const loginMode = h("select", { id: "f-mode" }, [["full", t("mode_full")], ["email_only", t("mode_email_only")], ["manual", t("mode_manual")]].map(([v, label]) =>
+      h("option", { value: v, selected: (p ? p.login_mode : "full") === v }, label)));
+    const autoLogin = h("input", { type: "checkbox", id: "f-autologin" });
+    autoLogin.checked = !!(p && p.auto_login);
+    const secretField = (label, s) => h("div", { class: "field secret-field" }, h("label", { for: s.el.id }, label), s.el, s.note);
     const msg = h("div", { class: "msg", role: "status" });
     const geo = h("div");
     const say = (cls, text) => { msg.className = "msg " + cls; msg.textContent = text; };
@@ -845,11 +1022,26 @@ function openEditor(p) {
       const submitBtn = e.currentTarget.querySelector(".modal-foot .btn-act");
       if (submitBtn) submitBtn.disabled = true;
       const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null,
-        timezone: tz.value.trim(), locale: loc.value.trim() };
+        timezone: tz.value.trim(), locale: loc.value.trim(),
+        email: email.value.trim(), purpose: purpose.value.trim(), notes: notes.value.trim(),
+        tags: tags.value.split(",").map((x) => x.trim()).filter(Boolean),
+        login_mode: loginMode.value, auto_login: autoLogin.checked };
+      const secrets = {};
+      for (const [key, s] of [["password", sPass], ["totp_secret", sTotp], ["backup_codes", sBackup], ["recovery", sRecovery], ["hint", sHint]]) {
+        if (clearSecret.has(key)) secrets[key] = null;
+        else if (s.el.value.trim()) secrets[key] = s.el.value.trim();
+      }
       if (!p) body.engine = engine.value;
       try {
         if (p) { await api("PATCH", `/profiles/${enc(p.name)}`, body); delete fingerprints[p.name]; toast(t("saved")); }
         else { await api("POST", "/profiles", body); toast(t("created", { name: body.name })); }
+        if (Object.keys(secrets).length) {
+          try { await api("PUT", `/profiles/${enc(body.name)}/secrets`, secrets); }
+          catch (se) {
+            if (se.status === 423) { toast(se.message, true); close(); refresh(); return openVaultDialog(() => toast(t("vault_retry"))); }
+            throw se;
+          }
+        }
         close(); refresh();
       } catch (ex) { say("err", ex.message); }
       finally { if (submitBtn) submitBtn.disabled = false; }
@@ -859,6 +1051,18 @@ function openEditor(p) {
         field(t("name"), name),
         h("div", { class: "field-row" }, field(t("engine"), engine, p ? t("engine_locked") : null), field(t("os"), os)),
         engineNote,
+        field(t("account_email"), email),
+        h("div", { class: "field-row" }, field(t("purpose"), purpose), field(t("tags"), tags, t("tags_hint"))),
+        field(t("notes"), notes),
+        p ? h("div", { class: "hint" }, sessionDot(p), ` ${t("session_" + (p.session_state || "none"))} · ${p.session_checked_at ? fmtTime(p.session_checked_at) : t("session_never")}`) : null,
+        h("div", { class: "fieldset-title" }, t("secrets_section")),
+        h("div", { class: "field-row" }, secretField(t("password"), sPass), secretField(t("totp_secret"), sTotp)),
+        h("div", { class: "hint", style: "margin:-4px 0 8px" }, t("totp_hint")),
+        h("div", { class: "field-row" }, secretField(t("recovery"), sRecovery), secretField(t("hint_f"), sHint)),
+        secretField(t("backup_codes"), sBackup),
+        h("div", { class: "field-row" }, field(t("login_mode"), loginMode),
+          h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:26px;color:var(--ink-2)", title: t("auto_login_hint") }, autoLogin, t("auto_login"))),
+        h("div", { class: "fieldset-title" }, t("connection_section")),
         field(t("proxy_label"), proxy, t("proxy_hint")),
         h("div", { class: "inline-btns" }, check, checkIp),
         msg,
@@ -978,6 +1182,462 @@ async function copyText(text) {
   area.value = text; document.body.append(area); area.select();
   let ok = false; try { ok = document.execCommand("copy"); } catch {}
   area.remove(); return ok;
+}
+
+
+// ---- Accounts page: open, copy, 2FA code, re-login ----------------------------------------
+const INBOX = "https://mail.google.com/mail/u/0/#inbox";
+const totpCache = {};
+let vaultUnlocked = null;
+let accKey = "";
+
+async function loadVault() {
+  try { vaultUnlocked = (await api("GET", "/vault")).unlocked; } catch { vaultUnlocked = null; }
+}
+
+function openVaultDialog(done) {
+  modal((close) => {
+    const pass = h("input", { id: "v-pass", type: "password", autocomplete: "new-password", required: true });
+    const persist = h("input", { type: "checkbox" }); persist.checked = true;
+    const msg = h("div", { class: "msg", role: "status" });
+    return h("form", { onsubmit: async (e) => {
+      e.preventDefault();
+      try {
+        const r = await api("POST", "/vault/passphrase", { passphrase: pass.value, persist: persist.checked });
+        vaultUnlocked = true; close(); toast(t("vault_saved", { where: r.kept_in })); if (done) done(); render(); renderAccounts(true);
+      } catch (ex) { msg.className = "msg err"; msg.textContent = ex.message; }
+    } },
+      modalHead(t("vault_title"), t("vault_hint"), close),
+      h("div", { class: "modal-body" }, field(t("vault_pass"), pass),
+        h("label", { style: "display:flex;gap:8px;align-items:center;color:var(--ink-2)" }, persist, t("vault_persist")), msg),
+      h("div", { class: "modal-foot" },
+        h("button", { type: "button", class: "btn btn-line", onclick: close }, t("cancel")),
+        h("button", { class: "btn btn-act" }, t("save"))));
+  });
+}
+
+async function withVault(fn) {
+  try { return await fn(); }
+  catch (e) { if (e.status === 423) { vaultUnlocked = false; openVaultDialog(); } else toast(e.message, true); }
+}
+
+let clipTimer = null;
+async function copySecret(text, label) {
+  if (!(await copyText(text))) return toast(t("copy_failed"), true);
+  toast(t("copied_clear", { what: label }));
+  clearTimeout(clipTimer);
+  clipTimer = setTimeout(() => { copyText(" "); }, 30000);
+}
+async function copyEmail(p) {
+  if (!p.email) return toast(t("no_email"), true);
+  if (await copyText(p.email)) toast(t("copied", { what: p.email }));
+}
+async function copyPassword(p) {
+  await withVault(async () => { const r = await api("GET", `/profiles/${enc(p.name)}/secrets/password`); await copySecret(r.value, t("password")); });
+}
+async function copyTotp(p) {
+  await withVault(async () => { const r = await api("GET", `/profiles/${enc(p.name)}/totp`); await copySecret(r.code, t("col_2fa")); });
+}
+
+async function openGmail(p) {
+  try {
+    if (!running.has(p.name)) {
+      busy.set(p.name, "starting"); render();
+      try { await api("POST", `/browser/${enc(p.name)}/launch`); } finally { busy.delete(p.name); }
+      await refresh();
+    }
+    await api("POST", `/browser/${enc(p.name)}/page/navigate`, { url: INBOX });
+    toast(t("gmail_opened", { name: p.name }));
+  } catch (e) { toast(e.message, true); }
+}
+async function relogin(p) {
+  try { await api("POST", `/automation/relogin/${enc(p.name)}`); toast(t("relogin_started", { name: p.name })); }
+  catch (e) { return toast(e.message, true); }
+  for (let i = 0; i < 12; i++) { await new Promise((r) => setTimeout(r, 8000)); await refresh(); }
+}
+
+async function fetchTotp(p) {
+  const c = totpCache[p.name];
+  if (c && c.pending) return;
+  totpCache[p.name] = { ...(c || {}), pending: true };
+  try {
+    const r = await api("GET", `/profiles/${enc(p.name)}/totp`);
+    totpCache[p.name] = { code: r.code, until: Date.now() + r.remaining * 1000 };
+  } catch (e) { totpCache[p.name] = { error: e.status === 423 ? "locked" : "error", until: Date.now() + 15000 }; }
+  paintTotp();
+}
+function paintTotp() {
+  document.querySelectorAll("[data-totp]").forEach((el) => {
+    const p = profiles.find((x) => x.name === el.dataset.totp);
+    const c = totpCache[el.dataset.totp];
+    if (!p) return;
+    if (!c || (c.until && c.until <= Date.now())) { fetchTotp(p); }
+    if (c && c.code && c.until > Date.now()) el.replaceChildren(c.code.slice(0, 3) + " " + c.code.slice(3), h("small", {}, Math.max(0, Math.ceil((c.until - Date.now()) / 1000)) + "s"));
+    else if (c && c.error) el.textContent = c.error === "locked" ? t("vault_locked_short") : "—";
+    else el.textContent = "…";
+  });
+}
+setInterval(() => { if (view === "accounts" && !document.hidden) paintTotp(); }, 1000);
+
+function setView(v) {
+  view = v;
+  document.body.classList.toggle("view-accounts", v === "accounts");
+  if (v === "accounts") { loadVault().then(() => renderAccounts(true)); }
+  else render();
+}
+
+function sessionLabel(p) {
+  const st = p.session_state || "none";
+  return h("span", {}, sessionDot(p), t("session_" + st), h("div", { class: "sub" }, p.session_checked_at ? fmtTime(p.session_checked_at) : t("session_never")));
+}
+
+function accountRow(p) {
+  const on = running.has(p.name);
+  const btn = (iconName, label, fn, disabled = false) => h("button", { class: "icon-btn", title: label, "aria-label": `${label}: ${p.name}`, disabled, onclick: fn }, icon(iconName));
+  return h("div", { class: "acc-row" },
+    h("div", {}, h("div", { class: "mail" }, p.email || h("span", { class: "sub" }, t("no_email"))), h("div", { class: "sub" }, p.name + (p.purpose ? " · " + p.purpose : ""))),
+    h("div", {}, (p.tags && p.tags.length) ? h("span", { class: "tags" }, p.tags.map((tg) => h("span", { class: "tag" }, tg))) : h("span", { class: "sub" }, "—"),
+      p.auto_login ? h("div", { class: "sub" }, t("auto_login_on")) : null),
+    h("div", {}, sessionLabel(p)),
+    h("div", { class: "code" }, p.has_totp_secret ? h("span", { "data-totp": p.name }, "…") : h("span", { class: "sub" }, "—")),
+    h("div", { class: "acc-actions" },
+      h("button", { class: "btn btn-act", onclick: () => openGmail(p), title: t("open_gmail") }, icon("mail", true), t("open_gmail_short")),
+      btn("copy", t("copy_email"), () => copyEmail(p), !p.email),
+      btn("key", t("copy_password"), () => copyPassword(p), !p.has_password),
+      h("button", { class: "icon-btn", title: t("copy_2fa"), disabled: !p.has_totp_secret, onclick: () => copyTotp(p) }, "2FA"),
+      btn("reload", t("relogin"), () => relogin(p), !p.has_password && p.login_mode === "full"),
+      btn("check", t("check_one"), () => checkSessions([p.name])),
+      btn("edit", t("edit"), () => openEditor(p))));
+}
+
+function renderAccounts(force = false) {
+  if (view !== "accounts") return;
+  const q = $("search").value.trim().toLowerCase();
+  const list = profiles.filter((p) => !q || [p.name, p.email, p.purpose, (p.tags || []).join(" ")].some((v) => (v || "").toLowerCase().includes(q)))
+    .sort((a, b) => (a.email || a.name).localeCompare(b.email || b.name));
+  const key = JSON.stringify([lang, q, vaultUnlocked, list, [...running].sort()]);
+  if (!force && key === accKey) return;
+  accKey = key;
+  const root = $("accounts-view");
+  root.replaceChildren(
+    h("div", { class: "acc-head" },
+      h("div", {}, h("h1", {}, t("accounts_title")), h("div", { class: "counts" }, t("accounts_sub", { n: list.length }))),
+      h("div", { class: "vault" },
+        vaultUnlocked === false ? h("span", { class: "msg err", style: "padding:4px 10px" }, t("vault_locked")) : (vaultUnlocked ? h("span", {}, t("vault_open")) : null),
+        h("button", { class: "btn btn-line", onclick: () => openVaultDialog() }, icon("key", true), t("vault_set")),
+        h("button", { class: "btn btn-line", onclick: () => checkSessions(list.map((p) => p.name)) }, icon("check", true), t("check_all")),
+        h("button", { class: "btn btn-ghost", onclick: () => setView("profiles") }, icon("back", true), t("back_profiles")))),
+    list.length
+      ? h("div", { class: "acc-table", role: "table" },
+          h("div", { class: "acc-row acc-headrow" }, h("div", {}, t("col_account")), h("div", {}, t("tags")), h("div", {}, t("col_session")), h("div", {}, t("col_2fa")), h("div", {})),
+          ...list.map(accountRow))
+      : h("p", { class: "hint" }, t("no_accounts")));
+  paintTotp();
+}
+
+// ---- Export / import profiles as one encrypted file -----------------------------------------
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = h("a", { href: url, download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+// names: null = all profiles; mode: "download", "usb" or "local"
+async function exportProfiles(names, mode, say) {
+  say = say || ((cls, text) => toast(text, cls === "err"));
+  say("info", t("working"));
+  try {
+    if (mode === "download") {
+      const res = await api("POST", "/transfer/export", { names }, { raw: true });
+      const blob = await res.blob();
+      const m = (res.headers.get("content-disposition") || "").match(/filename="?([^";]+)"?/);
+      saveBlob(blob, m ? m[1] : "foxprofile.fpbundle");
+      say("ok", t("transfer_exported", { n: (res.headers.get("x-exported") || "").split(",").filter(Boolean).length || (names ? names.length : profiles.length) }));
+    } else {
+      const r = await api("POST", "/transfer/export-to-folder", { names, target: mode });
+      say("ok", t("transfer_saved", { n: r.profiles.length, path: r.path }));
+    }
+  } catch (e) {
+    if (e.status === 423) { say("err", e.message); openVaultDialog(); } else say("err", e.message);
+  }
+}
+const exportOne = (p) => exportProfiles([p.name], "download");
+
+function openTransfer() {
+  modal((close) => {
+    const msg = h("div", { class: "msg", role: "status" });
+    const say = (cls, text) => { msg.className = "msg " + cls; msg.textContent = text; };
+    const boxes = profiles.map((p) => {
+      const box = h("input", { type: "checkbox", value: p.name, disabled: running.has(p.name) });
+      box.checked = !running.has(p.name);
+      return { p, box };
+    });
+    const chosen = () => boxes.filter(({ box }) => box.checked).map(({ p }) => p.name);
+    const setAll = (on) => boxes.forEach(({ p, box }) => { if (!running.has(p.name)) box.checked = on; });
+    const list = h("div", { style: "max-height:190px;overflow:auto;border:1px solid var(--rule);border-radius:8px;padding:6px 10px" },
+      boxes.length ? boxes.map(({ p, box }) => h("label", { style: "display:flex;gap:8px;align-items:center;padding:3px 0" },
+        box, h("b", {}, p.name), h("span", { class: "sub" }, [p.email, running.has(p.name) ? t("transfer_running") : null].filter(Boolean).join(" · "))))
+        : h("span", { class: "sub" }, t("no_accounts")));
+    const exportSelected = (mode) => { const n = chosen(); if (!n.length) return say("err", t("transfer_pick")); exportProfiles(n, mode, say); };
+    const exportAll = (mode) => exportProfiles(null, mode, say);
+
+    // ---- import side
+    const source = { kind: null, file: null, path: null };
+    const picker = h("div");
+    const overwrite = h("input", { type: "checkbox" });
+    let pickBoxes = [];
+    const showPicker = (info) => {
+      pickBoxes = info.profiles.map((p) => {
+        const box = h("input", { type: "checkbox", value: p.name }); box.checked = true;
+        return { p, box };
+      });
+      const doImport = async (all) => {
+        const only = all ? null : pickBoxes.filter(({ box }) => box.checked).map(({ p }) => p.name);
+        if (!all && !only.length) return say("err", t("transfer_pick"));
+        say("info", t("working"));
+        try {
+          let data;
+          if (source.kind === "path") {
+            data = await api("POST", "/transfer/import-path", { path: source.path, only, overwrite: overwrite.checked });
+          } else {
+            const q = new URLSearchParams({ overwrite: overwrite.checked });
+            (only || []).forEach((n) => q.append("only", n));
+            const headers = { "Content-Type": "application/octet-stream" };
+            if (token) headers.Authorization = "Bearer " + token;
+            const res = await fetch("/api/v1/transfer/import?" + q, { method: "POST", headers, body: source.file });
+            data = await res.json().catch(() => ({}));
+            if (res.status === 423) { say("err", data.detail || ""); return openVaultDialog(); }
+            if (!res.ok) return say("err", typeof data.detail === "string" ? data.detail : res.statusText);
+          }
+          const skipped = Object.entries(data.skipped || {});
+          say(skipped.length ? "err" : "ok", t("transfer_imported", { n: data.imported.length }) + (skipped.length ? " · " + skipped.map(([n, why]) => `${n}: ${why}`).join(" · ") : ""));
+          refresh();
+        } catch (e) { if (e.status === 423) { say("err", e.message); openVaultDialog(); } else say("err", e.message); }
+      };
+      picker.replaceChildren(
+        h("div", { class: "hint" }, t("transfer_inside", { n: info.profiles.length, machine: info.machine || "?" })),
+        h("div", { style: "max-height:150px;overflow:auto;border:1px solid var(--rule);border-radius:8px;padding:6px 10px;margin:6px 0" },
+          pickBoxes.map(({ p, box }) => h("label", { style: "display:flex;gap:8px;align-items:center;padding:3px 0" },
+            box, h("b", {}, p.name), h("span", { class: "sub" }, [p.email, p.exists_here ? t("transfer_exists") : null].filter(Boolean).join(" · "))))),
+        h("label", { style: "display:flex;gap:8px;align-items:center;color:var(--ink-2);margin:6px 0" }, overwrite, t("transfer_overwrite")),
+        h("div", { class: "inline-btns" },
+          h("button", { class: "btn btn-act", onclick: () => doImport(false) }, icon("upload", true), t("transfer_import_selected")),
+          h("button", { class: "btn btn-line", onclick: () => doImport(true) }, t("transfer_import_all"))));
+    };
+    const inspect = async (promise) => {
+      say("info", t("working"));
+      try { const info = await promise; say("", ""); showPicker(info); }
+      catch (e) { picker.replaceChildren(); if (e.status === 423) { say("err", e.message); openVaultDialog(); } else say("err", e.message); }
+    };
+    const file = h("input", { type: "file", accept: ".fpbundle", id: "t-file", onchange: () => {
+      if (!file.files.length) return;
+      source.kind = "upload"; source.file = file.files[0];
+      const headers = { "Content-Type": "application/octet-stream" };
+      if (token) headers.Authorization = "Bearer " + token;
+      inspect(fetch("/api/v1/transfer/inspect", { method: "POST", headers, body: source.file }).then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new ApiError(res.status, typeof data.detail === "string" ? data.detail : res.statusText);
+        return data;
+      }));
+    } });
+    const found = h("div");
+    api("GET", "/transfer/bundles").then((r) => {
+      found.replaceChildren(...(r.bundles.length ? [h("div", { class: "hint" }, t("transfer_found"))] : []),
+        ...r.bundles.slice(0, 8).map((b) => h("div", { style: "display:flex;gap:8px;align-items:center;padding:3px 0" },
+          h("span", { style: "flex:1;word-break:break-all" }, `${b.where === "usb" ? "USB" : t("transfer_local")} · ${b.name}`, h("span", { class: "sub" }, ` · ${(b.bytes / 1024).toFixed(0)} KB · ${fmtTime(b.modified)}`)),
+          h("button", { class: "btn btn-line", onclick: () => { source.kind = "path"; source.path = b.path; inspect(api("POST", "/transfer/inspect-path", { path: b.path })); } }, t("transfer_open")))));
+    }).catch(() => {});
+
+    return h("div", {},
+      modalHead(t("transfer_title"), t("transfer_sub"), close),
+      h("div", { class: "modal-body" },
+        h("div", { class: "fieldset-title" }, t("transfer_export")), list,
+        h("div", { class: "inline-btns", style: "margin-top:8px" },
+          h("button", { class: "btn btn-line", onclick: () => setAll(true) }, t("select_all")),
+          h("button", { class: "btn btn-line", onclick: () => setAll(false) }, t("transfer_none"))),
+        h("div", { class: "inline-btns", style: "margin-top:8px" },
+          h("button", { class: "btn btn-act", onclick: () => exportSelected("download") }, icon("download", true), t("transfer_dl_sel")),
+          h("button", { class: "btn btn-line", onclick: () => exportAll("download") }, icon("download", true), t("transfer_dl_all"))),
+        h("div", { class: "inline-btns", style: "margin-top:8px" },
+          h("button", { class: "btn btn-line", onclick: () => exportSelected("usb") }, t("transfer_usb_sel")),
+          h("button", { class: "btn btn-line", onclick: () => exportAll("usb") }, t("transfer_usb_all")),
+          h("button", { class: "btn btn-ghost", onclick: () => exportSelected("local") }, t("transfer_local_sel"))),
+        h("div", { class: "fieldset-title" }, t("transfer_import")),
+        found,
+        h("div", { class: "field" }, h("label", { for: "t-file" }, t("transfer_pick_file")), file),
+        picker,
+        h("p", { class: "hint" }, t("transfer_note")), msg),
+      h("div", { class: "modal-foot" }, h("button", { class: "btn btn-line", onclick: close }, t("close"))));
+  }, { wide: true });
+}
+
+function fmtTime(ts) { return ts ? new Date(ts * 1000).toLocaleString() : "—"; }
+
+async function openSync() {
+  const state = { force: false };
+  const list = h("div", { class: "sheet" });
+  const storeLine = h("div", { class: "hint" });
+  const logBox = h("pre", { class: "code", style: "max-height:220px;overflow:auto;font-size:11px;white-space:pre-wrap" });
+  let logText = "";
+  const autoPath = h("div", { class: "hint" });
+  const savedBox = h("div", { class: "hint", style: "word-break:break-all" });
+  let textPath = "";
+  const saveLogFile = async () => {
+    try {
+      const r = await api("POST", "/sync/log/save");
+      savedBox.replaceChildren(h("b", {}, t("sync_log_saved")), " ", r.path, " ",
+        h("button", { class: "btn btn-line", onclick: async () => { if (await copyText(r.path)) toast(t("copied", { what: r.name })); } }, t("sync_log_copy_path")),
+        " ", h("button", { class: "btn btn-ghost", onclick: () => api("POST", "/sync/log/open-folder").catch((e) => toast(e.message, true)) }, t("sync_log_open_folder")));
+    } catch (e) { savedBox.textContent = e.message; }
+  };
+  const downloadLogFile = async () => {
+    try {
+      const res = await api("GET", "/sync/log/file", undefined, { raw: true });
+      const m = (res.headers.get("content-disposition") || "").match(/filename="?([^";]+)"?/);
+      saveBlob(await res.blob(), m ? m[1] : "sync-log.txt");
+    } catch (e) { toast(e.message, true); }
+  };
+  async function drawLog() {
+    try {
+      const r = await api("GET", "/sync/log?limit=60");
+      textPath = r.text_path || "";
+      autoPath.replaceChildren(t("sync_log_auto"), " ", h("b", {}, textPath), " ",
+        h("button", { class: "btn btn-line", onclick: async () => { if (await copyText(textPath)) toast(t("copied", { what: "sync-log.txt" })); } }, t("sync_log_copy_path")));
+      const f = (v) => (v === undefined || v === null ? "" : v);
+      logText = r.events.map((e) => {
+        const steps = ["check_s", "pack_s", "encrypt_s", "upload_s", "download_s", "decrypt_s", "import_s"].filter((k) => e[k] !== undefined).map((k) => `${k.replace("_s", "")}=${e[k]}s`).join(" ");
+        return `${new Date(e.t * 1000).toLocaleTimeString()}  ${e.event.replace("sync_", "")}  ${f(e.profile)}  [${f(e.trigger)}]  ${e.ok === false ? "FAILED" : "ok"}  ${e.version !== undefined && e.version !== null ? "v" + e.version : ""}  ${e.bytes ? (e.bytes / 1024).toFixed(0) + "KB" : ""}  total=${f(e.total_s)}s  ${steps}  ${f(e.skipped)} ${f(e.error)}  ${f(e.reason)}`.replace(/\s+/g, " ");
+      }).join("\n");
+      logBox.textContent = logText || t("sync_log_empty");
+    } catch (e) { logBox.textContent = e.message; }
+  }
+  const setAutoAll = async (on) => {
+    try {
+      const data = await api("GET", "/sync");
+      for (const r of data.profiles) if (r.state !== "remote-only") await api("PUT", `/sync/${enc(r.name)}/auto?enabled=${on}`);
+      msg.className = "msg ok"; msg.textContent = t(on ? "sync_auto_all_on" : "sync_auto_all_off");
+    } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+    draw();
+  };
+  const msg = h("div", { class: "msg", role: "status" });
+  const run = async (method, path, okMsg, withForce = true) => {
+    msg.className = "msg"; msg.textContent = "…";
+    try {
+      const r = await api(method, path + (withForce && state.force ? (path.includes("?") ? "&" : "?") + "force=true" : ""));
+      const failed = r && r.failed ? Object.entries(r.failed) : [];
+      msg.className = "msg " + (failed.length ? "err" : "ok");
+      msg.textContent = failed.length ? failed.map(([n, e]) => `${n}: ${e}`).join(" · ") : okMsg;
+    } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+    await draw();
+    drawLog();
+    refresh();
+  };
+  async function draw() {
+    let data;
+    try { data = await api("GET", "/sync"); }
+    catch (e) { list.replaceChildren(h("p", { class: "msg err" }, e.message)); return; }
+    storeLine.textContent = data.store ? t("sync_store", { s: data.store }) : "";
+    if (!data.profiles.length) { list.replaceChildren(h("p", {}, t("sync_empty"))); return; }
+    list.replaceChildren(...data.profiles.map((r) => h("div", { class: "row", style: "display:flex;gap:10px;align-items:center;padding:8px 0" },
+      h("b", { style: "flex:1" }, r.name),
+      h("span", { style: "flex:1;color:var(--ink-2)" }, t("sync_state_" + r.state.replace("-", "_")), r.pushed_by ? ` · ${r.pushed_by} · ${fmtTime(r.pushed_at)}` : ""),
+      h("label", { style: "display:flex;gap:6px;align-items:center;color:var(--ink-2)", title: t("sync_auto_hint") },
+        h("input", { type: "checkbox", checked: r.auto, disabled: r.state === "remote-only",
+          onchange: (e) => run("PUT", `/sync/${enc(r.name)}/auto?enabled=${e.target.checked}`, t("saved"), false) }), t("sync_auto")),
+      h("button", { class: "btn btn-line", disabled: r.state === "remote-only", onclick: () => run("POST", `/sync/${enc(r.name)}/push`, t("sync_pushed", { name: r.name })) }, t("sync_push")),
+      h("button", { class: "btn btn-line", disabled: r.state === "local-only", onclick: () => run("POST", `/sync/${enc(r.name)}/pull?check=true`, t("sync_pulled", { name: r.name })) }, t("sync_pull")))));
+  }
+  modal((close) => {
+    const box = h("div", {},
+      modalHead(t("sync_title"), t("sync_sub"), close),
+      h("div", { class: "modal-body" },
+        storeLine, list, msg,
+        h("div", { class: "inline-btns", style: "margin-top:8px" },
+          h("button", { class: "btn btn-line", onclick: () => setAutoAll(true) }, t("sync_auto_all_btn_on")),
+          h("button", { class: "btn btn-ghost", onclick: () => setAutoAll(false) }, t("sync_auto_all_btn_off"))),
+        h("div", { class: "fieldset-title" }, t("sync_log_title")),
+        logBox,
+        h("div", { class: "inline-btns", style: "margin-top:6px" },
+          h("button", { class: "btn btn-line", onclick: drawLog }, t("sync_log_refresh")),
+          h("button", { class: "btn btn-line", onclick: async () => { if (await copyText(logText)) toast(t("copied", { what: t("sync_log_title") })); } }, t("sync_log_copy")),
+          h("button", { class: "btn btn-act", onclick: saveLogFile }, t("sync_log_save")),
+          h("button", { class: "btn btn-line", onclick: downloadLogFile }, t("sync_log_download"))),
+        autoPath, savedBox,
+        h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink-2)" },
+          h("input", { type: "checkbox", onchange: (e) => { state.force = e.target.checked; } }), t("sync_force")),
+        h("p", { class: "hint" }, t("sync_note"))),
+      h("div", { class: "modal-foot" },
+        h("button", { class: "btn btn-line", onclick: () => run("POST", "/sync/pull", t("sync_all_done")) }, t("sync_pull_all")),
+        h("button", { class: "btn btn-act", onclick: () => run("POST", "/sync/push", t("sync_all_done")) }, t("sync_push_all"))));
+    draw(); drawLog();
+    return box;
+  }, { wide: true });
+}
+
+async function openTasks() {
+  const state = { template: "keepalive-gmail" };
+  const body = h("div", { class: "modal-body" });
+  const msg = h("div", { class: "msg", role: "status" });
+  const say = (text, bad) => { msg.className = "msg " + (bad ? "err" : "ok"); msg.textContent = text; };
+  const act = async (fn, okMsg) => {
+    try { await fn(); say(okMsg, false); } catch (e) { say(e.message, true); }
+    draw();
+  };
+  async function draw() {
+    let tasks, groups, tpl, events;
+    try {
+      [tasks, groups, tpl, events] = await Promise.all([
+        api("GET", "/automation/tasks"), api("GET", "/automation/groups"),
+        api("GET", "/automation/templates"), api("GET", "/automation/activity?limit=15")]);
+    } catch (e) { body.replaceChildren(h("p", { class: "msg err" }, e.message)); return; }
+    const sched = (x) => x.every_minutes ? t("task_every", { n: x.every_minutes }) : x.daily_at ? t("task_daily", { at: x.daily_at }) : t("task_manual");
+    const taskRows = tasks.tasks.length ? tasks.tasks.map((x) => h("div", { style: "display:flex;gap:8px;align-items:center;padding:6px 0" },
+      h("div", { style: "flex:1" }, h("b", {}, x.name), h("div", { class: "hint" },
+        `${x.group ? "[" + x.group + "] " : ""}${(x.profiles || []).join(", ")} · ${sched(x)} · ${x.enabled ? t("task_on") : t("task_off")} · ${t("task_last")}: ${x.last_status || "—"} · ${t("task_next")}: ${fmtTime(x.next_run)}`)),
+      h("button", { class: "btn btn-line", onclick: () => act(() => api("POST", `/automation/tasks/${x.id}/run`), t("task_started")) }, t("task_run")),
+      h("button", { class: "btn btn-line", onclick: () => act(() => api("POST", `/automation/tasks/${x.id}/enable?enabled=${!x.enabled}`), t("saved")) }, x.enabled ? t("task_pause") : t("task_resume")),
+      h("button", { class: "btn btn-line", onclick: async () => { if (await confirmDialog(t("task_confirm_delete", { name: x.name }), t("delete"), true)) act(() => api("DELETE", `/automation/tasks/${x.id}`), t("deleted", { name: x.name })); } }, t("delete"))))
+      : [h("p", { class: "hint" }, t("task_none"))];
+
+    const gName = h("input", { id: "g-name", placeholder: t("group_name"), maxlength: 60 });
+    const gProfiles = h("input", { id: "g-profiles", placeholder: t("group_profiles") });
+    const groupRows = Object.entries(groups.groups).map(([g, ps]) => h("div", { class: "hint" }, `${g}: ${ps.join(", ")} `,
+      h("a", { href: "#", onclick: (e) => { e.preventDefault(); act(() => api("DELETE", `/automation/groups/${enc(g)}`), t("deleted", { name: g })); } }, t("delete"))));
+
+    const tName = h("input", { id: "t-name", placeholder: t("task_name"), maxlength: 80 });
+    const tTpl = h("select", { id: "t-tpl", onchange: (e) => { state.template = e.target.value; } },
+      Object.keys(tpl.templates).map((k) => h("option", { value: k, selected: k === state.template }, k)));
+    const tTargets = h("input", { id: "t-targets", placeholder: t("task_targets") });
+    const tEvery = h("input", { id: "t-every", type: "number", min: 1, placeholder: t("task_every_ph") });
+    const tJit = h("input", { id: "t-jit", type: "number", min: 0, placeholder: t("task_jitter_ph") });
+    const tSync = h("input", { type: "checkbox", id: "t-sync" });
+    const create = () => {
+      const names = tTargets.value.split(",").map((s) => s.trim()).filter(Boolean);
+      const isGroup = names.length === 1 && groups.groups[names[0]];
+      act(() => api("POST", "/automation/tasks", {
+        name: tName.value.trim(), template: state.template,
+        group: isGroup ? names[0] : null, profiles: isGroup ? null : names,
+        every_minutes: tEvery.value ? Number(tEvery.value) : null,
+        jitter_seconds: tJit.value ? Number(tJit.value) : 0, sync: tSync.checked }), t("created", { name: tName.value.trim() }));
+    };
+    body.replaceChildren(
+      h("h3", {}, t("task_list")), ...taskRows,
+      h("h3", { style: "margin-top:16px" }, t("groups")), ...groupRows,
+      h("div", { style: "display:flex;gap:8px;margin-top:6px" }, gName, gProfiles,
+        h("button", { class: "btn btn-line", onclick: () => act(() => api("PUT", `/automation/groups/${enc(gName.value.trim())}`, { profiles: gProfiles.value.split(",").map((s) => s.trim()).filter(Boolean) }), t("saved")) }, t("save_group"))),
+      h("h3", { style: "margin-top:16px" }, t("task_new")),
+      h("div", { style: "display:grid;gap:8px" }, tName, tTpl, tTargets, tEvery, tJit,
+        h("label", { style: "display:flex;gap:8px;align-items:center;color:var(--ink-2)" }, tSync, t("task_sync")),
+        h("button", { class: "btn btn-act", onclick: create }, t("task_create"))),
+      h("h3", { style: "margin-top:16px" }, t("activity")),
+      h("pre", { class: "code", style: "max-height:160px;overflow:auto" }, events.events.map((e) => `${fmtTime(e.t)}  ${e.event}  ${e.profile || ""} ${e.step || e.status || e.error || ""}`).join("\n") || "—"),
+      msg);
+  }
+  modal((close) => {
+    draw();
+    return h("div", {}, modalHead(t("tasks_title"), t("tasks_sub"), close), body,
+      h("div", { class: "modal-foot" }, h("button", { class: "btn btn-line", onclick: close }, t("close"))));
+  }, { wide: true });
 }
 
 async function openMcpGuide() {
@@ -1114,6 +1774,10 @@ $("login-form").onsubmit = async (e) => {
 $("logout-btn").onclick = () => { token = ""; store.set("foxprofile.token", null); showLogin(); };
 $("new-btn").onclick = () => openEditor(null);
 $("mcp-btn").onclick = openMcpGuide;
+$("transfer-btn").onclick = openTransfer;
+$("accounts-btn").onclick = () => setView("accounts");
+$("sync-btn").onclick = openSync;
+$("tasks-btn").onclick = openTasks;
 $("search").oninput = render;
 document.querySelectorAll("[data-lang]").forEach((b) => { b.onclick = () => { lang = b.dataset.lang; store.set("foxprofile.lang", lang); applyI18n(); lastRender = ""; render(); }; });
 document.addEventListener("keydown", (e) => {

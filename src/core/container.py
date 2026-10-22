@@ -39,10 +39,44 @@ class Container:
     def browser_launcher(self) -> IBrowserLauncher:
         from ..services.browser.launcher import BrowserLauncher
 
-        return self._get("bl", BrowserLauncher)
+        def build() -> BrowserLauncher:
+            from ..services.sync.service import AutoSyncHook
+
+            launcher = BrowserLauncher()
+            launcher.sync_hook = AutoSyncHook(lambda: self.sync_service)
+            launcher.ready_hooks.append(lambda name: self.automation.on_launched(name))
+            return launcher
+
+        return self._get("bl", build)
 
     @property
     def proxy_service(self) -> IProxyService:
         from ..services.proxy.service import ProxyService
 
         return self._get("ps", ProxyService)
+
+    @property
+    def sync_service(self):
+        from ..services.sync.service import SyncService
+
+        return self._get("sync", lambda: SyncService(self.profile_manager, self.browser_launcher))
+
+    @property
+    def account_vault(self):
+        from ..services.vault.accounts import AccountVault
+
+        return self._get("vault", lambda: AccountVault(self.profile_manager))
+
+    @property
+    def automation(self):
+        from ..services.automation.engine import Automation
+
+        return self._get(
+            "auto",
+            lambda: Automation(
+                self.profile_manager,
+                self.browser_launcher,
+                self.sync_service,
+                self.account_vault,
+            ),
+        )

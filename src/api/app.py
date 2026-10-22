@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
+import os
 import pathlib
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from ..core.config import API_PORT, API_TOKEN, HEADLESS
@@ -14,11 +16,15 @@ from . import mcp_http
 from .auth import require_token
 from .guard import LocalOnlyGuard
 from .routes import (
+    accounts_router,
+    automation_router,
     browser_router,
     mcp_setup_router,
     page_router,
     profiles_router,
     proxy_router,
+    sync_router,
+    transfer_router,
 )
 from .schemas.common import SuccessResponse
 
@@ -28,6 +34,15 @@ if TYPE_CHECKING:
 logger = get_logger("api")
 
 API_PREFIX = "/api/v1"
+
+
+def instance_id(data_dir: str) -> str:
+    """sha1 of the data folder path, lower case with backslashes and no trailing slash. The
+    start script computes the same value, so both sides agree whatever the path's spelling."""
+    norm = data_dir.replace("/", "\\").rstrip("\\").lower()
+    return hashlib.sha1(norm.encode("utf-8")).hexdigest()
+
+
 VERSION = "2.3.1"
 _PANEL = pathlib.Path(__file__).resolve().parents[1] / "web" / "index.html"
 _FONTS = pathlib.Path(__file__).resolve().parents[1] / "assets" / "fonts"
@@ -48,8 +63,13 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        async with mcp_lifespan:
-            yield
+        automation = container.automation
+        automation.start()
+        try:
+            async with mcp_lifespan:
+                yield
+        finally:
+            automation.shutdown()
 
     app = FastAPI(
         lifespan=lifespan,
@@ -70,6 +90,10 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
     app.include_router(browser_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(page_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(proxy_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(accounts_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(sync_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(transfer_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(automation_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(mcp_setup_router, prefix=API_PREFIX, dependencies=protected)
     app.router.routes.append(mcp_route)
 
@@ -78,15 +102,22 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
         return SuccessResponse(message="FoxProfile API is running")
 
     @app.get(f"{API_PREFIX}/info", tags=["health"])
-    def info() -> dict:
+    def info(request: Request) -> dict:
         """Public, secret-free facts the web panel needs before logging in."""
-        return {
+        data_dir = os.getcwd()
+        result = {
             "name": "FoxProfile",
             "version": VERSION,
             "auth_required": bool(API_TOKEN),
             "headless": HEADLESS,
             "mcp_path": mcp_http.MCP_PATH,
+            # Identifies which data folder this server serves, so a launcher can tell its own
+            # server from another FoxProfile copy that already holds the port.
+            "instance": instance_id(data_dir),
         }
+        if (request.client.host if request.client else "") in ("127.0.0.1", "::1", "localhost"):
+            result["data_dir"] = data_dir
+        return result
 
     @app.get("/", include_in_schema=False)
     def panel() -> FileResponse:
