@@ -1,3 +1,4 @@
+import contextlib
 import os
 import pathlib
 import subprocess
@@ -51,10 +52,43 @@ def spawn_browser(profile: Profile) -> subprocess.Popen:
     )
 
 
-def terminate(proc: subprocess.Popen, name: str, timeout: int = 5) -> None:
-    """Gracefully terminate a browser process, force-kill on timeout."""
+def _descendants(proc: subprocess.Popen) -> list:
+    """The runner's children (the driver, the browser, its tabs), found before it is stopped:
+    once the runner is gone they can no longer be traced back to it."""
+    try:
+        import psutil
+
+        return psutil.Process(proc.pid).children(recursive=True)
+    except Exception:  # psutil missing, or the process is already gone
+        return []
+
+
+def _reap(children: list, name: str, grace: float) -> None:
+    """Give the browser `grace` seconds to close by itself, then kill what is left. A stick or
+    disk that writes slowly needs the time; a browser left behind keeps its profile locked."""
+    if not children:
+        return
+    try:
+        import psutil
+
+        _, alive = psutil.wait_procs(children, timeout=grace)
+        for child in alive:
+            with contextlib.suppress(Exception):
+                child.kill()
+        if alive:
+            logger.warning(
+                "Browser %s: killed %d process(es) that would not close", name, len(alive)
+            )
+    except Exception as e:
+        logger.debug("Reaping the browser of %s failed: %s", name, e)
+
+
+def terminate(proc: subprocess.Popen, name: str, timeout: int = 5, grace: float = 20.0) -> None:
+    """Gracefully terminate a browser process, force-kill on timeout, and make sure nothing
+    the runner started is left running."""
     if proc.poll() is not None:
         return
+    children = _descendants(proc)
     try:
         proc.terminate()
         try:
@@ -68,6 +102,7 @@ def terminate(proc: subprocess.Popen, name: str, timeout: int = 5) -> None:
         logger.exception("Error terminating browser %s: %s", name, e)
     finally:
         cleanup(proc)
+        _reap(children, name, grace)
 
 
 def cleanup(proc: subprocess.Popen) -> None:

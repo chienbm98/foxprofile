@@ -42,3 +42,12 @@ def test_camoufox_home_redirects_the_browser_cache(tmp_path):
         [sys.executable, "-c", code], capture_output=True, text=True, env=env, cwd=tmp_path
     )
     assert out.stdout.strip() != str(home) and "camoufox" in out.stdout.lower()
+
+
+def test_runner_applies_the_browser_home_before_camoufox_is_imported():
+    import pathlib
+
+    text = (
+        pathlib.Path(__file__).resolve().parents[1] / "src/services/browser/runner.py"
+    ).read_text(encoding="utf-8")
+    assert text.index("import src ") < text.index("from camoufox.async_api")

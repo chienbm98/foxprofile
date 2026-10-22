@@ -9,6 +9,7 @@ sys.path.insert(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
 )
 
+import src  # noqa: F401,E402,I001  (FOXPROFILE_CAMOUFOX_HOME must be applied before camoufox loads)
 from camoufox.async_api import AsyncCamoufox
 from camoufox.virtdisplay import VirtualDisplay
 
