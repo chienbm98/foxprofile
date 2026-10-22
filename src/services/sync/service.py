@@ -283,11 +283,10 @@ class SyncService:
         with self._lock:
             last = self._state().get(name, {}).get("synced_at", 0)
             if time.time() - last < 15:
-                self.log.add(
-                    "sync_push_skipped",
-                    name,
-                    trigger="auto-stop",
-                    reason="already pushed seconds ago",
+                row = {"trigger": "auto-stop", "reason": "already synced seconds ago", "ok": True}
+                self.log.add("sync_push_skipped", name, **row)
+                self._append_text_log(
+                    {"t": time.time(), "event": "sync_push_skipped", "profile": name, **row}
                 )
                 return
             try:
