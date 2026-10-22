@@ -76,3 +76,54 @@ def test_api_download_then_upload(tmp_path, monkeypatch):
         assert c.post("/api/v1/transfer/import", content=b"junk" * 50).status_code == 400
         bad = c.post("/api/v1/transfer/import", content=blob, headers={"x-bundle-passphrase": "no"})
         assert bad.status_code == 400
+
+
+def test_inspect_selective_import_and_usb_save(tmp_path, monkeypatch):
+    from src.api.app import create_app
+    from src.core.container import Container
+    from src.services.sync import backends
+
+    stick = tmp_path / "stick"
+    stick.mkdir()
+    monkeypatch.setattr(backends, "_usb_roots", lambda: [stick])
+    monkeypatch.setattr(backends, "_drive_type", lambda root: 2)
+    _pm(tmp_path / "A", monkeypatch)
+    with TestClient(create_app(Container()), base_url="http://127.0.0.1:8000") as c:
+        for n in ("g1", "g2", "g3"):
+            c.post("/api/v1/profiles", json={"name": n, "email": f"{n}@b.co"})
+        vault.set_passphrase("pp", persist=False)
+        saved = c.post(
+            "/api/v1/transfer/export-to-folder", json={"names": ["g1", "g2"], "target": "usb"}
+        )
+        assert saved.status_code == 200, saved.text
+        path = saved.json()["path"]
+        assert path.startswith(str(stick)) and path.endswith(".fpbundle")
+        local = c.post("/api/v1/transfer/export-to-folder", json={"target": "local"}).json()
+        assert sorted(local["profiles"]) == ["g1", "g2", "g3"]
+        listed = c.get("/api/v1/transfer/bundles").json()["bundles"]
+        assert {b["where"] for b in listed} == {"usb", "local"}
+
+        with open(path, "rb") as f:
+            blob = f.read()
+        info = c.post("/api/v1/transfer/inspect", content=blob).json()
+        assert [p["name"] for p in info["profiles"]] == ["g1", "g2"]
+        assert info["profiles"][0]["email"] == "g1@b.co" and info["profiles"][0]["exists_here"]
+
+        for n in ("g1", "g2", "g3"):
+            c.delete(f"/api/v1/profiles/{n}")
+        one = c.post("/api/v1/transfer/import?only=g2", content=blob).json()
+        assert one["imported"] == ["g2"]
+        assert c.post("/api/v1/transfer/import?only=zzz", content=blob).status_code == 400
+        rest = c.post("/api/v1/transfer/import-path", json={"path": path}).json()
+        assert rest["imported"] == ["g1"] and "g2" in rest["skipped"]
+        assert (
+            c.post(
+                "/api/v1/transfer/import-path", json={"path": "C:/Windows/notepad.exe"}
+            ).status_code
+            == 400
+        )
+
+        monkeypatch.setattr(backends, "_usb_roots", lambda: [])
+        assert (
+            c.post("/api/v1/transfer/export-to-folder", json={"target": "usb"}).status_code == 400
+        )

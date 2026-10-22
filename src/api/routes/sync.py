@@ -68,6 +68,14 @@ def pull(
     return result
 
 
+@router.get("/log")
+def sync_log(
+    limit: int = 100, profile: str | None = None, svc: SyncService = Depends(get_sync)
+) -> dict:
+    """Newest first: every push, pull and auto-sync decision with its timings and sizes."""
+    return {"path": str(svc.log.path), "events": svc.log.tail(max(1, min(limit, 1000)), profile)}
+
+
 @router.put("/{name}/auto")
 def set_auto(name: str, enabled: bool = True, svc: SyncService = Depends(get_sync)) -> dict:
     """Per-profile: pull a newer copy before launch and push when the profile stops."""

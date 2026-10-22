@@ -26,7 +26,7 @@
   --ui: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
   --data: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
   --row-h: 58px;
-  --cols: 32px minmax(150px, 1.15fr) minmax(170px, 1.05fr) minmax(170px, 1.15fr) minmax(150px, 1fr) 112px 266px;
+  --cols: 32px minmax(150px, 1.15fr) minmax(170px, 1.05fr) minmax(170px, 1.15fr) minmax(150px, 1fr) 112px 300px;
   --ease-out: cubic-bezier(.16, 1, .3, 1);
 }
 * { box-sizing: border-box; }
@@ -244,7 +244,7 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
 /* The table follows its own width, not the viewport: all columns need about
    1140px, the version without Timezone · Locale about 870px. */
 @container sheet (max-width: 1150px) {
-  .row { --cols: 32px minmax(140px, 1.1fr) minmax(140px, 1fr) minmax(140px, 1.1fr) 108px 252px; column-gap: 12px; }
+  .row { --cols: 32px minmax(140px, 1.1fr) minmax(140px, 1fr) minmax(140px, 1.1fr) 108px 286px; column-gap: 12px; }
   .col-geo { display: none; }
   .geo-inline { display: block; }
 }
@@ -461,6 +461,11 @@ const I18N = {
     transfer_export: "Xuất", transfer_export_btn: "Xuất ra file .fpbundle", transfer_import: "Nhập", transfer_import_btn: "Nhập từ file", transfer_overwrite: "Ghi đè profile trùng tên",
     transfer_running: "đang chạy, hãy dừng trước", transfer_pick: "Chọn ít nhất một profile", transfer_choose_file: "Chọn file .fpbundle", transfer_exported: "Đã xuất {n} profile", transfer_imported: "Đã nhập {n} profile",
     transfer_note: "File được mã hoá bằng passphrase của kho mật khẩu: đặt cùng một passphrase trên PC nhận (Tài khoản Gmail, Đặt passphrase). Giữ cùng proxy hoặc quốc gia để Google không hỏi xác minh lại.",
+    export_one: "Xuất profile này", transfer_saved: "Đã lưu {n} profile vào {path}", transfer_none: "Bỏ chọn hết", transfer_dl_sel: "Tải file (đã chọn)", transfer_dl_all: "Tải file (tất cả)",
+    transfer_usb_sel: "Lưu vào USB (đã chọn)", transfer_usb_all: "Lưu vào USB (tất cả)", transfer_local_sel: "Lưu vào thư mục exports", transfer_found: "Đã có sẵn trên USB hoặc thư mục exports:", transfer_local: "exports", transfer_open: "Mở",
+    transfer_pick_file: "Hoặc chọn file .fpbundle", transfer_inside: "Trong file có {n} profile (xuất từ {machine})", transfer_exists: "đã có ở đây", transfer_import_selected: "Nhập đã chọn", transfer_import_all: "Nhập tất cả",
+    sync_auto_all_btn_on: "Bật Auto-sync cho tất cả", sync_auto_all_btn_off: "Tắt Auto-sync cho tất cả", sync_auto_all_on: "Đã bật Auto-sync cho mọi profile", sync_auto_all_off: "Đã tắt Auto-sync",
+    sync_log_title: "Nhật ký đồng bộ (đầy đủ, để tối ưu)", sync_log_refresh: "Làm mới nhật ký", sync_log_copy: "Copy nhật ký", sync_log_empty: "Chưa có hoạt động đồng bộ nào.",
     sync_store: "Kho đang dùng: {s}",
     sync_auto: "Tự đồng bộ", sync_auto_hint: "Kéo bản mới trước khi mở và tự đẩy lên khi profile dừng",
     sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
@@ -548,6 +553,11 @@ const I18N = {
     transfer_export: "Export", transfer_export_btn: "Export to a .fpbundle file", transfer_import: "Import", transfer_import_btn: "Import from file", transfer_overwrite: "Overwrite profiles with the same name",
     transfer_running: "running, stop it first", transfer_pick: "Pick at least one profile", transfer_choose_file: "Choose a .fpbundle file", transfer_exported: "Exported {n} profile(s)", transfer_imported: "Imported {n} profile(s)",
     transfer_note: "The file is encrypted with the vault passphrase: set the same passphrase on the receiving PC (Gmail accounts, Set passphrase). Keep the same proxy or country so Google does not ask to verify again.",
+    export_one: "Export this profile", transfer_saved: "Saved {n} profile(s) to {path}", transfer_none: "Select none", transfer_dl_sel: "Download file (selected)", transfer_dl_all: "Download file (all)",
+    transfer_usb_sel: "Save to USB (selected)", transfer_usb_all: "Save to USB (all)", transfer_local_sel: "Save to the exports folder", transfer_found: "Already on a USB stick or in the exports folder:", transfer_local: "exports", transfer_open: "Open",
+    transfer_pick_file: "Or choose a .fpbundle file", transfer_inside: "The file holds {n} profile(s) (exported from {machine})", transfer_exists: "already here", transfer_import_selected: "Import selected", transfer_import_all: "Import all",
+    sync_auto_all_btn_on: "Turn Auto-sync on for all", sync_auto_all_btn_off: "Turn Auto-sync off for all", sync_auto_all_on: "Auto-sync is on for every profile", sync_auto_all_off: "Auto-sync is off",
+    sync_log_title: "Sync log (full, for tuning)", sync_log_refresh: "Refresh log", sync_log_copy: "Copy log", sync_log_empty: "No sync activity yet.",
     sync_store: "Store in use: {s}",
     sync_auto: "Auto-sync", sync_auto_hint: "Pull a newer copy before launch and push when the profile stops",
     sync_button: "Sync profiles", tasks_button: "Tasks & groups",
@@ -826,6 +836,7 @@ function row(p) {
     h("div", { class: "c-stamp", role: "cell" }, stamp(p)),
     h("div", { class: "actions", role: "cell" }, main,
       iconBtn("mail", t("open_gmail"), () => openGmail(p), "", isBusy),
+      iconBtn("download", t("export_one"), () => exportOne(p), "", on),
       iconBtn("monitor", t("view"), () => openViewer(p.name), "", !on || isBusy),
       iconBtn("cookie", t("cookies"), () => openCookies(p), "", on),
       iconBtn("edit", t("edit"), () => openEditor(p)),
@@ -1312,6 +1323,33 @@ function renderAccounts(force = false) {
 }
 
 // ---- Export / import profiles as one encrypted file -----------------------------------------
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = h("a", { href: url, download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+// names: null = all profiles; mode: "download", "usb" or "local"
+async function exportProfiles(names, mode, say) {
+  say = say || ((cls, text) => toast(text, cls === "err"));
+  say("info", t("working"));
+  try {
+    if (mode === "download") {
+      const res = await api("POST", "/transfer/export", { names }, { raw: true });
+      const blob = await res.blob();
+      const m = (res.headers.get("content-disposition") || "").match(/filename="?([^";]+)"?/);
+      saveBlob(blob, m ? m[1] : "foxprofile.fpbundle");
+      say("ok", t("transfer_exported", { n: (res.headers.get("x-exported") || "").split(",").filter(Boolean).length || (names ? names.length : profiles.length) }));
+    } else {
+      const r = await api("POST", "/transfer/export-to-folder", { names, target: mode });
+      say("ok", t("transfer_saved", { n: r.profiles.length, path: r.path }));
+    }
+  } catch (e) {
+    if (e.status === 423) { say("err", e.message); openVaultDialog(); } else say("err", e.message);
+  }
+}
+const exportOne = (p) => exportProfiles([p.name], "download");
+
 function openTransfer() {
   modal((close) => {
     const msg = h("div", { class: "msg", role: "status" });
@@ -1321,54 +1359,100 @@ function openTransfer() {
       box.checked = !running.has(p.name);
       return { p, box };
     });
-    const list = h("div", { style: "max-height:200px;overflow:auto;border:1px solid var(--rule);border-radius:8px;padding:6px 10px" },
+    const chosen = () => boxes.filter(({ box }) => box.checked).map(({ p }) => p.name);
+    const setAll = (on) => boxes.forEach(({ p, box }) => { if (!running.has(p.name)) box.checked = on; });
+    const list = h("div", { style: "max-height:190px;overflow:auto;border:1px solid var(--rule);border-radius:8px;padding:6px 10px" },
       boxes.length ? boxes.map(({ p, box }) => h("label", { style: "display:flex;gap:8px;align-items:center;padding:3px 0" },
         box, h("b", {}, p.name), h("span", { class: "sub" }, [p.email, running.has(p.name) ? t("transfer_running") : null].filter(Boolean).join(" · "))))
         : h("span", { class: "sub" }, t("no_accounts")));
-    const doExport = async () => {
-      const names = boxes.filter(({ box }) => box.checked).map(({ p }) => p.name);
-      if (!names.length) return say("err", t("transfer_pick"));
-      say("info", t("working"));
-      try {
-        const res = await api("POST", "/transfer/export", { names }, { raw: true });
-        const blob = await res.blob();
-        const cd = res.headers.get("content-disposition") || "";
-        const m = cd.match(/filename="?([^";]+)"?/);
-        const url = URL.createObjectURL(blob);
-        const a = h("a", { href: url, download: m ? m[1] : "foxprofile.fpbundle" });
-        document.body.append(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-        say("ok", t("transfer_exported", { n: names.length }));
-      } catch (e) {
-        if (e.status === 423) { say("err", e.message); openVaultDialog(); } else say("err", e.message);
-      }
-    };
-    const file = h("input", { type: "file", accept: ".fpbundle", id: "t-file" });
+    const exportSelected = (mode) => { const n = chosen(); if (!n.length) return say("err", t("transfer_pick")); exportProfiles(n, mode, say); };
+    const exportAll = (mode) => exportProfiles(null, mode, say);
+
+    // ---- import side
+    const source = { kind: null, file: null, path: null };
+    const picker = h("div");
     const overwrite = h("input", { type: "checkbox" });
-    const doImport = async () => {
-      if (!file.files.length) return say("err", t("transfer_choose_file"));
-      say("info", t("working"));
-      try {
-        const headers = { "Content-Type": "application/octet-stream" };
-        if (token) headers.Authorization = "Bearer " + token;
-        const res = await fetch("/api/v1/transfer/import?overwrite=" + overwrite.checked, { method: "POST", headers, body: file.files[0] });
-        const data = await res.json().catch(() => ({}));
-        if (res.status === 423) { say("err", data.detail || ""); return openVaultDialog(); }
-        if (!res.ok) return say("err", typeof data.detail === "string" ? data.detail : res.statusText);
-        const skipped = Object.entries(data.skipped || {});
-        say(skipped.length ? "err" : "ok", t("transfer_imported", { n: data.imported.length }) + (skipped.length ? " · " + skipped.map(([n, why]) => `${n}: ${why}`).join(" · ") : ""));
-        refresh();
-      } catch (e) { say("err", e.message); }
+    let pickBoxes = [];
+    const showPicker = (info) => {
+      pickBoxes = info.profiles.map((p) => {
+        const box = h("input", { type: "checkbox", value: p.name }); box.checked = true;
+        return { p, box };
+      });
+      const doImport = async (all) => {
+        const only = all ? null : pickBoxes.filter(({ box }) => box.checked).map(({ p }) => p.name);
+        if (!all && !only.length) return say("err", t("transfer_pick"));
+        say("info", t("working"));
+        try {
+          let data;
+          if (source.kind === "path") {
+            data = await api("POST", "/transfer/import-path", { path: source.path, only, overwrite: overwrite.checked });
+          } else {
+            const q = new URLSearchParams({ overwrite: overwrite.checked });
+            (only || []).forEach((n) => q.append("only", n));
+            const headers = { "Content-Type": "application/octet-stream" };
+            if (token) headers.Authorization = "Bearer " + token;
+            const res = await fetch("/api/v1/transfer/import?" + q, { method: "POST", headers, body: source.file });
+            data = await res.json().catch(() => ({}));
+            if (res.status === 423) { say("err", data.detail || ""); return openVaultDialog(); }
+            if (!res.ok) return say("err", typeof data.detail === "string" ? data.detail : res.statusText);
+          }
+          const skipped = Object.entries(data.skipped || {});
+          say(skipped.length ? "err" : "ok", t("transfer_imported", { n: data.imported.length }) + (skipped.length ? " · " + skipped.map(([n, why]) => `${n}: ${why}`).join(" · ") : ""));
+          refresh();
+        } catch (e) { if (e.status === 423) { say("err", e.message); openVaultDialog(); } else say("err", e.message); }
+      };
+      picker.replaceChildren(
+        h("div", { class: "hint" }, t("transfer_inside", { n: info.profiles.length, machine: info.machine || "?" })),
+        h("div", { style: "max-height:150px;overflow:auto;border:1px solid var(--rule);border-radius:8px;padding:6px 10px;margin:6px 0" },
+          pickBoxes.map(({ p, box }) => h("label", { style: "display:flex;gap:8px;align-items:center;padding:3px 0" },
+            box, h("b", {}, p.name), h("span", { class: "sub" }, [p.email, p.exists_here ? t("transfer_exists") : null].filter(Boolean).join(" · "))))),
+        h("label", { style: "display:flex;gap:8px;align-items:center;color:var(--ink-2);margin:6px 0" }, overwrite, t("transfer_overwrite")),
+        h("div", { class: "inline-btns" },
+          h("button", { class: "btn btn-act", onclick: () => doImport(false) }, icon("upload", true), t("transfer_import_selected")),
+          h("button", { class: "btn btn-line", onclick: () => doImport(true) }, t("transfer_import_all"))));
     };
+    const inspect = async (promise) => {
+      say("info", t("working"));
+      try { const info = await promise; say("", ""); showPicker(info); }
+      catch (e) { picker.replaceChildren(); if (e.status === 423) { say("err", e.message); openVaultDialog(); } else say("err", e.message); }
+    };
+    const file = h("input", { type: "file", accept: ".fpbundle", id: "t-file", onchange: () => {
+      if (!file.files.length) return;
+      source.kind = "upload"; source.file = file.files[0];
+      const headers = { "Content-Type": "application/octet-stream" };
+      if (token) headers.Authorization = "Bearer " + token;
+      inspect(fetch("/api/v1/transfer/inspect", { method: "POST", headers, body: source.file }).then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new ApiError(res.status, typeof data.detail === "string" ? data.detail : res.statusText);
+        return data;
+      }));
+    } });
+    const found = h("div");
+    api("GET", "/transfer/bundles").then((r) => {
+      found.replaceChildren(...(r.bundles.length ? [h("div", { class: "hint" }, t("transfer_found"))] : []),
+        ...r.bundles.slice(0, 8).map((b) => h("div", { style: "display:flex;gap:8px;align-items:center;padding:3px 0" },
+          h("span", { style: "flex:1;word-break:break-all" }, `${b.where === "usb" ? "USB" : t("transfer_local")} · ${b.name}`, h("span", { class: "sub" }, ` · ${(b.bytes / 1024).toFixed(0)} KB · ${fmtTime(b.modified)}`)),
+          h("button", { class: "btn btn-line", onclick: () => { source.kind = "path"; source.path = b.path; inspect(api("POST", "/transfer/inspect-path", { path: b.path })); } }, t("transfer_open")))));
+    }).catch(() => {});
+
     return h("div", {},
       modalHead(t("transfer_title"), t("transfer_sub"), close),
       h("div", { class: "modal-body" },
         h("div", { class: "fieldset-title" }, t("transfer_export")), list,
-        h("div", { style: "margin-top:8px" }, h("button", { class: "btn btn-act", onclick: doExport }, icon("download", true), t("transfer_export_btn"))),
+        h("div", { class: "inline-btns", style: "margin-top:8px" },
+          h("button", { class: "btn btn-line", onclick: () => setAll(true) }, t("select_all")),
+          h("button", { class: "btn btn-line", onclick: () => setAll(false) }, t("transfer_none"))),
+        h("div", { class: "inline-btns", style: "margin-top:8px" },
+          h("button", { class: "btn btn-act", onclick: () => exportSelected("download") }, icon("download", true), t("transfer_dl_sel")),
+          h("button", { class: "btn btn-line", onclick: () => exportAll("download") }, icon("download", true), t("transfer_dl_all"))),
+        h("div", { class: "inline-btns", style: "margin-top:8px" },
+          h("button", { class: "btn btn-line", onclick: () => exportSelected("usb") }, t("transfer_usb_sel")),
+          h("button", { class: "btn btn-line", onclick: () => exportAll("usb") }, t("transfer_usb_all")),
+          h("button", { class: "btn btn-ghost", onclick: () => exportSelected("local") }, t("transfer_local_sel"))),
         h("div", { class: "fieldset-title" }, t("transfer_import")),
-        h("div", { class: "field" }, file),
-        h("label", { style: "display:flex;gap:8px;align-items:center;color:var(--ink-2);margin:6px 0" }, overwrite, t("transfer_overwrite")),
-        h("button", { class: "btn btn-line", onclick: doImport }, icon("upload", true), t("transfer_import_btn")),
+        found,
+        h("div", { class: "field" }, h("label", { for: "t-file" }, t("transfer_pick_file")), file),
+        picker,
         h("p", { class: "hint" }, t("transfer_note")), msg),
       h("div", { class: "modal-foot" }, h("button", { class: "btn btn-line", onclick: close }, t("close"))));
   }, { wide: true });
@@ -1380,6 +1464,27 @@ async function openSync() {
   const state = { force: false };
   const list = h("div", { class: "sheet" });
   const storeLine = h("div", { class: "hint" });
+  const logBox = h("pre", { class: "code", style: "max-height:220px;overflow:auto;font-size:11px;white-space:pre-wrap" });
+  let logText = "";
+  async function drawLog() {
+    try {
+      const r = await api("GET", "/sync/log?limit=60");
+      const f = (v) => (v === undefined || v === null ? "" : v);
+      logText = r.events.map((e) => {
+        const steps = ["check_s", "pack_s", "encrypt_s", "upload_s", "download_s", "decrypt_s", "import_s"].filter((k) => e[k] !== undefined).map((k) => `${k.replace("_s", "")}=${e[k]}s`).join(" ");
+        return `${new Date(e.t * 1000).toLocaleTimeString()}  ${e.event.replace("sync_", "")}  ${f(e.profile)}  [${f(e.trigger)}]  ${e.ok === false ? "FAILED" : "ok"}  ${e.version !== undefined && e.version !== null ? "v" + e.version : ""}  ${e.bytes ? (e.bytes / 1024).toFixed(0) + "KB" : ""}  total=${f(e.total_s)}s  ${steps}  ${f(e.skipped)} ${f(e.error)}  ${f(e.reason)}`.replace(/\s+/g, " ");
+      }).join("\n");
+      logBox.textContent = logText || t("sync_log_empty");
+    } catch (e) { logBox.textContent = e.message; }
+  }
+  const setAutoAll = async (on) => {
+    try {
+      const data = await api("GET", "/sync");
+      for (const r of data.profiles) if (r.state !== "remote-only") await api("PUT", `/sync/${enc(r.name)}/auto?enabled=${on}`);
+      msg.className = "msg ok"; msg.textContent = t(on ? "sync_auto_all_on" : "sync_auto_all_off");
+    } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+    draw();
+  };
   const msg = h("div", { class: "msg", role: "status" });
   const run = async (method, path, okMsg, withForce = true) => {
     msg.className = "msg"; msg.textContent = "…";
@@ -1390,6 +1495,7 @@ async function openSync() {
       msg.textContent = failed.length ? failed.map(([n, e]) => `${n}: ${e}`).join(" · ") : okMsg;
     } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
     await draw();
+    drawLog();
     refresh();
   };
   async function draw() {
@@ -1412,13 +1518,21 @@ async function openSync() {
       modalHead(t("sync_title"), t("sync_sub"), close),
       h("div", { class: "modal-body" },
         storeLine, list, msg,
+        h("div", { class: "inline-btns", style: "margin-top:8px" },
+          h("button", { class: "btn btn-line", onclick: () => setAutoAll(true) }, t("sync_auto_all_btn_on")),
+          h("button", { class: "btn btn-ghost", onclick: () => setAutoAll(false) }, t("sync_auto_all_btn_off"))),
+        h("div", { class: "fieldset-title" }, t("sync_log_title")),
+        logBox,
+        h("div", { class: "inline-btns", style: "margin-top:6px" },
+          h("button", { class: "btn btn-line", onclick: drawLog }, t("sync_log_refresh")),
+          h("button", { class: "btn btn-line", onclick: async () => { if (await copyText(logText)) toast(t("copied", { what: t("sync_log_title") })); } }, t("sync_log_copy"))),
         h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink-2)" },
           h("input", { type: "checkbox", onchange: (e) => { state.force = e.target.checked; } }), t("sync_force")),
         h("p", { class: "hint" }, t("sync_note"))),
       h("div", { class: "modal-foot" },
         h("button", { class: "btn btn-line", onclick: () => run("POST", "/sync/pull", t("sync_all_done")) }, t("sync_pull_all")),
         h("button", { class: "btn btn-act", onclick: () => run("POST", "/sync/push", t("sync_all_done")) }, t("sync_push_all"))));
-    draw();
+    draw(); drawLog();
     return box;
   }, { wide: true });
 }

@@ -55,6 +55,8 @@ API_TOKEN = _env("API_TOKEN", "")
 SYNC_URL = _env("SYNC_URL", "")
 SYNC_PASSPHRASE = _env("SYNC_PASSPHRASE", "")
 SYNC_STATE_FILE = _env("SYNC_STATE_FILE", "sync_state.json")
+# One JSON line per sync action: what, when, why, how long each step took, how big.
+SYNC_LOG = _env("SYNC_LOG", "sync_log.jsonl")
 MACHINE_NAME = _env("MACHINE_NAME", "")
 AUTOMATION_FILE = _env("AUTOMATION_FILE", "automation.json")
 ACTIVITY_LOG = _env("ACTIVITY_LOG", "activity.jsonl")

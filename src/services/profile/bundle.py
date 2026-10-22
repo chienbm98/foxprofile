@@ -97,7 +97,9 @@ def import_bundle(
     overwrite: bool = False,
     is_running: Callable[[str], bool] = lambda n: False,
     data_dir: str | None = None,
+    only: list[str] | None = None,
 ) -> dict[str, Any]:
+    """Import the profiles in the file (only those named in `only`, when given)."""
     if not passphrase:
         raise BundleError("A passphrase is required to open the file")
     if os.path.getsize(path) > MAX_BUNDLE_BYTES:
@@ -122,7 +124,13 @@ def import_bundle(
                 raise BundleError("The file is not a FoxProfile bundle (no manifest)") from e
             if manifest.get("version") != BUNDLE_VERSION:
                 raise BundleError(f"Unsupported bundle version: {manifest.get('version')}")
-            for name in manifest.get("profiles", []):
+            wanted = manifest.get("profiles", [])
+            if only:
+                missing = [n for n in only if n not in wanted]
+                if missing:
+                    raise BundleError(f"not in the file: {', '.join(missing)}")
+                wanted = [n for n in wanted if n in only]
+            for name in wanted:
                 entry = f"{name}.zip"
                 if not _ENTRY.match(entry) or entry not in bundle.namelist():
                     skipped[str(name)] = "entry missing or has an unsafe name"
@@ -154,3 +162,44 @@ def _import_one(pm, zip_path: str, name: str, overwrite: bool, data_dir: str) ->
         shutil.rmtree(target, ignore_errors=True)
         backup.rename(target)
     return ok, str(result)
+
+
+def inspect_bundle(path: str, passphrase: str) -> dict[str, Any]:
+    """What is inside, without importing anything: the manifest and each profile's labels."""
+    if not passphrase:
+        raise BundleError("A passphrase is required to open the file")
+    with tempfile.TemporaryDirectory() as tmp:
+        plain = os.path.join(tmp, "bundle.zip")
+        try:
+            with open(path, "rb") as src, open(plain, "wb") as dst:
+                decrypt_stream(src, dst, passphrase)
+            bundle = zipfile.ZipFile(plain)
+        except DecryptError as e:
+            raise BundleError(str(e)) from e
+        except zipfile.BadZipFile as e:
+            raise BundleError("The file is not a FoxProfile bundle") from e
+        with bundle:
+            try:
+                manifest = json.loads(bundle.read("manifest.json"))
+            except (KeyError, ValueError) as e:
+                raise BundleError("The file is not a FoxProfile bundle (no manifest)") from e
+            profiles = []
+            for name in manifest.get("profiles", []):
+                info: dict[str, Any] = {"name": name}
+                try:
+                    inner = bundle.extract(f"{name}.zip", os.path.join(tmp, "x"))
+                    with zipfile.ZipFile(inner) as z:
+                        meta = json.loads(z.read("profile.json"))
+                    info.update(
+                        email=meta.get("email"),
+                        purpose=meta.get("purpose"),
+                        engine=meta.get("engine"),
+                    )
+                except (KeyError, ValueError, zipfile.BadZipFile):
+                    pass
+                profiles.append(info)
+    return {
+        "created": manifest.get("created"),
+        "machine": manifest.get("machine"),
+        "profiles": profiles,
+    }

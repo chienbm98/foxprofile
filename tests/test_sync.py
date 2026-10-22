@@ -227,3 +227,30 @@ def test_service_switches_store_when_the_first_goes_away(tmp_path, monkeypatch):
 
     shutil.rmtree(lan.parent)  # the share's PC went away
     assert svc.backend and str(stick) in svc.store_label
+
+
+def test_every_sync_action_is_logged_with_timings(tmp_path, monkeypatch):
+    store = tmp_path / "store"
+    pm, _, svc = _machine(tmp_path / "A", monkeypatch, store)
+    pm.add_profile("p", "", "windows")
+    (tmp_path / "A" / "camoufox_data" / "p" / "cookies.sqlite").write_bytes(b"x" * 5000)
+    svc.push("p", trigger="auto-stop")
+    pushed = svc.log.tail()[0]
+    pm2, _, svc2 = _machine(tmp_path / "B", monkeypatch, store)
+    svc2.pull("p", trigger="auto-launch")
+    svc2.pull("p", trigger="manual")
+    with pytest.raises(SyncError):
+        svc2.push("nope")
+
+    assert pushed["event"] == "sync_push" and pushed["ok"] and pushed["trigger"] == "auto-stop"
+    assert pushed["version"] == 1 and pushed["bytes"] > 0
+    assert {"check_s", "pack_s", "encrypt_s", "upload_s", "total_s"} <= set(pushed)
+    events = svc2.log.tail()
+    assert [(e["event"], e["ok"]) for e in events] == [
+        ("sync_push", False),
+        ("sync_pull", True),
+        ("sync_pull", True),
+    ]
+    assert events[2]["trigger"] == "auto-launch" and "download_s" in events[2]
+    assert events[1]["skipped"] == "already up to date"
+    assert "not found" in events[0]["error"]

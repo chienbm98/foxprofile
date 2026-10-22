@@ -22,11 +22,13 @@ from ...core.config import (
     DATA_DIR,
     MACHINE_NAME,
     SYNC_AUTO,
+    SYNC_LOG,
     SYNC_PASSPHRASE,
     SYNC_STATE_FILE,
     SYNC_URL,
 )
 from ...core.logging import get_logger
+from ..automation.engine import ActivityLog
 from .backends import Backend, FolderBackend, SyncError, _reachable, resolve_backend
 from .crypto import DecryptError, decrypt_stream, encrypt_stream
 
@@ -53,11 +55,13 @@ class SyncService:
         passphrase: str | None = None,
         state_file: str | None = None,
         data_dir: str | None = None,
+        sync_log: str | None = None,
     ) -> None:
         self.pm = pm
         self.launcher = launcher
         self._backend = backend
         self._resolved = False
+        self.log = ActivityLog(sync_log or SYNC_LOG)
         self.store_label = ""
         self.passphrase = SYNC_PASSPHRASE if passphrase is None else passphrase
         self.state_file = pathlib.Path(state_file or SYNC_STATE_FILE)
@@ -127,7 +131,51 @@ class SyncService:
         raw = self.backend.read(f"{name}.json")
         return json.loads(raw) if raw else None
 
-    def push(self, name: str, force: bool = False) -> dict[str, Any]:
+    def _record(
+        self, event: str, name: str, trigger: str, started: float, ok: bool, **fields: Any
+    ) -> None:
+        """One line in sync_log.jsonl and one in the normal log: the data to tune sync from."""
+        row = {
+            "trigger": trigger,
+            "ok": ok,
+            "store": self.store_label or None,
+            "machine": _machine(),
+            "total_s": round(time.perf_counter() - started, 2),
+            **fields,
+        }
+        self.log.add(event, name, **row)
+        (logger.info if ok else logger.warning)("%s %s %s", event, name, row)
+
+    def push(self, name: str, force: bool = False, trigger: str = "manual") -> dict[str, Any]:
+        started = time.perf_counter()
+        timing: dict[str, float] = {}
+        try:
+            meta = self._push(name, force, timing)
+        except Exception as e:
+            self._record(
+                "sync_push",
+                name,
+                trigger,
+                started,
+                False,
+                error=str(e)[:300],
+                conflict=isinstance(e, SyncConflict),
+                **timing,
+            )
+            raise
+        self._record(
+            "sync_push",
+            name,
+            trigger,
+            started,
+            True,
+            version=meta["version"],
+            bytes=meta["size"],
+            **timing,
+        )
+        return meta
+
+    def _push(self, name: str, force: bool, timing: dict[str, float]) -> dict[str, Any]:
         self._need_passphrase()
         with self._lock:
             profile = self.pm.profiles.get(name)
@@ -135,7 +183,9 @@ class SyncService:
                 raise SyncError(f"Profile '{name}' not found")
             if self.launcher.is_running(name):
                 raise SyncError(f"Stop '{name}' before pushing it (its files are in use)")
+            t = time.perf_counter()
             remote = self.remote_meta(name)
+            timing["check_s"] = round(time.perf_counter() - t, 2)
             known = self._state().get(name, {}).get("version", 0)
             if remote and remote["version"] > known and not force:
                 raise SyncConflict(
@@ -146,6 +196,7 @@ class SyncService:
             from ..profile.transfer import export_to_zip
 
             with tempfile.TemporaryDirectory() as tmp:
+                t = time.perf_counter()
                 ok, zip_path = export_to_zip(
                     profile,
                     os.path.join(self.data_dir, name),
@@ -154,12 +205,18 @@ class SyncService:
                     slim=True,
                     filename="p.zip",
                 )
+                timing["pack_s"] = round(time.perf_counter() - t, 2)
                 if not ok:
                     raise SyncError(f"Export failed: {zip_path}")
+                timing["pack_bytes"] = os.path.getsize(zip_path)
                 enc = os.path.join(tmp, "p.fpx")
+                t = time.perf_counter()
                 with open(zip_path, "rb") as src, open(enc, "wb") as dst:
                     encrypt_stream(src, dst, self.passphrase)
+                timing["encrypt_s"] = round(time.perf_counter() - t, 2)
+                t = time.perf_counter()
                 self.backend.upload(f"{name}.fpx", enc)
+                timing["upload_s"] = round(time.perf_counter() - t, 2)
                 size = os.path.getsize(enc)
             version = max(remote["version"] if remote else 0, known) + 1
             meta = {
@@ -184,16 +241,45 @@ class SyncService:
         with self._lock:
             last = self._state().get(name, {}).get("synced_at", 0)
             if time.time() - last < 15:
+                self.log.add(
+                    "sync_push_skipped",
+                    name,
+                    trigger="auto-stop",
+                    reason="already pushed seconds ago",
+                )
                 return
             try:
-                self.push(name)
+                self.push(name, trigger="auto-stop")
             except Exception as e:
                 logger.warning("Auto-push of %s failed: %s", name, e)
 
-    def pull(self, name: str, force: bool = False) -> dict[str, Any]:
+    def pull(self, name: str, force: bool = False, trigger: str = "manual") -> dict[str, Any]:
+        started = time.perf_counter()
+        timing: dict[str, float] = {}
+        try:
+            meta = self._pull(name, force, timing)
+        except Exception as e:
+            self._record("sync_pull", name, trigger, started, False, error=str(e)[:300], **timing)
+            raise
+        self._record(
+            "sync_pull",
+            name,
+            trigger,
+            started,
+            True,
+            version=meta.get("version"),
+            bytes=meta.get("size"),
+            skipped=meta.get("skipped"),
+            **timing,
+        )
+        return meta
+
+    def _pull(self, name: str, force: bool, timing: dict[str, float]) -> dict[str, Any]:
         self._need_passphrase()
         with self._lock:
+            t = time.perf_counter()
             remote = self.remote_meta(name)
+            timing["check_s"] = round(time.perf_counter() - t, 2)
             if remote is None:
                 raise SyncError(f"'{name}' is not in the sync store")
             known = self._state().get(name, {}).get("version", 0)
@@ -204,12 +290,17 @@ class SyncService:
                 raise SyncError(f"Stop '{name}' before pulling it (its files are in use)")
             with tempfile.TemporaryDirectory() as tmp:
                 enc, plain = os.path.join(tmp, "p.fpx"), os.path.join(tmp, "p.zip")
+                t = time.perf_counter()
                 self.backend.download(f"{name}.fpx", enc)
+                timing["download_s"] = round(time.perf_counter() - t, 2)
+                t = time.perf_counter()
                 try:
                     with open(enc, "rb") as src, open(plain, "wb") as dst:
                         decrypt_stream(src, dst, self.passphrase)
                 except DecryptError as e:
                     raise SyncError(str(e)) from e
+                timing["decrypt_s"] = round(time.perf_counter() - t, 2)
+                t = time.perf_counter()
                 data_dir = pathlib.Path(self.data_dir) / name
                 backup = pathlib.Path(self.data_dir) / f"{name}.syncbak"
                 moved = False
@@ -223,6 +314,7 @@ class SyncService:
                         shutil.rmtree(data_dir, ignore_errors=True)
                         backup.rename(data_dir)
                     raise SyncError(f"Import failed: {result}")
+                timing["import_s"] = round(time.perf_counter() - t, 2)
             state = self._state()
             state[name] = {"version": remote["version"], "synced_at": time.time()}
             self._save_state(state)
@@ -302,7 +394,7 @@ class AutoSyncHook:
         if svc is None:
             return profile
         try:
-            svc.pull(profile.name)
+            svc.pull(profile.name, trigger="auto-launch")
         except Exception as e:
             logger.warning("Auto-pull of %s skipped: %s", profile.name, e)
         return svc.pm.profiles.get(profile.name, profile)
