@@ -456,6 +456,7 @@ const I18N = {
     backup_codes: "Mã dự phòng", recovery: "Email/số điện thoại khôi phục", hint_f: "Gợi ý", login_mode: "Cách tự đăng nhập", mode_full: "Điền email và mật khẩu", mode_email_only: "Chỉ điền email", mode_manual: "Không tự đăng nhập",
     auto_login: "Tự đăng nhập lại khi mất phiên", auto_login_hint: "Khi kiểm tra phiên, mở profile hoặc tác vụ theo lịch thấy mất đăng nhập", connection_section: "Kết nối",
     secret_stored_ph: "•••• đã lưu, để trống để giữ nguyên", secret_stored: "Đã lưu", secret_clear: "Xoá", secret_will_clear: "Sẽ xoá khi lưu", f_verify: "Cần xác minh", session_needs_verification: "Cần xác minh tay",
+    sync_store: "Kho đang dùng: {s}",
     sync_auto: "Tự đồng bộ", sync_auto_hint: "Kéo bản mới trước khi mở và tự đẩy lên khi profile dừng",
     sync_button: "Đồng bộ profile", tasks_button: "Tác vụ & nhóm",
     sync_title: "Đồng bộ profile giữa các máy", sync_sub: "Đăng nhập một lần, dùng ở máy khác mà không phải đăng nhập lại.",
@@ -538,6 +539,7 @@ const I18N = {
     backup_codes: "Backup codes", recovery: "Recovery email / phone", hint_f: "Hint", login_mode: "Auto sign-in mode", mode_full: "Fill email and password", mode_email_only: "Fill the email only", mode_manual: "Never sign in automatically",
     auto_login: "Sign in again when the session is lost", auto_login_hint: "When a session check, a profile launch or a scheduled task finds it logged out", connection_section: "Connection",
     secret_stored_ph: "•••• stored, leave empty to keep", secret_stored: "Stored", secret_clear: "Remove", secret_will_clear: "Will be removed on save", f_verify: "Needs verification", session_needs_verification: "Needs manual check",
+    sync_store: "Store in use: {s}",
     sync_auto: "Auto-sync", sync_auto_hint: "Pull a newer copy before launch and push when the profile stops",
     sync_button: "Sync profiles", tasks_button: "Tasks & groups",
     sync_title: "Sync profiles between machines", sync_sub: "Log in once, reuse the session on another machine without logging in again.",
@@ -1305,6 +1307,7 @@ function fmtTime(ts) { return ts ? new Date(ts * 1000).toLocaleString() : "—";
 async function openSync() {
   const state = { force: false };
   const list = h("div", { class: "sheet" });
+  const storeLine = h("div", { class: "hint" });
   const msg = h("div", { class: "msg", role: "status" });
   const run = async (method, path, okMsg, withForce = true) => {
     msg.className = "msg"; msg.textContent = "…";
@@ -1321,6 +1324,7 @@ async function openSync() {
     let data;
     try { data = await api("GET", "/sync"); }
     catch (e) { list.replaceChildren(h("p", { class: "msg err" }, e.message)); return; }
+    storeLine.textContent = data.store ? t("sync_store", { s: data.store }) : "";
     if (!data.profiles.length) { list.replaceChildren(h("p", {}, t("sync_empty"))); return; }
     list.replaceChildren(...data.profiles.map((r) => h("div", { class: "row", style: "display:flex;gap:10px;align-items:center;padding:8px 0" },
       h("b", { style: "flex:1" }, r.name),
@@ -1335,7 +1339,7 @@ async function openSync() {
     const box = h("div", {},
       modalHead(t("sync_title"), t("sync_sub"), close),
       h("div", { class: "modal-body" },
-        list, msg,
+        storeLine, list, msg,
         h("label", { style: "display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--ink-2)" },
           h("input", { type: "checkbox", onchange: (e) => { state.force = e.target.checked; } }), t("sync_force")),
         h("p", { class: "hint" }, t("sync_note"))),

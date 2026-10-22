@@ -33,7 +33,8 @@ def _call(fn, *args) -> Any:
 
 @router.get("")
 def status(svc: SyncService = Depends(get_sync)) -> dict:
-    return {"profiles": _call(svc.status)}
+    profiles = _call(svc.status)
+    return {"store": svc.store_label, "profiles": profiles}
 
 
 @router.post("/push")

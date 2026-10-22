@@ -132,7 +132,5 @@ def test_profile_roundtrip(store, request, tmp_path, monkeypatch):
             svc.push("gmail-1")
         else:
             svc.pull("gmail-1")
-            results["cookie"] = (
-                root / "camoufox_data" / "gmail-1" / "cookies.sqlite"
-            ).read_bytes()
+            results["cookie"] = (root / "camoufox_data" / "gmail-1" / "cookies.sqlite").read_bytes()
     assert results["cookie"] == b"LOGIN"

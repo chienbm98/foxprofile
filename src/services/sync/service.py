@@ -27,7 +27,7 @@ from ...core.config import (
     SYNC_URL,
 )
 from ...core.logging import get_logger
-from .backends import Backend, SyncError, open_backend
+from .backends import Backend, FolderBackend, SyncError, _reachable, resolve_backend
 from .crypto import DecryptError, decrypt_stream, encrypt_stream
 
 if TYPE_CHECKING:
@@ -57,6 +57,8 @@ class SyncService:
         self.pm = pm
         self.launcher = launcher
         self._backend = backend
+        self._resolved = False
+        self.store_label = ""
         self.passphrase = SYNC_PASSPHRASE if passphrase is None else passphrase
         self.state_file = pathlib.Path(state_file or SYNC_STATE_FILE)
         self.data_dir = data_dir or DATA_DIR
@@ -68,8 +70,19 @@ class SyncService:
 
     @property
     def backend(self) -> Backend:
-        if self._backend is None:
-            self._backend = open_backend(SYNC_URL)
+        """The store in use. A folder store (USB stick, LAN share) is looked up again when it
+        has gone away, so plugging the stick back in or switching networks just works."""
+        current = self._backend
+        if current is not None and (
+            not isinstance(current, FolderBackend) or not self._resolved or _reachable(current.root)
+        ):
+            return current
+        if not SYNC_URL:
+            if current is not None:
+                return current
+            raise SyncError("Sync is not configured: set FOXPROFILE_SYNC_URL")
+        self._backend, self.store_label = resolve_backend(SYNC_URL)
+        self._resolved = True
         return self._backend
 
     def _need_passphrase(self) -> None:

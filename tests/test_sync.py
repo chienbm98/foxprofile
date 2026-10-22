@@ -184,3 +184,46 @@ def test_slim_pack_keeps_logins_and_drops_rebuildable_data(tmp_path):
     names = {n.removeprefix("data/") for n in zipfile.ZipFile(z).namelist()}
     assert set(keep) <= names
     assert not names & set(drop)
+
+
+def test_store_fallback_list_and_usb_lookup(tmp_path, monkeypatch):
+    from src.services.sync import backends
+
+    missing = tmp_path / "no" / "such" / "share"
+    good = tmp_path / "lan"
+    good.mkdir()
+    backend, label = backends.resolve_backend(f"{missing};{good}")
+    assert isinstance(backend, backends.FolderBackend) and str(good) in label
+
+    stick = tmp_path / "stick"
+    stick.mkdir()
+    monkeypatch.setattr(backends, "_usb_roots", lambda: [stick])
+    monkeypatch.setattr(backends, "_drive_type", lambda root: 2)
+    backend, label = backends.resolve_backend(f"{missing};usb:foxprofile-sync")
+    assert label.startswith("USB") and (stick / "foxprofile-sync").is_dir()
+    backend.write("x.json", b"{}")
+    # next time the same folder is found again, whatever the drive letter is called
+    other = tmp_path / "other"
+    (other / "foxprofile-sync").mkdir(parents=True)
+    monkeypatch.setattr(backends, "_usb_roots", lambda: [other, stick])
+    assert backends.find_usb_folder("foxprofile-sync") == other / "foxprofile-sync"
+
+    monkeypatch.setattr(backends, "_usb_roots", lambda: [])
+    with pytest.raises(backends.SyncError, match="No sync store is reachable"):
+        backends.resolve_backend(f"{missing};usb:foxprofile-sync")
+
+
+def test_service_switches_store_when_the_first_goes_away(tmp_path, monkeypatch):
+    from src.services.sync import service as svc_mod
+
+    lan, stick = tmp_path / "net" / "lan", tmp_path / "stick"
+    lan.mkdir(parents=True)
+    stick.mkdir()
+    monkeypatch.setattr(svc_mod, "SYNC_URL", f"{lan};{stick}")
+    pm, launcher, _ = _machine(tmp_path / "A", monkeypatch, tmp_path / "unused")
+    svc = SyncService(pm, launcher, passphrase="pw", state_file=str(tmp_path / "A" / "s.json"))
+    assert str(lan) in (svc.backend and svc.store_label)
+    import shutil
+
+    shutil.rmtree(lan.parent)  # the share's PC went away
+    assert svc.backend and str(stick) in svc.store_label

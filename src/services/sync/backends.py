@@ -189,3 +189,100 @@ def open_backend(url: str, env: dict[str, str] | None = None) -> Backend:
     if len(parsed.scheme) > 1 and parsed.scheme != "folder":
         raise SyncError(f"Unsupported sync URL scheme: {parsed.scheme}")
     return FolderBackend(url.removeprefix("folder:"))
+
+
+# --- Stores that may or may not be there: a USB stick, a LAN share -------------------------
+
+
+def _reachable(path: pathlib.Path, timeout: float = 4.0) -> bool:
+    """exists() with a deadline: a switched-off PC behind a UNC path can block for a minute."""
+    import threading
+
+    result: list[bool] = []
+    worker = threading.Thread(target=lambda: result.append(path.exists()), daemon=True)
+    worker.start()
+    worker.join(timeout)
+    return bool(result and result[0])
+
+
+def _drive_type(root: str) -> int:
+    """Windows GetDriveType: 2 = removable (USB stick), 3 = fixed, 4 = network."""
+    try:
+        import ctypes
+
+        return int(ctypes.windll.kernel32.GetDriveTypeW(root))  # type: ignore[attr-defined]
+    except (AttributeError, OSError):
+        return 0
+
+
+def _usb_roots() -> list[pathlib.Path]:
+    if os.name == "nt":
+        import string
+
+        return [
+            pathlib.Path(f"{letter}:\\")
+            for letter in string.ascii_uppercase
+            if os.path.exists(f"{letter}:\\")
+        ]
+    roots: list[pathlib.Path] = []
+    for pattern in ("/media/*/*", "/run/media/*/*", "/Volumes/*", "/mnt/*"):
+        roots += [p for p in pathlib.Path("/").glob(pattern.lstrip("/")) if p.is_dir()]
+    return roots
+
+
+def find_usb_folder(name: str, create: bool = True) -> pathlib.Path | None:
+    """The folder `name` on whichever drive carries it, whatever letter the stick got today.
+    With `create`, a removable drive without it gets it. Fixed disks are never touched."""
+    roots = _usb_roots()
+    for root in roots:
+        if (root / name).is_dir():
+            return root / name
+    if not create:
+        return None
+    for root in roots:
+        removable = (
+            _drive_type(str(root)) == 2
+            if os.name == "nt"
+            else "/media" in str(root) or "/Volumes" in str(root) or "/run/media" in str(root)
+        )
+        if removable:
+            target = root / name
+            try:
+                target.mkdir(parents=True, exist_ok=True)
+                return target
+            except OSError:
+                continue
+    return None
+
+
+def _open_one(spec: str, env: dict[str, str]) -> tuple[Backend, str]:
+    spec = spec.strip()
+    if spec.lower().startswith("usb:"):
+        name = spec[4:].strip().strip(r"\/") or "foxprofile-sync"
+        folder = find_usb_folder(name)
+        if folder is None:
+            raise SyncError(f"no USB stick with a '{name}' folder (or no removable drive) found")
+        return FolderBackend(str(folder)), f"USB {folder}"
+    parsed = urllib.parse.urlparse(spec)
+    if len(parsed.scheme) <= 1 or parsed.scheme == "folder":  # a path, drive letters included
+        path = pathlib.Path(spec.removeprefix("folder:"))
+        if not (_reachable(path) or _reachable(path.parent)):
+            raise SyncError(f"folder {path} is not reachable (drive missing or PC off?)")
+        return FolderBackend(str(path)), f"folder {path}"
+    return open_backend(spec, env), parsed.scheme
+
+
+def resolve_backend(spec: str, env: dict[str, str] | None = None) -> tuple[Backend, str]:
+    """`spec` is one store or several separated by `;`, tried in order: the first that is
+    reachable now wins, e.g. `\\PC\fpsync;usb:foxprofile-sync`. Returns (backend, label)."""
+    env = env if env is not None else dict(os.environ)
+    specs = [s for s in (part.strip() for part in spec.split(";")) if s]
+    if not specs:
+        raise SyncError("Sync is not configured: set FOXPROFILE_SYNC_URL")
+    problems: list[str] = []
+    for one in specs:
+        try:
+            return _open_one(one, env)
+        except (SyncError, OSError) as e:
+            problems.append(f"{one}: {e}")
+    raise SyncError("No sync store is reachable right now. " + " | ".join(problems))
