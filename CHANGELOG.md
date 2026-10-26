@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### 新增
+- 桌面端和 Web 面板新增完整简体中文界面，可在应用内切换，也可通过 `FOXPROFILE_LANG=zh` 设置默认语言。
+- Web 面板会将当前语言传给 API；常见 API 错误和字段校验信息按请求语言显示。
+- 新增简体中文 README 和 VPS 部署指南。
+
 ### Sửa
 - App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
 - Proxy dạng `host:port:user:pass` có `@` hoặc `:` trong mật khẩu không còn bị bỏ qua (trước đây profile mở mà không qua proxy). Chấp nhận proxy IPv6 dạng `[2001:db8::1]`; host proxy tối đa 253 ký tự.
@@ -16,7 +21,7 @@
 - App desktop: hỏi xác nhận trước khi tạo fingerprint mới; ô chọn ở tiêu đề bảng không còn bỏ chọn các profile ở trang khác; rail hiện số profile và số trình duyệt đang chạy; hộp thoại xoá nói rõ cookie và dữ liệu sẽ mất vĩnh viễn.
 
 ### Thay đổi
-- Ngôn ngữ giao diện mặc định của app desktop và web panel là English; đặt `FOXPROFILE_LANG=vi` (hoặc bấm "Tiếng Việt" trong app) để dùng tiếng Việt.
+- Ngôn ngữ giao diện mặc định của app desktop và web panel là English; đặt `FOXPROFILE_LANG=vi` (hoặc bấm "Tiếng Việt" trong app) để dùng tiếng Việt; đặt `FOXPROFILE_LANG=zh` (hoặc chọn "中文") để dùng giao diện giản thể.
 
 ## [2.3.1] - 2026-10-09
 

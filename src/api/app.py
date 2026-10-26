@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse
 
 from ..core.config import API_PORT, API_TOKEN, HEADLESS
@@ -13,6 +14,7 @@ from ..core.logging import get_logger
 from . import mcp_http
 from .auth import require_token
 from .guard import LocalOnlyGuard
+from .i18n import LanguageMiddleware, http_exception_handler, validation_exception_handler
 from .routes import (
     browser_router,
     mcp_setup_router,
@@ -61,6 +63,9 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
         version=VERSION,
     )
     app.state.container = container
+    app.add_middleware(LanguageMiddleware)
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
     if not API_TOKEN:
         # Token-less means local-only: block CSRF and DNS rebinding from websites.
         app.add_middleware(LocalOnlyGuard)

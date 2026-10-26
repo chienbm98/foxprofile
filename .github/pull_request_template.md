@@ -16,7 +16,7 @@
 - [ ] `pytest` chạy qua hết
 - [ ] Đã thêm test cho thay đổi (nếu là logic)
 - [ ] Đã chạy thử app và mô tả cách test bên dưới
-- [ ] Chữ mới trên giao diện đã thêm vào `src/core/strings.py` cho cả `vi` và `en`
+- [ ] Chữ mới trên giao diện đã thêm vào `src/core/strings.py` cho `en`, `vi` và `zh`
 - [ ] Không có cookie, proxy hay thông tin tài khoản thật trong PR
 
 ## Cách test
