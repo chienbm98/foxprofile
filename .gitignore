@@ -190,3 +190,4 @@ e2e-output/
 .impeccable/decision/
 .impeccable/questions/
 .impeccable/mocks/
+.DS_Store

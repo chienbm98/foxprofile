@@ -381,7 +381,9 @@ def _geo_lines(result: GeoCheckResult, use_locale: Callable[[str], None]) -> lis
             get_string(
                 "geo_locale",
                 value=result.locale or f"~{result.suggested_locale or '?'}",
-                mode=mode[True] if result.locale_pinned else get_string("geo_locale_random"),
+                mode=mode[True]
+                if result.locale_pinned
+                else get_string("geo_locale_kept" if result.locale else "geo_locale_first"),
             )
         ),
     ]

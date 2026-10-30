@@ -47,7 +47,10 @@ class GeoCheckResponse(BaseModel):
     suggested_locale: str | None = Field(description="Most spoken locale of the country")
     timezone: str | None = Field(description="Timezone the browser will present")
     timezone_pinned: bool
-    locale: str | None = Field(description="Pinned locale; null = random per launch")
+    locale: str | None = Field(
+        description="Pinned locale, else the one the profile keeps for this country; "
+        "null = picked on the first launch from this country, then kept"
+    )
     locale_pinned: bool
     sources: list[GeoSource]
     warnings: list[GeoWarningItem]

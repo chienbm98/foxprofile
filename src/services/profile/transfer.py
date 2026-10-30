@@ -4,7 +4,6 @@ import pathlib
 import zipfile
 from datetime import datetime
 
-from ...core.config import FINGERPRINT_FILE
 from ...core.logging import get_logger
 from ...models.profile import ENGINES, Profile
 from ...utils.validation import (
@@ -13,7 +12,7 @@ from ...utils.validation import (
     validate_profile_name,
     validate_timezone,
 )
-from ..browser.fingerprint import CHROME_PERSONA_FILE
+from ..browser.fingerprint import IDENTITY_FILES
 
 logger = get_logger("profile.transfer")
 
@@ -45,7 +44,7 @@ def export_to_zip(
             else:
                 # The fingerprint is the profile's identity, not browser data:
                 # keep it so the imported profile presents the same device.
-                for identity in (FINGERPRINT_FILE, CHROME_PERSONA_FILE):
+                for identity in IDENTITY_FILES:
                     fp_file = os.path.join(profile_data_dir, identity)
                     if pathlib.Path(fp_file).exists():
                         zipf.write(fp_file, os.path.join("data", identity))

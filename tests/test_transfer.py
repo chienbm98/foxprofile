@@ -48,3 +48,19 @@ def test_launch_result_settles_once():
     r.settle(True)
     r.settle(False, "late failure")
     assert r.ok is True and r.error is None
+
+
+def test_export_without_data_keeps_the_identity(tmp_path):
+    from src.models.profile import Profile
+    from src.services.profile.transfer import export_to_zip
+
+    data = tmp_path / "data"
+    (data / "Default").mkdir(parents=True)
+    for name in ("fingerprint.json", "chrome_persona.json", "geo_locale.json"):
+        (data / name).write_text("{}", encoding="utf-8")
+    (data / "Default" / "Cookies").write_text("x", encoding="utf-8")
+    ok, zip_path = export_to_zip(Profile(name="alice"), str(data), str(tmp_path), False)
+    assert ok
+    names = set(zipfile.ZipFile(zip_path).namelist())
+    assert {"data/fingerprint.json", "data/chrome_persona.json", "data/geo_locale.json"} <= names
+    assert "data/Default/Cookies" not in names

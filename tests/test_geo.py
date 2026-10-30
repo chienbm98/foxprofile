@@ -96,9 +96,7 @@ def test_compare_ignores_same_family_ip_changes_and_checks_pinned_locale():
 @pytest.fixture
 def fake_lookups(monkeypatch):
     monkeypatch.setattr(geo_check, "_exit_ip", lambda proxy: "198.51.100.7")
-    monkeypatch.setattr(
-        geo_check, "_camoufox_geo", lambda ip: ("VN", "Asia/Bangkok", "vi-VN", 0.98)
-    )
+    monkeypatch.setattr(geo_check, "_camoufox_geo", lambda ip: ("VN", "Asia/Bangkok", "vi-VN"))
     monkeypatch.setattr(
         geo_check,
         "_SOURCES",
@@ -120,8 +118,19 @@ def test_check_geo_automatic(fake_lookups):
         False,
     )
     assert r.sources[1].error == "OSError: unreachable"
-    assert _codes(r.warnings) == ["timezone_mismatch", "locale_random"]
-    assert r.warnings[1].params == {"suggested": "vi-VN", "share": 98}
+    assert _codes(r.warnings) == ["timezone_mismatch"]
+    assert (r.suggested_locale, r.locale, r.locale_pinned) == ("vi-VN", None, False)
+
+
+def test_check_geo_reports_the_locale_a_profile_keeps(tmp_path, fake_lookups):
+    from chrome_engine.geo import remembered_locale
+
+    remembered_locale(tmp_path, "VN", "en-VN")
+    r = check_geo(None, profile_dir=str(tmp_path))
+    assert (r.locale, r.locale_pinned) == ("en-VN", False)
+    # A locale kept for another country does not apply to this exit IP.
+    remembered_locale(tmp_path / "other", "US", "en-US")
+    assert check_geo(None, profile_dir=str(tmp_path / "other")).locale is None
 
 
 def test_check_geo_pinned_values_clear_the_warnings(fake_lookups):
@@ -182,8 +191,7 @@ def test_api_ip_check(client, fake_lookups):
     client.post("/profiles", json={"name": "p", "timezone": "Asia/Ho_Chi_Minh"})
     data = client.get("/profiles/p/ip-check").json()
     assert data["timezone"] == "Asia/Ho_Chi_Minh" and data["timezone_pinned"]
-    assert [w["code"] for w in data["warnings"]] == ["locale_random"]
-    assert data["warnings"][0]["message"]
+    assert data["warnings"] == []
 
     r = client.post("/proxy/geo-check", json={"proxy": None, "locale": "vi-VN"})
     assert [w["code"] for w in r.json()["warnings"]] == ["timezone_mismatch"]
@@ -312,3 +320,29 @@ def test_dead_proxy_reports_launch_failed(monkeypatch, tmp_path, capsys):
     )
     assert "Failed to get IP address" in out  # the raw error is still logged
     assert "user" not in out.split("LAUNCH_FAILED:", 1)[1]
+
+
+def test_camoufox_runner_keeps_the_locale(tmp_path, monkeypatch):
+    import camoufox.geolocation as cg
+    from camoufox.locales import Locale
+
+    from src.services.browser.runner import stable_locale
+
+    picks = iter(["es", "en"])
+    monkeypatch.setattr(
+        cg, "get_geolocation", lambda ip: types.SimpleNamespace(locale=Locale(next(picks), "US"))
+    )
+    assert stable_locale(str(tmp_path), "203.0.113.5") == "es-US"
+    assert stable_locale(str(tmp_path), "203.0.113.5") == "es-US"
+
+
+def test_geoip_draw_cannot_change_the_kept_locale(monkeypatch):
+    """A random draw with a script (en-Latn-HK) must not leak into a kept zh-HK."""
+    from camoufox.locales import SELECTOR
+
+    from src.services.browser.runner import pin_geoip_locale
+
+    monkeypatch.setattr(SELECTOR, "from_region", SELECTOR.from_region)
+    pin_geoip_locale("zh-HK")
+    drawn = SELECTOR.from_region("HK")
+    assert (drawn.language, drawn.script, drawn.region) == ("zh", None, "HK")

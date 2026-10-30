@@ -8,7 +8,8 @@ What the engine adds on top of a bare `launch_persistent_context`:
 
 - a persistent persona (seed, OS, brand, cores) per profile directory;
 - proxies with credentials, through a loopback bridge (proxy_bridge.py);
-- timezone / locale from the proxy's exit IP unless the persona pins them;
+- timezone / locale from the proxy's exit IP unless the persona pins them,
+  with the locale kept per profile while the exit IP stays in one country;
 - Playwright's automation switches removed where a page can observe them;
 - a refusal to present an OS the host cannot fake consistently.
 """
@@ -28,7 +29,7 @@ from typing import Any
 
 from . import fetch
 from . import persona as personas
-from .geo import ExitGeo, lookup
+from .geo import ExitGeo, lookup, remembered_locale
 from .proxy_bridge import ProxyBridge, Upstream
 from .release import host_os
 
@@ -227,6 +228,9 @@ class ChromeEngine:
 
         if upstream and self.geoip and not (persona.timezone and persona.locale):
             self.geo = await self._lookup_geo()
+            if not persona.locale:
+                locale = remembered_locale(self.profile_dir, self.geo.country, self.geo.locale)
+                self.geo = replace(self.geo, locale=locale)
             persona = persona.with_geo(self.geo.timezone, self.geo.locale)
         self.persona = persona
 

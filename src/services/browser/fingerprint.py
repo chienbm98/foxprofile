@@ -47,13 +47,17 @@ def load_or_create(profile_dir: str, os_type: str) -> dict[str, Any]:
 
 # The Chrome engine's equivalent of fingerprint.json (chrome_engine/persona.py).
 CHROME_PERSONA_FILE = "chrome_persona.json"
+# The locale kept for the exit IP's country, both engines (chrome_engine/geo.py).
+GEO_LOCALE_FILE = "geo_locale.json"
+# Files that make up a profile's identity rather than its browser data.
+IDENTITY_FILES = (FINGERPRINT_FILE, CHROME_PERSONA_FILE, GEO_LOCALE_FILE)
 _NAVIGATOR_PLATFORM = {"windows": "Win32", "macos": "MacIntel", "linux": "Linux x86_64"}
 
 
 def reset(profile_dir: str) -> bool:
     """Delete the saved fingerprint so the next launch generates a new one."""
     removed = False
-    for name in (FINGERPRINT_FILE, CHROME_PERSONA_FILE):
+    for name in IDENTITY_FILES:
         path = pathlib.Path(profile_dir) / name
         if path.exists():
             path.unlink()

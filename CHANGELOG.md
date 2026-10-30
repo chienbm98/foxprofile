@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### Thay đổi
+- Engine Chrome không còn là thử nghiệm: bỏ nhãn "experimental"/"thử nghiệm" trong app, web panel, API và MCP. README có mục "Giới hạn đã biết" (font lấy từ máy, kích thước màn hình thật khi chạy có cửa sổ, không có Widevine, ghim bản 148, WebRTC khi có proxy).
+- Locale tự động được chọn một lần cho mỗi quốc gia rồi giữ cố định theo profile (file `geo_locale.json` trong thư mục profile), trên cả Camoufox và Chrome. Trước đây locale bị chọn lại ngẫu nhiên ở mỗi lần mở, nên cùng một tài khoản có thể hôm nay là `en-US`, hôm sau là `es-US`. Locale này đi kèm khi xuất profile và bị xoá khi tạo fingerprint mới.
+- Kiểm tra IP không còn cảnh báo "locale ngẫu nhiên"; khi kiểm tra theo profile (`/profiles/{name}/ip-check`, MCP `check_profile_ip`) kết quả hiện locale mà profile đang giữ.
+
 ### Sửa
 - App desktop: nút "Launch" không còn bị gãy chữ thành hai dòng khi dùng giao diện English.
 - Proxy dạng `host:port:user:pass` có `@` hoặc `:` trong mật khẩu không còn bị bỏ qua (trước đây profile mở mà không qua proxy). Chấp nhận proxy IPv6 dạng `[2001:db8::1]`; host proxy tối đa 253 ký tự.

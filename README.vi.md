@@ -25,7 +25,7 @@
 
 ![FoxProfile](docs/images/main.png)
 
-FoxProfile quản lý các profile trình duyệt chống phát hiện: mỗi profile là một danh tính riêng với fingerprint thiết bị, cookie, proxy, timezone và locale của nó. Trình duyệt mặc định là [Camoufox](https://github.com/daijro/camoufox), một bản Firefox được chỉnh sửa ở tầng mã nguồn để giả lập fingerprint; ngoài ra có engine Chrome thử nghiệm dựa trên [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium). FoxProfile là lựa chọn tự host, chạy trên máy bạn hoặc VPS, thay cho các antidetect browser trả phí như GoLogin, GPM hay MoreLogin.
+FoxProfile quản lý các profile trình duyệt chống phát hiện: mỗi profile là một danh tính riêng với fingerprint thiết bị, cookie, proxy, timezone và locale của nó. Trình duyệt mặc định là [Camoufox](https://github.com/daijro/camoufox), một bản Firefox được chỉnh sửa ở tầng mã nguồn để giả lập fingerprint; ngoài ra có engine Chrome dựa trên [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium). FoxProfile là lựa chọn tự host, chạy trên máy bạn hoặc VPS, thay cho các antidetect browser trả phí như GoLogin, GPM hay MoreLogin.
 
 ## Mục lục
 
@@ -35,7 +35,7 @@ FoxProfile quản lý các profile trình duyệt chống phát hiện: mỗi pr
 - [Timezone, locale và Kiểm tra IP](#timezone-locale-và-kiểm-tra-ip)
 - [Chế độ server và web panel](#chế-độ-server-và-web-panel)
 - [MCP: cho AI điều khiển trình duyệt](#mcp-cho-ai-điều-khiển-trình-duyệt)
-- [Engine Chrome (thử nghiệm)](#engine-chrome-thử-nghiệm)
+- [Engine Chrome](#engine-chrome)
 - [Cookie và fingerprint](#cookie-và-fingerprint)
 - [Cấu hình](#cấu-hình)
 - [REST API](#rest-api)
@@ -49,7 +49,7 @@ FoxProfile quản lý các profile trình duyệt chống phát hiện: mỗi pr
 ## Tính năng
 
 - **Fingerprint cố định cho từng profile.** Lần mở đầu tiên sinh ra một thiết bị (màn hình, GPU, số nhân CPU, font, nhiễu canvas/audio) và lưu lại; các lần sau mở lại đúng thiết bị đó. Có thể chủ động tạo fingerprint mới.
-- **Hai engine.** Camoufox (Firefox, mặc định) hoặc Chrome (fingerprint-chromium, thử nghiệm), chọn khi tạo profile. Bản Chrome được tự tải về khi cần.
+- **Hai engine.** Camoufox (Firefox, mặc định) hoặc Chrome (fingerprint-chromium), chọn khi tạo profile. Bản Chrome được tự tải về khi cần.
 - **Giữ phiên làm việc.** Lịch sử, cookie và đăng nhập nằm trong thư mục của profile; các tab đang mở được mở lại ở lần khởi động sau.
 - **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, kể cả dạng `host:port:user:pass`, có nút kiểm tra proxy.
 - **Timezone và locale** tự khớp theo IP hoặc đặt cố định cho từng profile. Nút **Kiểm tra IP** đối chiếu IP ra với Cloudflare, ipinfo, ip-api và cảnh báo khi lệch quốc gia/timezone hoặc IP bị gắn datacenter.
@@ -95,15 +95,15 @@ Trên Windows có thể bấm đúp `run_foxprofile.bat`. Ứng dụng mở cử
 
 ## Timezone, locale và Kiểm tra IP
 
-Mặc định, mỗi lần mở profile Camoufox tra IP đi ra (qua proxy của profile) và đặt timezone, locale, toạ độ và IP WebRTC theo IP đó. Có ba điều nên biết:
+Mặc định, mỗi lần mở profile, cả hai engine đều tra IP đi ra (qua proxy của profile) và đặt timezone, locale, toạ độ theo IP đó; Camoufox còn báo IP này qua WebRTC. Có ba điều nên biết:
 
-- **Locale tự động được chọn ngẫu nhiên ở mỗi lần mở**, theo tỷ lệ người nói từng ngôn ngữ ở quốc gia của IP. Ví dụ IP Pháp cho `fr-FR` khoảng 60% số lần, còn lại là `en-FR`, `es-FR`… Một tài khoản đổi ngôn ngữ giữa các phiên là điều đáng ngờ, nên hãy đặt cố định locale cho profile.
+- **Locale tự động được chọn một lần cho mỗi quốc gia rồi giữ cố định.** Lần mở đầu tiên từ một quốc gia sẽ chọn theo tỷ lệ người nói từng ngôn ngữ ở đó (IP Pháp cho `fr-FR` khoảng 60% số lần, còn lại là `en-FR`, `es-FR`…), và profile giữ locale đó ở mọi lần mở sau, cho đến khi proxy chuyển sang quốc gia khác. Muốn một locale cụ thể thì đặt tay. "Fingerprint mới" cũng xoá locale đang giữ.
 - **Các cơ sở dữ liệu GeoIP không phải lúc nào cũng thống nhất.** Cùng một IP có thể được Cloudflare xếp vào nước này, Google vào nước khác; Camoufox cũng có thể chọn một timezone cùng giờ nhưng khác tên (ví dụ IP Việt Nam ra `Asia/Bangkok` thay vì `Asia/Ho_Chi_Minh`).
 - **IP datacenter dễ bị bắt captcha** bất kể cấu hình trình duyệt. Với các trang dùng Cloudflare, proxy residential hoặc 4G quan trọng hơn mọi tinh chỉnh khác.
 
 ![Hộp thoại tạo profile](docs/images/profile-dialog.png)
 
-Trong hộp thoại tạo/sửa profile có hai ô **Timezone** (tên IANA, ví dụ `Asia/Ho_Chi_Minh`) và **Locale** (dạng `vi-VN`); để trống là tự động theo IP. Nút **Kiểm tra IP** lấy IP đi ra qua proxy, đối chiếu với Cloudflare, ipinfo và ip-api, rồi cảnh báo khi lệch quốc gia hoặc timezone, khi IP bị gắn datacenter, khi proxy ra Internet bằng IPv4 và IPv6 khác nhau, và khi locale đang để ngẫu nhiên.
+Trong hộp thoại tạo/sửa profile có hai ô **Timezone** (tên IANA, ví dụ `Asia/Ho_Chi_Minh`) và **Locale** (dạng `vi-VN`); để trống là tự động theo IP. Nút **Kiểm tra IP** lấy IP đi ra qua proxy, đối chiếu với Cloudflare, ipinfo và ip-api, rồi cảnh báo khi lệch quốc gia hoặc timezone, khi IP bị gắn datacenter và khi proxy ra Internet bằng IPv4 và IPv6 khác nhau. Khi kiểm tra theo profile (API hoặc MCP `check_profile_ip`), kết quả còn hiện locale mà profile đang giữ.
 
 ## Chế độ server và web panel
 
@@ -166,11 +166,19 @@ Sau đó chỉ cần nhắn AI, ví dụ: *"Mở profile tiktok-us-02, vào tikt
 
 MCP **không** có tool xóa profile, để AI không thể vô tình xóa cookie của tài khoản. Trang chỉ mở được `http`, `https` và `about:blank`; `file://` và `about:config` bị chặn.
 
-## Engine Chrome (thử nghiệm)
+## Engine Chrome
 
 Ngoài Camoufox (Firefox), profile có thể chạy trên engine **Chrome**: một bản Chromium đã vá fingerprint ở tầng C++ ([fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium), giấy phép BSD-3). Chọn ở ô **Engine** khi tạo profile; không đổi được sau khi tạo. Bản trình duyệt (~140-190 MB tuỳ hệ điều hành, tải từ GitHub của fingerprint-chromium và kiểm tra SHA-256) được tự tải ở nền ngay khi tạo profile Chrome đầu tiên, hoặc lúc mở profile nếu chưa có; tiến độ hiện trong log. Muốn tải trước bằng tay: `python -m chrome_engine fetch`.
 
-Nên chọn đúng hệ điều hành của máy đang chạy FoxProfile: persona khác hệ điều hành sẽ lộ font của máy, và persona Linux trên Windows/macOS bị từ chối vì WebGL lộ GPU thật. Hỗ trợ Windows x64, macOS Apple Silicon và Linux x64 (chưa kiểm chứng). Chi tiết và kết quả kiểm thử: [chrome_engine/README.md](chrome_engine/README.md).
+Nên chọn đúng hệ điều hành của máy đang chạy FoxProfile: persona khác hệ điều hành sẽ lộ font của máy, và persona Linux trên Windows/macOS bị từ chối vì WebGL lộ GPU thật. Hỗ trợ Windows x64, macOS Apple Silicon và Linux x64 (hiện ít kiểm thử trên máy thật hơn). Chi tiết và kết quả kiểm thử: [chrome_engine/README.md](chrome_engine/README.md).
+
+Giới hạn đã biết:
+
+- **Font lấy từ máy.** Persona khác hệ điều hành sẽ hiện font của máy, vì vậy persona nên dùng đúng hệ điều hành của máy. Trên máy macOS, persona Windows còn có scrollbar overlay 0px.
+- **Cửa sổ hiện trên màn hình báo kích thước màn hình thật.** fingerprint-chromium 148 bỏ qua các switch giả kích thước màn hình, nên các profile trên cùng một máy có chung kích thước màn hình; trình duyệt chạy ẩn (headless) báo 1920x1080.
+- **Không có Widevine.** Bản build dựa trên ungoogled-chromium nên video có DRM (các dịch vụ streaming) không phát được, và trang web kiểm tra được điều này.
+- **Chậm hơn Chrome hiện hành vài phiên bản.** FoxProfile ghim fingerprint-chromium 148 vì bản 150 bị crash khi trang vẽ emoji lên canvas.
+- **WebRTC khi có proxy không gửi UDP**, giống chính sách của extension WebRTC Leak Prevent: không lộ địa chỉ nào, nhưng cuộc gọi WebRTC chỉ chạy được qua TURN server dùng TCP.
 
 ## Cookie và fingerprint
 
