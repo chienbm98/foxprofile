@@ -2,7 +2,7 @@ flet>=1.0.5
 camoufox[geoip]>=0.4.11
 python-dotenv>=1.0.0
 tzdata>=2026.5; sys_platform == "win32"
-aiohttp>=3.9.0
+aiohttp>=3.14.5
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 mcp>=1.2,<2
