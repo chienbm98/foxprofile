@@ -27,8 +27,15 @@
 
 FoxProfile manages anti-detect browser profiles: each profile is a separate identity with its own device fingerprint, cookies, proxy, timezone and locale. The default browser is [Camoufox](https://github.com/daijro/camoufox), a Firefox build that spoofs fingerprints at the engine level; a Chrome engine based on [fingerprint-chromium](https://github.com/adryfish/fingerprint-chromium) is also available. It is a self-hosted alternative, on your machine or a VPS, to paid anti-detect browsers such as GoLogin, GPM or MoreLogin.
 
+## Support
+
+FoxProfile is free and open source, built in my spare time, and will stay that way. If it saves you time or money, you can buy me a coffee; it goes toward bug fixes, keeping up with upstream browser releases and faster replies on issues.
+
+<a href="https://buymeacoffee.com/chienbm98"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" /></a>
+
 ## Contents
 
+- [Support](#support)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
@@ -41,7 +48,6 @@ FoxProfile manages anti-detect browser profiles: each profile is a separate iden
 - [REST API](#rest-api)
 - [Development](#development)
 - [Contributing](#contributing)
-- [Support](#support)
 - [Responsible use](#responsible-use)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
@@ -297,12 +303,6 @@ Contributions of all kinds are welcome: bug reports, feature ideas, docs, transl
 - Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 If FoxProfile is useful to you, consider giving it a ⭐ on GitHub.
-
-## Support
-
-FoxProfile is free and open source, built in my spare time, and will stay that way. If it saves you time or money, you can buy me a coffee; it goes toward bug fixes, keeping up with upstream browser releases and faster replies on issues.
-
-<a href="https://buymeacoffee.com/chienbm98"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" /></a>
 
 ## Responsible use
 
