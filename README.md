@@ -41,6 +41,7 @@ FoxProfile is free and open source, built in my spare time, and will stay that w
 - [Quick start](#quick-start)
 - [Timezone, locale and Check IP](#timezone-locale-and-check-ip)
 - [Server mode and web panel](#server-mode-and-web-panel)
+- [One-Click Deploy](#one-click-deploy)
 - [MCP: let AI agents drive the browser](#mcp-let-ai-agents-drive-the-browser)
 - [Chrome engine](#chrome-engine)
 - [Cookies and fingerprints](#cookies-and-fingerprints)
@@ -136,6 +137,10 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 On a VPS, put the server behind an HTTPS reverse proxy (Caddy, Nginx) so the token is never sent in clear text. On a display-less Linux box, `FOXPROFILE_HEADLESS=virtual` (needs `xvfb`) runs browsers on a virtual display, which is harder to detect than plain headless.
 
 Full deployment guide (Ubuntu, systemd, nginx, HTTPS; in Vietnamese): [docs/DEPLOY.md](docs/DEPLOY.md).
+
+## One-Click Deploy
+
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/FoxProfile/)
 
 ## MCP: let AI agents drive the browser
 
