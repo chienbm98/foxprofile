@@ -28,7 +28,7 @@ async def import_profile(
             try:
                 success, result = pm.import_profile(f.path)
             except (ProfileBusyError, ProfileStoreError) as e:
-                log(get_string("import_error", error=str(e)))
+                log(get_string("import_error", error=failure_message("", e)))
                 continue
             if success:
                 ok_count += 1

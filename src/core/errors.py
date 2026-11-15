@@ -9,5 +9,9 @@ class ProfileStoreError(RuntimeError):
     """A profile change could not be saved. The in-memory state was rolled back."""
 
 
+class ProfileAccountSaveError(ProfileStoreError):
+    """The profile itself was saved, but its Proton account could not be written or moved."""
+
+
 class ProtonStoreError(RuntimeError):
     """The Proton account store cannot be read or decrypted. Nothing has been overwritten."""

@@ -102,7 +102,7 @@ def add_profile(
                 proton_country=draft.proton_country,
             )
         except ProfileStoreError as e:
-            return str(e)
+            return failure_message(draft.name, e)
         if created:
             log(get_string("created_profile", name=draft.name))
             if draft.engine == "chrome":

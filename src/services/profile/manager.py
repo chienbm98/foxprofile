@@ -9,7 +9,7 @@ import time
 from collections.abc import Callable
 
 from ...core import config
-from ...core.errors import ProfileStoreError, ProtonStoreError
+from ...core.errors import ProfileAccountSaveError, ProfileStoreError, ProtonStoreError
 from ...core.logging import get_logger
 from ...models.profile import (
     ENGINES,
@@ -166,7 +166,8 @@ class ProfileManager:
         try:
             proton_account.save(name, user, password, totp)
         except (OSError, ProtonStoreError) as e:
-            raise ProfileStoreError(
+            logger.warning("The Proton account of %s was not saved: %s", name, e)
+            raise ProfileAccountSaveError(
                 f"The profile was saved, but its Proton account was not: {e}"
             ) from e
 
@@ -321,7 +322,8 @@ class ProfileManager:
                 try:
                     proton_account.rename(original_name, new_name)
                 except (OSError, ProtonStoreError) as e:
-                    raise ProfileStoreError(
+                    logger.warning("The Proton account of %s was not moved: %s", original_name, e)
+                    raise ProfileAccountSaveError(
                         f"The profile was renamed, but its Proton account was not moved: {e}"
                     ) from e
             if mode == "proton" and proton_user is not None:

@@ -131,6 +131,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "update_failed": "Could not update profile (Name might exist)",
         "stop_before_rename": "Stop the browser before renaming",
         "busy_profile": "{name} is running. Stop the browser first.",
+        "profile_store_failed": "Could not save the change. It was undone; details are in the log.",
+        "profile_saved_account_failed": (
+            "The profile was saved, but its Proton account could not be saved. "
+            "Open the profile and enter the account again."
+        ),
         "created_profile": "Created: {name}",
         "deleted_profile": "Deleted: {name}",
         "updated_profile": "Updated: {old} -> {new}",
@@ -337,6 +342,11 @@ STRINGS: dict[str, dict[str, str]] = {
         "update_failed": "Không cập nhật được (có thể trùng tên)",
         "stop_before_rename": "Hãy dừng trình duyệt trước khi đổi tên",
         "busy_profile": "{name} đang chạy. Hãy dừng trình duyệt trước.",
+        "profile_store_failed": "Không lưu được thay đổi. Đã hoàn tác; chi tiết có trong nhật ký.",
+        "profile_saved_account_failed": (
+            "Đã lưu profile, nhưng không lưu được tài khoản Proton. "
+            "Hãy mở profile và nhập lại tài khoản."
+        ),
         "created_profile": "Đã tạo: {name}",
         "deleted_profile": "Đã xóa: {name}",
         "updated_profile": "Đã cập nhật: {old} -> {new}",
