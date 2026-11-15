@@ -18,7 +18,7 @@ Thư mục cache mặc định là `%LOCALAPPDATA%\foxprofile\chrome`, `~/Librar
 ```python
 from chrome_engine import ChromeEngine
 
-async with ChromeEngine("data/alice", proxy="http://u:p@1.2.3.4:8080") as context:
+async with ChromeEngine("data/alice", proxy="http://u:p@192.0.2.1:8080") as context:
     page = context.pages[0]
     await page.goto("https://example.com")
 ```
@@ -88,5 +88,5 @@ python chrome_engine/e2e/detection_e2e.py headed headless   # cần internet
 - Persona macOS luôn báo `devicePixelRatio` 1, trong khi MacBook thật gần như luôn là 2 (Retina). Ở headless, `availHeight` bằng `height` (không trừ thanh menu).
 - Persona Windows trên macOS: scrollbar 0px. Đặt `defaults write org.chromium.Chromium AppleShowScrollBars Always` đưa về 15px (Windows thật 17px), nhưng cài đặt đó áp dụng cho mọi Chromium cùng bundle id trên máy.
 - Phát hiện qua thời gian phản hồi CDP chưa được xử lý.
-- Proxy bridge nghe trên `127.0.0.1` cổng ngẫu nhiên, không có mật khẩu (Chromium không gửi được). Trang web không dùng được nó (không gửi được `CONNECT`, request thường bị trả 400), nhưng tiến trình khác trên cùng máy có thể đi ra ngoài qua proxy của profile trong lúc profile đang mở.
+- Proxy bridge nghe trên `127.0.0.1` cổng ngẫu nhiên và chỉ phục vụ client gửi đúng `Proxy-Authorization` của lần mở đó; client khác nhận 407. Thông tin này chỉ nằm trong tiến trình của profile và được Playwright đưa cho Chromium, nên tiến trình khác trên cùng máy không dùng được proxy của profile trong lúc profile đang mở.
 - Phụ thuộc fork bên ngoài: nâng phiên bản phải chạy lại toàn bộ test (đặc biệt `test_emoji_canvas_does_not_crash`) trước khi đổi `DEFAULT_VERSION`.

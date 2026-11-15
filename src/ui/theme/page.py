@@ -3,6 +3,8 @@ import os
 import flet as ft
 
 from ...core.strings import get_string
+from ...services.browser.proton_countries import BY_CODE as PROTON_COUNTRIES_BY_CODE
+from ...services.browser.proton_countries import COUNTRIES as PROTON_COUNTRIES
 from .colors import COLORS, FONT, FONT_BOLD, FONT_DATA, FONT_MEDIUM, FONT_SEMIBOLD
 
 
@@ -84,6 +86,39 @@ def build_engine_dropdown(value: str = "camoufox", disabled: bool = False) -> ft
             ft.dropdown.Option("camoufox", get_string("engine_camoufox")),
             ft.dropdown.Option("chrome", get_string("engine_chrome")),
         ],
+    )
+
+
+def build_connection_dropdown(value: str = "direct") -> ft.Dropdown:
+    return ft.Dropdown(
+        label=get_string("connection"),
+        value=value if value in ("direct", "proxy", "proton") else "direct",
+        bgcolor=COLORS["input_bg"],
+        color=COLORS["text_main"],
+        border_color=COLORS["rule_strong"],
+        focused_border_color=COLORS["sidebar"],
+        label_style=ft.TextStyle(color=COLORS["text_sub"]),
+        border_radius=8,
+        options=[
+            ft.dropdown.Option("direct", get_string("connection_direct")),
+            ft.dropdown.Option("proxy", get_string("connection_proxy")),
+            ft.dropdown.Option("proton", get_string("connection_proton")),
+        ],
+    )
+
+
+def build_proton_country_dropdown(value: str = "") -> ft.Dropdown:
+    return ft.Dropdown(
+        label=get_string("proton_country"),
+        value=value if value in PROTON_COUNTRIES_BY_CODE else "",
+        bgcolor=COLORS["input_bg"],
+        color=COLORS["text_main"],
+        border_color=COLORS["rule_strong"],
+        focused_border_color=COLORS["sidebar"],
+        label_style=ft.TextStyle(color=COLORS["text_sub"]),
+        border_radius=8,
+        options=[ft.dropdown.Option("", get_string("proton_country_auto"))]
+        + [ft.dropdown.Option(code, name) for code, name in PROTON_COUNTRIES],
     )
 
 

@@ -34,9 +34,13 @@ def require_token(request: Request) -> None:
 
 
 def is_loopback(host: str) -> bool:
-    """True if every address `host` resolves to is a loopback address."""
-    if host == "":
-        return True
+    """True if every address `host` resolves to is a loopback address.
+
+    An empty host is not loopback: uvicorn and Python's socket API both bind ""
+    to every interface.
+    """
+    if not host.strip():
+        return False
     try:
         return ipaddress.ip_address(host.strip("[]")).is_loopback
     except ValueError:

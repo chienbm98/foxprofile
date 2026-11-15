@@ -49,7 +49,9 @@ Run everything from the repo root: `profiles.json`, `camoufox_data/`, `logs/` an
 
 **MCP is a REST client.** `src/mcp_server/server.py` defines the tools with FastMCP and calls the REST API over HTTP. The same tools are also served over Streamable HTTP at `/mcp` (`api/mcp_http.py`), calling back into the API through `self_url` on loopback. A new capability therefore usually needs a REST route first, then an MCP tool. MCP deliberately has no delete tool.
 
-**Auth.** `FOXPROFILE_API_TOKEN` protects the REST routers, the web panel and `/mcp` (`/health` and `/info` stay public). `check_bind_safety` refuses to start on a non-loopback host without a 24+ character token. Without a token, `LocalOnlyGuard` blocks CSRF/DNS-rebinding requests from websites.
+**Auth.** `FOXPROFILE_API_TOKEN` protects the REST routers, the panel's API calls and `/mcp` (`/health` and `/info` stay public; the panel's HTML shell is served without auth and holds no data). `check_bind_safety` refuses to start on any non-loopback host, the empty host (every interface) included, without a 24+ character token. Without a token, `LocalOnlyGuard` blocks CSRF/DNS-rebinding requests from websites.
+
+**Guards.** Destructive operations (delete, rename, an overwriting import, an export with data, a fingerprint reset) go through `ProfileManager`, which holds `BrowserLauncher.exclusive(name)`, or take that guard directly. A profile whose browser runs raises `ProfileBusyError` (409 in the API). A failed write of `profiles.json` raises `ProfileStoreError` after the in-memory change is rolled back (500 in the API). Do not swallow either.
 
 **Config** is read from `FOXPROFILE_*` env vars (and `.env`) at import time in `src/core/config.py`. Anything that must change it, like server mode defaulting `FOXPROFILE_HEADLESS=true`, has to set the env var before `src.core.config` is imported; runner subprocesses inherit it through the environment.
 
@@ -61,6 +63,8 @@ Run everything from the repo root: `profiles.json`, `camoufox_data/`, `logs/` an
 - UI work: read `DESIGN.md` (visual system) and `PRODUCT.md` (users, constraints) first. Use the tokens (`COLORS` keys, CSS custom properties), never new hex values. Fox orange is only for things you can press; Stop is ink, not red. Status reads by form as well as colour (live = violet double-rule stamp, starting = grey single rule, failed = struck red single rule). Every data cell in a profile row keeps two lines. Change the desktop app and the web panel together so both surfaces stay one product.
 - In Vietnamese copy, keep industry terms in English: profile, proxy, cookie, fingerprint, engine, timezone, locale, headless, API, MCP.
 - Profile names become directory names: always pass them through `validate_profile_name`.
+- Data paths: build a profile's directory with `config.profile_data_dir(name)`, never by joining `DATA_DIR` yourself. Tests redirect data by patching `src.core.config` (`DATA_DIR`, `PROFILES_FILE`, `PROTON_ACCOUNTS_FILE`), because modules that copy those names at import time do not see the patch.
+- Loopback calls from FoxProfile to its own processes go through `utils/local_http.open_url`, which ignores `HTTP_PROXY`.
 - Proxies go through `utils/proxy_parser.parse_proxy` (accepts `[scheme://][user:pass@]host:port` and `host:port:user:pass`); validation is `utils/validation.validate_proxy_format`.
 - `README.md` (English, primary) and `README.vi.md` (Vietnamese) must stay in sync. `CONTRIBUTING.md`, `SECURITY.md` and `docs/DEPLOY.md` are in Vietnamese.
 - Release: bump `version` in `pyproject.toml`, `VERSION` in `src/api/app.py`, and `CHANGELOG.md` in one PR, then tag `vX.Y.Z`.

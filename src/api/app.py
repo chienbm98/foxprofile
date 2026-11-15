@@ -5,10 +5,11 @@ import pathlib
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
 
 from ..core.config import API_PORT, API_TOKEN, HEADLESS
+from ..core.errors import ProfileBusyError, ProfileStoreError, ProtonStoreError
 from ..core.logging import get_logger
 from . import mcp_http
 from .auth import require_token
@@ -18,6 +19,7 @@ from .routes import (
     mcp_setup_router,
     page_router,
     profiles_router,
+    proton_router,
     proxy_router,
 )
 from .schemas.common import SuccessResponse
@@ -33,6 +35,18 @@ _PANEL = pathlib.Path(__file__).resolve().parents[1] / "web" / "index.html"
 _FONTS = pathlib.Path(__file__).resolve().parents[1] / "assets" / "fonts"
 # Served to the panel without a token: it needs them before login.
 _FONT_FILES = {f.name: f for f in _FONTS.glob("*.ttf")}
+
+
+async def _busy_response(_request: Request, _exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        {"detail": "The profile's browser is running or busy. Stop it and try again."},
+        status_code=409,
+    )
+
+
+async def _store_response(_request: Request, exc: Exception) -> JSONResponse:
+    # The change was rolled back; the message names what could not be written.
+    return JSONResponse({"detail": str(exc)}, status_code=500)
 
 
 def create_app(container: Container, self_url: str | None = None) -> FastAPI:
@@ -61,6 +75,9 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
         version=VERSION,
     )
     app.state.container = container
+    app.add_exception_handler(ProfileBusyError, _busy_response)
+    app.add_exception_handler(ProfileStoreError, _store_response)
+    app.add_exception_handler(ProtonStoreError, _store_response)
     if not API_TOKEN:
         # Token-less means local-only: block CSRF and DNS rebinding from websites.
         app.add_middleware(LocalOnlyGuard)
@@ -70,6 +87,7 @@ def create_app(container: Container, self_url: str | None = None) -> FastAPI:
     app.include_router(browser_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(page_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(proxy_router, prefix=API_PREFIX, dependencies=protected)
+    app.include_router(proton_router, prefix=API_PREFIX, dependencies=protected)
     app.include_router(mcp_setup_router, prefix=API_PREFIX, dependencies=protected)
     app.router.routes.append(mcp_route)
 

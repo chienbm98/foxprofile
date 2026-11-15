@@ -18,6 +18,15 @@ def test_only_http_urls_are_kept(tmp_path):
     assert session.load(str(tmp_path)) == ["https://a.test/"]
 
 
+def test_proton_sign_in_tabs_are_never_restored():
+    urls = [
+        "https://account.proton.me/vpn",
+        "https://account.protonvpn.com/login",
+        "https://a.test/",
+    ]
+    assert session.restorable(urls) == ["https://a.test/"]
+
+
 def test_empty_list_keeps_previous_snapshot(tmp_path):
     session.save(str(tmp_path), ["https://a.test/"])
     assert session.save(str(tmp_path), ["about:blank"]) is False

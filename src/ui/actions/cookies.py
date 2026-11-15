@@ -1,16 +1,16 @@
 import asyncio
-import os
 import pathlib
 from collections.abc import Callable
 
 import flet as ft
 
-from ...core.config import DATA_DIR
+from ...core.config import profile_data_dir
+from ...core.errors import ProfileBusyError
 from ...core.strings import get_string
 from ...interfaces.protocols import IBrowserLauncher, IProfileManager
 from ...services.browser import cookies, fingerprint
-from ...services.browser.launcher import ProfileBusyError
 from ..dialogs import open_confirm_dialog, open_cookie_dialog
+from .errors import failure_message
 
 _EXTENSIONS = {"json": "json", "netscape": "txt"}
 
@@ -30,7 +30,7 @@ def manage_cookies(
         log(get_string("cookie_stop_first", name=name))
         return
 
-    profile_dir = os.path.join(DATA_DIR, name)
+    profile_dir = profile_data_dir(name)
 
     def _locked(fn, arg):
         with bl.exclusive(name):
@@ -73,7 +73,12 @@ def manage_cookies(
 
     def on_reset_fingerprint() -> None:
         def _do_reset() -> None:
-            fingerprint.reset(profile_dir)
+            try:
+                with bl.exclusive(name):
+                    fingerprint.reset(profile_dir)
+            except ProfileBusyError as e:
+                log(failure_message(name, e))
+                return
             log(get_string("fingerprint_was_reset", name=name))
 
         open_confirm_dialog(

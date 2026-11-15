@@ -399,6 +399,7 @@ const I18N = {
     name: "Tên profile", os: "Hệ điều hành", engine: "Engine",
     engine_camoufox: "Camoufox (Firefox)", engine_chrome: "Chrome (Chromium)", engine_locked: "Engine không đổi được sau khi tạo.",
     engine_note: "Engine Chromium (fingerprint-chromium). Lần đầu dùng sẽ tự tải về máy chạy FoxProfile (~150 MB). Nên chọn đúng hệ điều hành của máy đó, chọn hệ khác sẽ lộ font. Không đổi được engine sau khi tạo.",
+    ext_hint: "Cài vào profile này ở lần mở kế tiếp. Đăng nhập Proton trong trình duyệt; khi bật VPN, IP ra không còn đi theo proxy.",
     proxy_label: "Proxy", proxy_hint: "user:pass@host:port, host:port:user:pass, hoặc socks5://... Để trống = kết nối trực tiếp.",
     check_proxy: "Kiểm tra proxy", cancel: "Huỷ", save: "Lưu thay đổi", checking: "Đang kiểm tra...",
     confirm_delete: "Xoá profile “{name}”? Cookie và dữ liệu của profile sẽ mất vĩnh viễn.", confirm_title: "Xác nhận", stop_first: "Hãy dừng trình duyệt trước",
@@ -410,6 +411,14 @@ const I18N = {
     launching: "Đang mở {name}...", started: "Đã mở {name}", stopped: "Đã dừng {name}", created: "Đã tạo {name}", saved: "Đã lưu",
     deleted: "Đã xoá {name}", deleted_n: "Đã xoá {n} profile", exported: "Đã xuất {n} cookie", imported: "Đã nhập {n} cookie", fp_reset: "Đã tạo fingerprint mới",
     mcp_button: "Kết nối AI (MCP)", mcp_title: "Kết nối AI agent qua MCP",
+    connection: "Kết nối", connection_direct: "Trực tiếp", connection_proxy: "Proxy", connection_proton: "Proton VPN",
+    proxy_required: "Nhập proxy cho chế độ Proxy", proton_vpn_short: "PROTON",
+    proton_country: "Quốc gia", proton_country_auto: "Tự động (nhanh nhất)",
+    proton_username: "Tên đăng nhập hoặc email Proton", proton_password: "Mật khẩu",
+    proton_password_keep: "Để trống để giữ mật khẩu đã lưu", proton_password_required: "Nhập mật khẩu Proton",
+    proton_totp: "Secret 2FA (không bắt buộc)", proton_totp_keep: "Để trống để giữ nguyên. Secret Base32 hoặc otpauth:// URI.",
+    proton_username_required: "Nhập tên đăng nhập Proton",
+    proton_profile_note: "Chỉ lưu cho profile này (đã mã hoá). Extension tự đăng nhập; khi bật VPN, IP ra không còn đi theo proxy.",
     mcp_intro: "Cho Claude, Cursor hay VS Code tự quản lý profile và lướt web giúp bạn: mở trang, đọc nội dung, click, gõ và chụp màn hình.",
     mcp_endpoint: "Địa chỉ MCP", mcp_pick: "1. Chọn ứng dụng AI bạn dùng", mcp_paste: "2. Dán vào: {where}",
     mcp_copy: "Sao chép", mcp_copied: "Đã sao chép", mcp_insert_token: "Chèn token đang đăng nhập vào cấu hình",
@@ -450,6 +459,7 @@ const I18N = {
     name: "Profile name", os: "Operating system", engine: "Engine",
     engine_camoufox: "Camoufox (Firefox)", engine_chrome: "Chrome (Chromium)", engine_locked: "The engine cannot be changed after creation.",
     engine_note: "Chromium engine (fingerprint-chromium). It is downloaded automatically to the FoxProfile machine the first time (~150 MB). Pick that machine's OS: other OSes leak its fonts. The engine cannot be changed later.",
+    ext_hint: "Installed into this profile on its next launch. Sign in to Proton inside the browser; while the VPN is connected, the exit IP no longer follows the proxy.",
     proxy_label: "Proxy", proxy_hint: "user:pass@host:port, host:port:user:pass, or socks5://... Blank = direct connection.",
     check_proxy: "Check proxy", cancel: "Cancel", save: "Save changes", checking: "Checking...",
     confirm_delete: "Delete profile “{name}”? Its cookies and data are removed permanently.", confirm_title: "Confirm", stop_first: "Stop the browser first",
@@ -461,6 +471,14 @@ const I18N = {
     launching: "Launching {name}...", started: "Started {name}", stopped: "Stopped {name}", created: "Created {name}", saved: "Saved",
     deleted: "Deleted {name}", deleted_n: "Deleted {n} profiles", exported: "Exported {n} cookies", imported: "Imported {n} cookies", fp_reset: "New fingerprint created",
     mcp_button: "Connect AI (MCP)", mcp_title: "Connect an AI agent over MCP",
+    connection: "Connection", connection_direct: "Direct", connection_proxy: "Proxy", connection_proton: "Proton VPN",
+    proxy_required: "Enter a proxy for proxy mode", proton_vpn_short: "PROTON",
+    proton_country: "Country", proton_country_auto: "Auto (fastest)",
+    proton_username: "Proton username or email", proton_password: "Password",
+    proton_password_keep: "Leave blank to keep the saved password", proton_password_required: "Enter the Proton password",
+    proton_totp: "Two-factor secret (optional)", proton_totp_keep: "Leave blank to keep it. Base32 secret or otpauth:// URI.",
+    proton_username_required: "Enter the Proton username",
+    proton_profile_note: "Stored for this profile only (encrypted). The extension signs in automatically; while the VPN is connected the exit IP no longer follows a proxy.",
     mcp_intro: "Let Claude, Cursor or VS Code manage profiles and browse for you: open pages, read them, click, type and take screenshots.",
     mcp_endpoint: "MCP endpoint", mcp_pick: "1. Pick your AI app", mcp_paste: "2. Paste into: {where}",
     mcp_copy: "Copy", mcp_copied: "Copied", mcp_insert_token: "Insert the token you are logged in with",
@@ -488,8 +506,15 @@ const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
 };
+// The API token lives for this browser tab only: sessionStorage is cleared when the tab
+// closes, so it does not outlive the session in long-lived storage.
+const session = {
+  get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} },
+};
+store.set("foxprofile.token", null); // drop a token saved by an older version of the panel
 let lang = store.get("foxprofile.lang") || "en";
-let token = store.get("foxprofile.token") || "";
+let token = session.get("foxprofile.token") || "";
 let profiles = [], running = new Set(), fingerprints = {};
 let filter = "all";
 const busy = new Map();          // name -> "starting" | "stopping"
@@ -681,6 +706,7 @@ function row(p) {
   const box = h("input", { type: "checkbox", "aria-label": t("select_row", { name: p.name }),
     onchange: (e) => { e.target.checked ? selected.add(p.name) : selected.delete(p.name); render(); } });
   box.checked = selected.has(p.name);
+  const proton = p.proxy_mode === "proton";
   const proxy = maskProxy(p.proxy);
   const main = on
     ? h("button", { class: "btn btn-ink main", disabled: isBusy, onclick: () => toggle(p) }, icon("stop", true), t("stop"))
@@ -696,9 +722,11 @@ function row(p) {
       h("div", { class: "stack" }, h("span", { class: p.engine === "chrome" ? "engine chrome" : "engine" }, engine),
         fp && fp.exists ? h("span", { class: "data minor" }, [fp.screen, `${fp.hardware_concurrency || "?"} CPU`].filter(Boolean).join(" · "))
           : h("span", { class: "minor" }, t("no_fp_short")))),
-    h("div", { class: "c-proxy stack", role: "cell" }, proxy
-      ? [h("span", { class: "data", title: proxy }, proxy.split("://")[1]), h("span", { class: "minor" }, proxy.split("://")[0].toUpperCase())]
-      : [h("span", { class: "direct" }, t("direct")), h("span", { class: "minor" }, t("no_proxy_short"))],
+    h("div", { class: "c-proxy stack", role: "cell" }, proton
+      ? [h("span", { class: "data" }, t("connection_proton")), h("span", { class: "minor" }, p.proton_user || t("proton_vpn_short"))]
+      : proxy
+        ? [h("span", { class: "data", title: proxy }, proxy.split("://")[1]), h("span", { class: "minor" }, proxy.split("://")[0].toUpperCase())]
+        : [h("span", { class: "direct" }, t("direct")), h("span", { class: "minor" }, t("no_proxy_short"))],
       h("span", { class: "minor geo-inline data" }, `${p.timezone || t("follow_ip")} · ${p.locale || t("follow_ip")}`)),
     h("div", { class: "col-geo stack", role: "cell" },
       h("span", { class: p.timezone ? "data" : "muted" }, p.timezone || t("follow_ip")),
@@ -802,7 +830,9 @@ function field(label, input, hint) {
   return h("div", { class: "field" }, h("label", { for: input.id }, label), input, hint ? h("div", { class: "hint" }, hint) : null);
 }
 
-function openEditor(p) {
+async function openEditor(p) {
+  let countries = [];
+  try { countries = await api("GET", "/proton/countries"); } catch {}
   modal((close) => {
     const name = h("input", { id: "f-name", value: p ? p.name : "", required: true, maxlength: 64, autocomplete: "off" });
     const os = h("select", { id: "f-os" }, [["windows", "Windows"], ["macos", "macOS"], ["linux", "Linux"]].map(([v, label]) =>
@@ -814,7 +844,18 @@ function openEditor(p) {
     const engineNote = h("div", { class: "note" }, icon("alert", true), h("span", {}, t("engine_note")));
     const syncNote = () => { engineNote.style.display = !p && engine.value === "chrome" ? "" : "none"; };
     engine.onchange = syncNote; syncNote();
+    const mode = h("select", { id: "f-mode" },
+      [["direct", t("connection_direct")], ["proxy", t("connection_proxy")], ["proton", t("connection_proton")]].map(([v, label]) =>
+        h("option", { value: v, selected: (p ? p.proxy_mode : "proxy") === v }, label)));
     const proxy = h("input", { id: "f-proxy", value: p && p.proxy ? p.proxy : "", placeholder: "socks5://user:pass@host:port", autocomplete: "off", class: "data" });
+    const protonUser = h("input", { id: "f-proton-user", value: p && p.proton_user ? p.proton_user : "", autocomplete: "username" });
+    const protonPass = h("input", { id: "f-proton-pass", type: "password", autocomplete: "current-password",
+      placeholder: p && p.has_proton_password ? t("proton_password_keep") : t("proton_password") });
+    const protonTotp = h("input", { id: "f-proton-totp", autocomplete: "off",
+      placeholder: p && p.proton_totp_set ? t("proton_totp_keep") : t("proton_totp") });
+    const protonCountry = h("select", { id: "f-proton-country" },
+      [["", t("proton_country_auto")], ...countries.map((c) => [c.code, c.name])].map(([v, label]) =>
+        h("option", { value: v, selected: (p ? p.proton_country : "") === v }, label)));
     const tz = h("input", { id: "f-tz", value: p && p.timezone ? p.timezone : "", placeholder: t("tz_hint"), autocomplete: "off", class: "data" });
     const loc = h("input", { id: "f-locale", value: p && p.locale ? p.locale : "", placeholder: t("locale_hint"), autocomplete: "off", class: "data" });
     const msg = h("div", { class: "msg", role: "status" });
@@ -837,13 +878,35 @@ function openEditor(p) {
       } catch (e) { say("err", e.message); }
       check.disabled = false;
     } }, icon("plug", true), t("check_proxy"));
+    const proxyFields = h("div", {},
+      field(t("proxy_label"), proxy, t("proxy_hint")),
+      h("div", { class: "inline-btns" }, check, checkIp));
+    const protonFields = h("div", {},
+      field(t("proton_country"), protonCountry),
+      field(t("proton_username"), protonUser),
+      field(t("proton_password"), protonPass, p && p.has_proton_password ? t("proton_password_keep") : null),
+      field(t("proton_totp"), protonTotp, p && p.proton_totp_set ? t("proton_totp_keep") : null),
+      h("div", { class: "hint", style: "margin-top:6px;font-size:12px;color:var(--ink-3)" }, t("proton_profile_note")));
+    const syncMode = () => {
+      proxyFields.style.display = mode.value === "proxy" ? "" : "none";
+      protonFields.style.display = mode.value === "proton" ? "" : "none";
+    };
+    mode.onchange = syncMode; syncMode();
     return h("form", { onsubmit: async (e) => {
       e.preventDefault();
       say("", "");
       const submitBtn = e.currentTarget.querySelector(".modal-foot .btn-act");
       if (submitBtn) submitBtn.disabled = true;
-      const body = { name: name.value.trim(), os_type: os.value, proxy: proxy.value.trim() || null,
+      const selectedMode = mode.value;
+      const body = { name: name.value.trim(), os_type: os.value, proxy_mode: selectedMode,
+        proxy: selectedMode === "proxy" ? (proxy.value.trim() || null) : null,
         timezone: tz.value.trim(), locale: loc.value.trim() };
+      if (selectedMode === "proton") {
+        body.proton_country = protonCountry.value || "";
+        body.proton_user = protonUser.value.trim();
+        if (protonPass.value) body.proton_password = protonPass.value;
+        if (protonTotp.value.trim()) body.proton_totp = protonTotp.value.trim();
+      }
       if (!p) body.engine = engine.value;
       try {
         if (p) { await api("PATCH", `/profiles/${enc(p.name)}`, body); delete fingerprints[p.name]; toast(t("saved")); }
@@ -857,8 +920,9 @@ function openEditor(p) {
         field(t("name"), name),
         h("div", { class: "field-row" }, field(t("engine"), engine, p ? t("engine_locked") : null), field(t("os"), os)),
         engineNote,
-        field(t("proxy_label"), proxy, t("proxy_hint")),
-        h("div", { class: "inline-btns" }, check, checkIp),
+        field(t("connection"), mode),
+        proxyFields,
+        protonFields,
         msg,
         h("div", { class: "field-row" }, field(t("timezone"), tz), field(t("locale"), loc)),
         h("div", { class: "hint", style: "margin-top:6px;font-size:12px;color:var(--ink-3)" }, t("geo_hint")),
@@ -1106,10 +1170,10 @@ async function showApp(authRequired) {
 $("login-form").onsubmit = async (e) => {
   e.preventDefault();
   token = $("token").value.trim();
-  try { await api("GET", "/profiles"); store.set("foxprofile.token", token); $("login-err").textContent = ""; showApp(true); }
+  try { await api("GET", "/profiles"); session.set("foxprofile.token", token); $("login-err").textContent = ""; showApp(true); }
   catch (err) { $("login-err").textContent = err.status === 401 ? t("bad_token") : (err.message || t("bad_token")); token = ""; }
 };
-$("logout-btn").onclick = () => { token = ""; store.set("foxprofile.token", null); showLogin(); };
+$("logout-btn").onclick = () => { token = ""; session.set("foxprofile.token", null); showLogin(); };
 $("new-btn").onclick = () => openEditor(null);
 $("mcp-btn").onclick = openMcpGuide;
 $("search").oninput = render;

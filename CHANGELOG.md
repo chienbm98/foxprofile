@@ -4,6 +4,34 @@
 
 ## [Unreleased]
 
+### Thêm
+- WebRTC trên Camoufox không còn lộ IP thật khi dùng proxy hoặc Proton VPN. Nguyên nhân là Camoufox spoof IP WebRTC theo `geoip` (IP thật trước khi VPN kết nối) và STUN vẫn đi ra ngoài proxy; profile Proton giờ không truyền `geoip` cho WebRTC và đặt `ice.proxy_only`/`no_host`/`default_address_only`, nên không phát candidate chứa IP máy. Chrome đã có chính sách tương đương.
+- Kiểu kết nối theo từng profile: ô **Proxy** trong form profile thành dropdown **Trực tiếp / Proxy / Proton VPN**. Chọn Proxy thì hiện ô proxy như cũ; chọn Proton VPN thì nhập username, password, secret TOTP (nếu bật 2FA) và quốc gia exit riêng của profile đó. Profile Proton được cài extension (add-on Firefox đã ký cho Camoufox, bản Chrome Web Store nạp bằng `--load-extension` cho fingerprint-chromium) và tự đăng nhập; chuyển về Trực tiếp/Proxy thì extension được gỡ ở lần mở sau. Tài khoản Proton lưu riêng từng profile trong `proton_accounts.json` (mật khẩu mã hoá bằng key cục bộ), không ghi vào `profiles.json`, log hay file xuất profile. Engine Chrome tự bấm Sign in và điền trang account; Camoufox mở các trang riêng của extension qua Marionette nên cũng tự bấm Sign in, điền account/TOTP và kết nối quốc gia đã chọn. Profile chỉ được báo sẵn sàng sau khi VPN kết nối; nếu đăng nhập hoặc kết nối thất bại, trình duyệt tự đóng và lần mở báo `LAUNCH_FAILED`. Captcha hoặc 2FA thiếu secret làm lần mở thất bại thay vì để trình duyệt chạy ở IP thật. Thời gian API chờ mở profile mặc định tăng lên 180 giây để đủ cho lần đăng nhập đầu tiên. Thêm CLI `python -m src.services.proton_session prepare <profile> --country US` để đăng nhập/kết nối trước khi mở browser (Chrome), cùng `harvest`/`inject` session qua file `0600`.
+
+### Bảo mật
+- `FOXPROFILE_API_HOST` để trống không còn vượt qua kiểm tra bind: giá trị rỗng giờ là `127.0.0.1`, và một host rỗng khi kiểm tra bind được coi là mọi giao diện, nên bắt buộc có token. Trước đây API có thể lắng nghe mọi giao diện mà không cần token.
+- Mật khẩu và TOTP secret của tài khoản Proton đều được mã hoá. Khoá (`proton_accounts.key`) và file tài khoản không bao giờ bị thay thế khi không đọc được; thao tác ghi báo lỗi thay vì làm mất mọi mật khẩu đã lưu.
+- Proxy bridge của engine Chrome chỉ phục vụ client gửi đúng thông tin xác thực của lần mở đó; client khác nhận 407.
+- Extension Chrome của Proton VPN được kiểm tra chữ ký CRX3 trước khi giải nén. Chỉ chấp nhận CRX3.
+- Web panel chỉ giữ API token trong `sessionStorage` (xoá khi đóng tab). Token do bản cũ lưu trong `localStorage` được xoá khi mở panel.
+
+### Sửa
+- Xoá, đổi tên, xuất kèm dữ liệu, nhập ghi đè và đặt lại fingerprint không còn chạy khi trình duyệt của profile đang mở: API trả 409, app báo "hãy dừng trình duyệt trước".
+- Ghi `profiles.json` thất bại được báo lỗi (API trả 500) và thay đổi được hoàn tác. Trước đây API báo thành công nhưng thay đổi mất khi khởi động lại.
+- Xoá profile không còn xoá dữ liệu khi lưu danh sách thất bại.
+- `profiles.json` không đọc được được sao lưu thành `profiles.json.corrupt-<thời gian>` trước khi lần ghi tiếp theo thay thế nó.
+- Điều khiển trình duyệt và MCP gọi `127.0.0.1` không còn đi qua `HTTP_PROXY` của máy.
+- Nhập profile từ file zip kiểm tra hệ điều hành và proxy giống như khi tạo mới.
+- Danh sách profile đọc file tài khoản Proton một lần cho cả danh sách thay vì một lần cho mỗi profile.
+
+### Thay đổi
+- `camoufox` được giới hạn `<0.6`. `tests/test_camoufox_contract.py` kiểm tra các API nội bộ mà FoxProfile dùng; nếu một bản Camoufox không còn bộ chọn locale, lần mở báo lỗi rõ ràng thay vì chọn locale ngẫu nhiên.
+- CI chạy thêm Python 3.14.
+- Địa chỉ placeholder trong test dùng dải tài liệu (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) theo CLAUDE.md.
+
+### Giới hạn đã biết
+- Marionette, kênh điều khiển extension Proton trong Camoufox, không có xác thực. Nó chỉ nghe trên `127.0.0.1` với cổng ngẫu nhiên, nên tiến trình khác trên cùng máy có thể kết nối tới cổng đó trong lúc profile Proton đang mở.
+
 ## [2.4.0] - 2026-10-30
 
 ### Thay đổi

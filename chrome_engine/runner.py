@@ -13,6 +13,7 @@ restore and tab snapshots are FoxProfile's own, shared with Camoufox.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import signal
 import sys
@@ -21,8 +22,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from chrome_engine import fetch
 from chrome_engine.engine import ChromeEngine
-from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
-from src.services.browser import control, session
+from src.core.config import HEADLESS, RESTORE_TABS, profile_data_dir
+from src.services.browser import control, extensions, proton_login, session
 from src.services.browser.runner import restore_tabs, snapshot_tabs
 
 _shutdown = asyncio.Event()
@@ -76,9 +77,23 @@ async def run_browser(
     os_type: str,
     timezone: str = "",
     locale: str = "",
+    extension: str = "",
+    country: str = "",
 ) -> int:
-    profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
+    profile_dir = profile_data_dir(profile_name)
     proxy = proxy_str if proxy_str and proxy_str != "None" else None
+
+    # fingerprint-chromium is unbranded and still honours --load-extension.
+    extra_args: list[str] = []
+    if extension:
+        _say("Preparing browser extensions...")
+        try:
+            extra_args = await asyncio.to_thread(extensions.chromium_extra_args, (extension,))
+            if extension in extensions.EXTENSIONS:
+                _say(f"Extension: {extensions.EXTENSIONS[extension].label}")
+        except Exception as e:
+            _say(f"Warning: browser extensions were not installed: {_compact(e, 200)}")
+
     engine = ChromeEngine(
         profile_dir,
         platform=os_type,
@@ -87,6 +102,7 @@ async def run_browser(
         # "" keeps the timezone / locale following the proxy's exit IP.
         timezone=timezone,
         locale=locale,
+        extra_args=extra_args,
     )
     _say(f"Starting Chrome engine for {profile_name}...")
     try:
@@ -106,10 +122,6 @@ async def run_browser(
             _say(f"Warning: {warning}")
         if not context.pages:
             await context.new_page()
-        if RESTORE_TABS:
-            restored = await restore_tabs(context, session.load(profile_dir))
-            if restored:
-                _say(f"Restored {restored} tab(s)")
 
         close_event = asyncio.Event()
 
@@ -124,6 +136,58 @@ async def run_browser(
             watch(page)
         context.on("page", watch)
         context.on("close", lambda _: close_event.set())
+
+        proton = extension == "proton-vpn"
+        if proton:
+            if not proton_login.configured(profile_name):
+                _say("LAUNCH_FAILED: no Proton account saved for this profile")
+                return 1
+            try:
+                signed_in = await asyncio.wait_for(
+                    proton_login.auto_login(
+                        context,
+                        profile_dir,
+                        "chrome",
+                        profile_name,
+                        keep_open=not _headless(),
+                        log=_say,
+                        country=country,
+                    ),
+                    timeout=100,
+                )
+            except asyncio.TimeoutError:
+                _say("LAUNCH_FAILED: Proton VPN sign-in timed out")
+                return 1
+            if not signed_in:
+                _say("LAUNCH_FAILED: Proton VPN sign-in failed")
+                return 1
+            try:
+                connected = await asyncio.wait_for(
+                    proton_login.ensure_connected(context, country, _say), timeout=70
+                )
+            except asyncio.TimeoutError:
+                _say("LAUNCH_FAILED: Proton VPN connection timed out")
+                return 1
+            except Exception as e:
+                _say(f"LAUNCH_FAILED: Proton VPN connection failed: {_compact(e)}")
+                return 1
+            if not connected:
+                _say("LAUNCH_FAILED: Proton VPN did not connect")
+                return 1
+            # Keep one blank tab and drop the tabs used for the sign-in, so
+            # they never end up in tabs.json and no old tab loads before the VPN.
+            blank = await context.new_page()
+            for page in list(context.pages):
+                if page is blank:
+                    continue
+                with contextlib.suppress(Exception):
+                    if page.url.startswith(("https://account.proton.me", "chrome-extension://")):
+                        await page.close()
+
+        if RESTORE_TABS:
+            restored = await restore_tabs(context, session.load(profile_dir))
+            if restored:
+                _say(f"Restored {restored} tab(s)")
 
         control_runner, port, token = await control.serve(context)
         # CONTROL must precede BROWSER_STARTED (see the Camoufox runner).
@@ -162,7 +226,7 @@ async def _async_main(argv: list[str]) -> int:
             loop.add_signal_handler(sig, _shutdown.set)
     except NotImplementedError:
         pass
-    return await run_browser(*argv[:5])
+    return await run_browser(*argv[:7])
 
 
 def main() -> int:
@@ -170,7 +234,10 @@ def main() -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     if len(sys.argv) < 4:
-        _say("Usage: python -m chrome_engine.runner <name> <proxy> <os> [timezone] [locale]")
+        _say(
+            "Usage: python -m chrome_engine.runner "
+            "<name> <proxy> <os> [timezone] [locale] [extension] [country]"
+        )
         return 1
     try:
         return asyncio.run(_async_main(sys.argv[1:]))

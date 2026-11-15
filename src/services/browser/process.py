@@ -28,6 +28,8 @@ def runner_command(profile: Profile) -> list[str]:
         profile.os_type,
         profile.timezone or "",
         profile.locale or "",
+        profile.extension or "",
+        profile.proton_country or "",
     ]
 
 

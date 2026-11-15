@@ -56,6 +56,7 @@ FoxProfile miễn phí, mã nguồn mở, được làm vào thời gian rảnh 
 
 - **Fingerprint cố định cho từng profile.** Lần mở đầu tiên sinh ra một thiết bị (màn hình, GPU, số nhân CPU, font, nhiễu canvas/audio) và lưu lại; các lần sau mở lại đúng thiết bị đó. Có thể chủ động tạo fingerprint mới.
 - **Hai engine.** Camoufox (Firefox, mặc định) hoặc Chrome (fingerprint-chromium), chọn khi tạo profile. Bản Chrome được tự tải về khi cần.
+- **Kiểu kết nối.** Mỗi profile đi trực tiếp, qua proxy riêng, hoặc qua Proton VPN: extension kèm tài khoản Proton riêng của profile, chọn ngay trong form.
 - **Giữ phiên làm việc.** Lịch sử, cookie và đăng nhập nằm trong thư mục của profile; các tab đang mở được mở lại ở lần khởi động sau.
 - **Mỗi profile một proxy riêng**, hỗ trợ HTTP/HTTPS/SOCKS4/SOCKS5 có hoặc không có mật khẩu, kể cả dạng `host:port:user:pass`, có nút kiểm tra proxy.
 - **Timezone và locale** tự khớp theo IP hoặc đặt cố định cho từng profile. Nút **Kiểm tra IP** đối chiếu IP ra với Cloudflare, ipinfo, ip-api và cảnh báo khi lệch quốc gia/timezone hoặc IP bị gắn datacenter.
@@ -101,7 +102,7 @@ Trên Windows có thể bấm đúp `run_foxprofile.bat`. Ứng dụng mở cử
 
 ## Timezone, locale và Kiểm tra IP
 
-Mặc định, mỗi lần mở profile, cả hai engine đều tra IP đi ra (qua proxy của profile) và đặt timezone, locale, toạ độ theo IP đó; Camoufox còn báo IP này qua WebRTC. Có ba điều nên biết:
+Mặc định, mỗi lần mở profile, cả hai engine đều tra IP đi ra (qua proxy của profile) và đặt timezone, locale, toạ độ theo IP đó. Profile Camoufox chạy trực tiếp báo IP đó qua WebRTC; khi có proxy hoặc Proton VPN, Camoufox không phát candidate WebRTC nào có thể lộ máy thật. Có ba điều nên biết:
 
 - **Locale tự động được chọn một lần cho mỗi quốc gia rồi giữ cố định.** Lần mở đầu tiên từ một quốc gia sẽ chọn theo tỷ lệ người nói từng ngôn ngữ ở đó (IP Pháp cho `fr-FR` khoảng 60% số lần, còn lại là `en-FR`, `es-FR`…), và profile giữ locale đó ở mọi lần mở sau, cho đến khi proxy chuyển sang quốc gia khác. Muốn một locale cụ thể thì đặt tay. "Fingerprint mới" cũng xoá locale đang giữ.
 - **Các cơ sở dữ liệu GeoIP không phải lúc nào cũng thống nhất.** Cùng một IP có thể được Cloudflare xếp vào nước này, Google vào nước khác; Camoufox cũng có thể chọn một timezone cùng giờ nhưng khác tên (ví dụ IP Việt Nam ra `Asia/Bangkok` thay vì `Asia/Ho_Chi_Minh`).
@@ -184,7 +185,7 @@ Giới hạn đã biết:
 - **Cửa sổ hiện trên màn hình báo kích thước màn hình thật.** fingerprint-chromium 148 bỏ qua các switch giả kích thước màn hình, nên các profile trên cùng một máy có chung kích thước màn hình; trình duyệt chạy ẩn (headless) báo 1920x1080.
 - **Không có Widevine.** Bản build dựa trên ungoogled-chromium nên video có DRM (các dịch vụ streaming) không phát được, và trang web kiểm tra được điều này.
 - **Chậm hơn Chrome hiện hành vài phiên bản.** FoxProfile ghim fingerprint-chromium 148 vì bản 150 bị crash khi trang vẽ emoji lên canvas.
-- **WebRTC khi có proxy không gửi UDP**, giống chính sách của extension WebRTC Leak Prevent: không lộ địa chỉ nào, nhưng cuộc gọi WebRTC chỉ chạy được qua TURN server dùng TCP.
+- **WebRTC khi có proxy hoặc Proton VPN không gửi candidate UDP**, trên cả hai engine: không lộ địa chỉ, nhưng cuộc gọi WebRTC chỉ chạy được qua TURN server dùng TCP. Đây cũng là lý do profile Proton không lộ IP trước khi VPN kết nối.
 
 ## Cookie và fingerprint
 
@@ -207,12 +208,32 @@ Mọi cấu hình đều không bắt buộc. Muốn đổi thì sao chép `.env
 | `FOXPROFILE_LOG_DIR` | `logs` | Thư mục log |
 | `FOXPROFILE_LOG_LEVEL` | `INFO` | Mức log |
 | `FOXPROFILE_PROXY_TIMEOUT` | `10` | Thời gian chờ khi kiểm tra proxy (giây) |
-| `FOXPROFILE_LAUNCH_TIMEOUT` | `90` | Thời gian API chờ trình duyệt mở xong (giây) |
+| `FOXPROFILE_LAUNCH_TIMEOUT` | `180` | Thời gian API chờ trình duyệt mở xong (giây) |
 | `FOXPROFILE_HEADLESS` | `false` (`true` ở chế độ server) | Chạy trình duyệt ẩn: `true`, `false` hoặc `virtual` (Linux + Xvfb) |
 | `FOXPROFILE_RESTORE_TABS` | `true` | Mở lại các tab của lần chạy trước |
 | `FOXPROFILE_API_TOKEN` | *(trống)* | Token cho API, web panel và MCP. Bắt buộc khi API nghe ngoài `127.0.0.1` |
 | `FOXPROFILE_API_HOST` | `127.0.0.1` | Địa chỉ API |
 | `FOXPROFILE_API_PORT` | `8000` | Cổng API |
+
+### Kết nối: trực tiếp, proxy hoặc Proton VPN
+
+Mỗi profile chọn cách ra internet ngay trong form của profile:
+
+- **Trực tiếp** — không dùng proxy.
+- **Proxy** — dùng ô proxy bên dưới (định dạng ở mục kế tiếp).
+- **Proton VPN** — profile được cài extension Proton VPN và có tài khoản Proton riêng: username, password, secret TOTP nếu bật 2FA, và quốc gia exit (hoặc Tự động để lấy server nhanh nhất). Extension chỉ được cài vào profile đó, ở lần mở kế tiếp; chuyển về Trực tiếp hoặc Proxy thì nó được gỡ ở lần mở sau.
+
+Bản cài được tải một lần từ addons.mozilla.org và Chrome Web Store (Proton VPN dùng GPL-3.0; FoxProfile không đóng gói sẵn) và lưu trong thư mục cache, không nằm trong dữ liệu profile. Khi bật VPN, IP ra là của Proton, nên timezone/locale không còn đi theo proxy; hãy đặt cố định trong profile nếu cần. Cập nhật bản đã tải bằng `python -m src.services.browser.extensions fetch`.
+
+Đăng nhập và kết nối đều tự động trên cả hai engine. Chrome điều khiển popup của extension bằng Playwright; Camoufox mở các trang riêng của extension qua Marionette. FoxProfile tự bấm **Sign in**, điền trang account (hoặc ô TOTP), chờ extension lưu session rồi kết nối quốc gia đã chọn. Profile chỉ được báo là sẵn sàng sau khi VPN đã kết nối; nếu đăng nhập hoặc kết nối thất bại, trình duyệt được đóng và lần mở đó báo lỗi. Extension tự nhận session. Tài khoản của từng profile được lưu cạnh `profiles.json` (`proton_accounts.json`, mật khẩu mã hoá bằng key cục bộ), không bao giờ ghi vào `profiles.json`, log hay file xuất profile. Gặp captcha, hoặc 2FA mà không có TOTP secret, lần mở sẽ thất bại thay vì để trình duyệt mở ở trạng thái chưa bảo vệ.
+
+Có thể chuẩn bị profile Chrome từ CLI trước khi app mở browser:
+
+```bash
+python -m src.services.proton_session prepare <profile> --country US
+```
+
+Lệnh này đăng nhập headless, kết nối quốc gia đã chọn và để session trong profile. `harvest` ghi token ra file `0600`, `inject` ghi file đó vào profile; mỗi session thuộc một profile vì refresh token bị xoay.
 
 ### Định dạng proxy
 
@@ -263,6 +284,8 @@ Tiền tố: `/api/v1`. Xem đầy đủ tại `/docs` khi ứng dụng đang ch
 | `GET` / `POST` | `/browser/{name}/page/tabs` | Liệt kê / mở tab mới |
 | `POST` / `DELETE` | `/browser/{name}/page/tabs/{index}/select` · `/page/tabs/{index}` | Chọn / đóng tab |
 | `GET` | `/mcp/setup?base_url=...` | Cấu hình MCP cho từng ứng dụng AI (dùng bởi hộp thoại Kết nối AI) |
+
+Profile nhận `proxy_mode` (`direct`, `proxy`, `proton`) và, ở chế độ `proton`, `proton_user`, `proton_password`, `proton_totp`, `proton_country` (mã ISO, trống = Quick Connect). API không bao giờ trả lại mật khẩu; `GET /proton/countries` trả danh sách mã.
 
 Khi có `FOXPROFILE_API_TOKEN`, mọi request (trừ `/health` và `/info`) phải gửi header `Authorization: Bearer <token>`.
 

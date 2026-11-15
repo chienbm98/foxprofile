@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 
-from ..core.config import DATA_DIR
+from ..core.config import profile_data_dir
+from ..services import proton_account
 from .schemas.profiles import ProfileResponse
 
 if TYPE_CHECKING:
@@ -33,7 +33,13 @@ def build_profile_response(
     return profile_response(require_profile(name, pm), bl)
 
 
-def profile_response(profile: Profile, bl: IBrowserLauncher) -> ProfileResponse:
+def profile_response(
+    profile: Profile,
+    bl: IBrowserLauncher,
+    account: proton_account.ProtonAccount | None = None,
+) -> ProfileResponse:
+    if account is None:
+        account = proton_account.load(profile.name)
     return ProfileResponse(
         name=profile.name,
         proxy=profile.proxy,
@@ -41,6 +47,12 @@ def profile_response(profile: Profile, bl: IBrowserLauncher) -> ProfileResponse:
         timezone=profile.timezone,
         locale=profile.locale,
         engine=profile.engine,
-        data_dir=os.path.join(os.getcwd(), DATA_DIR, profile.name),
+        extension=profile.extension,
+        proxy_mode=profile.proxy_mode,
+        proton_user=account.username,
+        has_proton_password=bool(account.password),
+        proton_totp_set=bool(account.totp),
+        proton_country=profile.proton_country,
+        data_dir=profile_data_dir(profile.name),
         is_running=bl.is_running(profile.name),
     )

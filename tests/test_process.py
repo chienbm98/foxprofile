@@ -52,8 +52,9 @@ def _patch_launch(monkeypatch, tmp_path, headless):
     monkeypatch.setattr(runner, "VirtualDisplay", FakeDisplay)
     monkeypatch.setattr(runner, "AsyncCamoufox", failing_camoufox)
     monkeypatch.setattr(runner, "load_or_create", lambda *_: {})
-    # No network: the exit-IP lookup (when present) is not under test here.
-    monkeypatch.setattr(runner, "exit_ip", lambda *_: "5.6.7.8", raising=False)
+    # No network and no GeoIP lookup: the exit IP and locale are not under test here.
+    monkeypatch.setattr(runner, "exit_ip", lambda *_: "198.51.100.5", raising=False)
+    monkeypatch.setattr(runner, "stable_locale", lambda *_: "en-US")
     monkeypatch.setattr(runner.xvfb, "sweep_stale", lambda: seen["records"].append("sweep"))
     monkeypatch.setattr(
         runner.xvfb, "record", lambda pid, d: seen["records"].append(("record", pid, d))
@@ -89,7 +90,7 @@ def test_dead_proxy_fails_before_any_virtual_display(monkeypatch, tmp_path, caps
         raise RuntimeError("Failed to get IP address")
 
     monkeypatch.setattr(runner, "exit_ip", dead_proxy)
-    assert asyncio.run(runner.run_browser("p", "socks5://1.2.3.4:1080", "windows")) == 1
+    assert asyncio.run(runner.run_browser("p", "socks5://192.0.2.1:1080", "windows")) == 1
     assert "LAUNCH_FAILED: RuntimeError: Failed to get IP address" in capsys.readouterr().out
     assert FakeDisplay.instances == []
     assert seen["records"] == []
@@ -112,6 +113,63 @@ def test_runners_share_the_launcher_session(monkeypatch):
     monkeypatch.setattr(process.subprocess, "Popen", lambda args, **kw: captured.update(kw))
     process.spawn_browser(Profile(name="p"))
     assert not captured.get("start_new_session")
+
+
+# --- runner: extensions ---------------------------------------------------------------
+
+
+def _saved_proton_account(monkeypatch, tmp_path, profile="p"):
+    from src.core import config
+    from src.services import proton_account
+
+    monkeypatch.setattr(config, "PROTON_ACCOUNTS_FILE", str(tmp_path / "proton_accounts.json"))
+    monkeypatch.setattr(config, "PROTON_ACCOUNTS_KEY_FILE", str(tmp_path / "proton_accounts.key"))
+    proton_account.save(profile, "user@example.com", "secret")
+
+
+def test_runner_installs_extensions_before_launch(monkeypatch, tmp_path, capsys):
+    _patch_launch(monkeypatch, tmp_path, True)
+    _saved_proton_account(monkeypatch, tmp_path)
+    calls = []
+
+    def install(profile_dir, names):
+        calls.append((profile_dir, names))
+        return ["Proton VPN 1.3.7"]
+
+    monkeypatch.setattr(runner.extensions, "install_firefox", install)
+    asyncio.run(runner.run_browser("p", "None", "windows", "", "", "proton-vpn"))
+
+    assert calls == [(str(tmp_path / "camoufox_data" / "p"), ("proton-vpn",))]
+    assert "Extension: Proton VPN 1.3.7" in capsys.readouterr().out
+
+
+def test_a_proton_profile_does_not_launch_without_its_extension(monkeypatch, tmp_path, capsys):
+    seen = _patch_launch(monkeypatch, tmp_path, True)
+    _saved_proton_account(monkeypatch, tmp_path)
+
+    def offline(_profile_dir, _names):
+        raise RuntimeError("no route to the extension host")
+
+    monkeypatch.setattr(runner.extensions, "install_firefox", offline)
+    assert asyncio.run(runner.run_browser("p", "None", "windows", "", "", "proton-vpn")) == 1
+
+    out = capsys.readouterr().out
+    assert "Warning: browser extensions were not installed: no route" in out
+    # Fail closed: without the VPN the browser would show the profile's real exit IP.
+    assert "LAUNCH_FAILED: the Proton VPN extension was not installed" in out
+    assert seen["config"] == {}  # the browser itself was never started
+
+
+def test_runner_removes_the_extension_when_unselected(monkeypatch, tmp_path):
+    _patch_launch(monkeypatch, tmp_path, True)
+    calls = []
+
+    monkeypatch.setattr(
+        runner.extensions, "remove_firefox", lambda profile_dir: calls.append(profile_dir)
+    )
+    asyncio.run(runner.run_browser("p", "None", "windows"))
+
+    assert calls == [str(tmp_path / "camoufox_data" / "p")]
 
 
 # --- display records: platform independent ---------------------------------------------

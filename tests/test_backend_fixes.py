@@ -157,13 +157,9 @@ def manager_in_tmp(tmp_path, monkeypatch):
 
     import src.core.config as cfg
 
+    # The manager and the data-dir helper read these at call time.
     monkeypatch.setattr(cfg, "DATA_DIR", data_dir)
     monkeypatch.setattr(cfg, "PROFILES_FILE", profiles_file)
-
-    import src.services.profile.manager as mgr_mod
-
-    monkeypatch.setattr(mgr_mod, "DATA_DIR", data_dir)
-    monkeypatch.setattr(mgr_mod, "PROFILES_FILE", profiles_file)
 
     from src.services.profile.manager import ProfileManager
 

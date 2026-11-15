@@ -20,6 +20,8 @@ from typing import Any, Literal
 from mcp.server.fastmcp import FastMCP, Image
 from mcp.types import ToolAnnotations
 
+from ..utils.local_http import open_url
+
 BASE_URL = os.getenv("FOXPROFILE_URL", "http://127.0.0.1:8000").rstrip("/") + "/api/v1"
 TOKEN = os.getenv("FOXPROFILE_API_TOKEN", "")
 TIMEOUT = 150
@@ -68,7 +70,7 @@ def _request(
     data = json.dumps(body).encode() if body is not None else None
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        with open_url(request, TIMEOUT) as response:
             payload = response.read()
     except urllib.error.HTTPError as e:
         raise FoxProfileError(f"FoxProfile API {e.code}: {_error_detail(e.read())}") from e
@@ -138,23 +140,40 @@ async def create_profile(
     timezone: str | None = None,
     locale: str | None = None,
     engine: Literal["camoufox", "chrome"] = "camoufox",
+    proxy_mode: Literal["direct", "proxy", "proton"] | None = None,
+    proton_user: str | None = None,
+    proton_password: str | None = None,
+    proton_totp: str | None = None,
+    proton_country: str | None = None,
 ) -> dict:
     """Create a profile. proxy format: [scheme://][user:pass@]host:port or host:port:user:pass
     (http, https, socks4, socks5). timezone (IANA, e.g. Asia/Ho_Chi_Minh) and locale (e.g. vi-VN)
     default to following the proxy's IP. engine: camoufox (Firefox, default) or chrome
-    (Chromium, fingerprint-chromium); it cannot be changed later."""
-    return await _arequest(
-        "POST",
-        "/profiles",
+    (Chromium, fingerprint-chromium); it cannot be changed later. proxy_mode="proton" installs
+    the Proton VPN extension and signs in with this profile's proton_user/proton_password
+    (optional proton_totp for 2FA)."""
+    body = {
+        "name": name,
+        "os_type": os_type,
+        "proxy": proxy,
+        "timezone": timezone,
+        "locale": locale,
+        "engine": engine,
+    }
+    body.update(
         {
-            "name": name,
-            "os_type": os_type,
-            "proxy": proxy,
-            "timezone": timezone,
-            "locale": locale,
-            "engine": engine,
-        },
+            k: v
+            for k, v in {
+                "proxy_mode": proxy_mode,
+                "proton_user": proton_user,
+                "proton_password": proton_password,
+                "proton_totp": proton_totp,
+                "proton_country": proton_country,
+            }.items()
+            if v is not None
+        }
     )
+    return await _arequest("POST", "/profiles", body)
 
 
 @mcp.tool()
@@ -165,9 +184,16 @@ async def update_profile(
     os_type: Literal["windows", "macos", "linux"] | None = None,
     timezone: str | None = None,
     locale: str | None = None,
+    proxy_mode: Literal["direct", "proxy", "proton"] | None = None,
+    proton_user: str | None = None,
+    proton_password: str | None = None,
+    proton_totp: str | None = None,
+    proton_country: str | None = None,
 ) -> dict:
-    """Rename a profile or change its proxy / OS / timezone / locale.
-    Changing the OS generates a new fingerprint. Pass timezone="" or locale="" to follow the IP again."""
+    """Rename a profile or change its proxy / OS / timezone / locale / connection mode.
+    Changing the OS generates a new fingerprint. Pass timezone="" or locale="" to follow the IP
+    again. proxy_mode="proton" uses this profile's Proton account; omit proton_password to keep
+    the saved one."""
     # Use `is not None` so that proxy="" is included and clears the proxy on the
     # API side (the previous `if v` filter silently dropped an empty string).
     body = {
@@ -176,7 +202,19 @@ async def update_profile(
         if v is not None
     }
     body.update(
-        {k: v for k, v in {"timezone": timezone, "locale": locale}.items() if v is not None}
+        {
+            k: v
+            for k, v in {
+                "timezone": timezone,
+                "locale": locale,
+                "proxy_mode": proxy_mode,
+                "proton_user": proton_user,
+                "proton_password": proton_password,
+                "proton_totp": proton_totp,
+                "proton_country": proton_country,
+            }.items()
+            if v is not None
+        }
     )
     return await _arequest("PATCH", f"/profiles/{_quote(name)}", body)
 

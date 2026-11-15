@@ -16,6 +16,22 @@ class ProfileCreate(BaseModel):
         description="camoufox (Firefox) or chrome (Chromium, fingerprint-chromium). "
         "Fixed once the profile is created",
     )
+    extension: str | None = Field(
+        None,
+        description="Deprecated alias for proxy_mode=proton; the extension follows proxy_mode",
+    )
+    proxy_mode: str | None = Field(
+        None,
+        description="direct, proxy or proton. Unset = infer from proxy/extension",
+    )
+    proton_user: str | None = Field(None, description="Proton username for proton mode")
+    proton_password: str | None = Field(
+        None, description="Proton password for proton mode; never returned"
+    )
+    proton_totp: str | None = Field(None, description="Base32 TOTP secret or otpauth:// URI")
+    proton_country: str | None = Field(
+        None, description="Proton exit country ISO code, e.g. US; empty = Quick Connect"
+    )
 
 
 class ProfileUpdate(BaseModel):
@@ -27,6 +43,11 @@ class ProfileUpdate(BaseModel):
     timezone: str | None = Field(None, description='"" switches back to automatic')
     locale: str | None = Field(None, description='"" switches back to automatic')
     engine: str | None = Field(None, description="Cannot be changed; only the current value")
+    proxy_mode: str | None = Field(None, description="direct, proxy or proton")
+    proton_user: str | None = Field(None, description="Proton username for proton mode")
+    proton_password: str | None = Field(None, description="Omit to keep the saved password")
+    proton_totp: str | None = Field(None, description="Omit to keep the saved secret")
+    proton_country: str | None = Field(None, description="Proton exit country ISO code")
 
 
 class ProfileResponse(BaseModel):
@@ -36,6 +57,12 @@ class ProfileResponse(BaseModel):
     timezone: str | None = None
     locale: str | None = None
     engine: str = "camoufox"
+    extension: str | None = None
+    proxy_mode: str = "direct"
+    proton_user: str = ""
+    has_proton_password: bool = False
+    proton_totp_set: bool = False
+    proton_country: str = ""
     data_dir: str
     is_running: bool
 

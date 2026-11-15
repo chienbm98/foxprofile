@@ -16,6 +16,10 @@ class IProfileManager(Protocol):
         timezone: str | None = None,
         locale: str | None = None,
         engine: str = "camoufox",
+        proxy_mode: str | None = None,
+        proton_user: str = "",
+        proton_password: str = "",
+        proton_totp: str = "",
     ) -> bool: ...
 
     def update_profile(
@@ -26,6 +30,10 @@ class IProfileManager(Protocol):
         new_os: str,
         new_timezone: str | None = None,
         new_locale: str | None = None,
+        new_proxy_mode: str | None = None,
+        proton_user: str | None = None,
+        proton_password: str | None = None,
+        proton_totp: str | None = None,
     ) -> bool: ...
 
     def delete_profile(self, name: str) -> bool: ...

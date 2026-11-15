@@ -20,6 +20,8 @@ logger = get_logger("browser.session")
 TABS_FILE = "tabs.json"
 MAX_TABS = 30
 _RESTORABLE_SCHEMES = ("http", "https")
+# The Proton sign-in tab is not part of the user's session.
+_EXCLUDED_HOSTS = {"account.proton.me", "account.protonvpn.com"}
 
 
 def tabs_path(profile_dir: str) -> pathlib.Path:
@@ -28,7 +30,13 @@ def tabs_path(profile_dir: str) -> pathlib.Path:
 
 def restorable(urls: list[str]) -> list[str]:
     """Keep the URLs worth reopening: http(s) only, at most MAX_TABS."""
-    kept = [u for u in urls if isinstance(u, str) and urlparse(u).scheme in _RESTORABLE_SCHEMES]
+    kept = [
+        u
+        for u in urls
+        if isinstance(u, str)
+        and urlparse(u).scheme in _RESTORABLE_SCHEMES
+        and urlparse(u).netloc.lower() not in _EXCLUDED_HOSTS
+    ]
     return kept[:MAX_TABS]
 
 

@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import os
 import signal
+import socket
 import sys
 
 sys.path.insert(
@@ -12,8 +13,8 @@ sys.path.insert(
 from camoufox.async_api import AsyncCamoufox
 from camoufox.virtdisplay import VirtualDisplay
 
-from src.core.config import DATA_DIR, HEADLESS, RESTORE_TABS
-from src.services.browser import control, session
+from src.core.config import HEADLESS, RESTORE_TABS, profile_data_dir
+from src.services.browser import control, extensions, proton_login, session
 from src.services.browser import display as xvfb
 from src.services.browser.fingerprint import load_or_create
 from src.services.proxy.geo_check import requests_proxy_url
@@ -48,6 +49,13 @@ def _compact_error(exc: Exception, limit: int = 700) -> str:
     if len(text) > limit:
         return text[:limit] + "..."
     return text
+
+
+def _free_tcp_port() -> int:
+    """Reserve a free loopback port for Marionette (closed before the browser binds)."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
 
 
 def _setup_signals(loop: asyncio.AbstractEventLoop) -> None:
@@ -141,6 +149,10 @@ class ProxyUnreachable(RuntimeError):
     pass
 
 
+class CamoufoxIncompatible(RuntimeError):
+    """A Camoufox release changed an internal FoxProfile relies on."""
+
+
 def stable_locale(profile_dir: str, ip: str) -> str:
     """The locale for `ip`, kept per profile while the IP stays in one country.
 
@@ -165,6 +177,9 @@ def pin_geoip_locale(locale: str) -> None:
     """
     from camoufox.locales import SELECTOR, normalize_locale
 
+    if not callable(getattr(SELECTOR, "from_region", None)):
+        # Fail the launch with a clear reason instead of silently drawing a random locale.
+        raise CamoufoxIncompatible("the installed Camoufox has no locale selector to pin")
     pinned = normalize_locale(locale)
     SELECTOR.from_region = lambda region: pinned
 
@@ -175,9 +190,38 @@ async def run_browser(
     os_type: str,
     timezone: str = "",
     locale: str = "",
+    extension: str = "",
+    country: str = "",
 ) -> int:
-    profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
+    profile_dir = profile_data_dir(profile_name)
 
+    # Camoufox loads signed add-ons from <profile>/extensions/<addon-id>.xpi.
+    # A failed download must not stop the launch: the browser is the point.
+    installed_extensions: list[str] = []
+    if extension:
+        _safe_print("Preparing browser extensions...")
+        try:
+            installed_extensions = await asyncio.to_thread(
+                extensions.install_firefox, profile_dir, (extension,)
+            )
+        except Exception as e:
+            _safe_print(f"Warning: browser extensions were not installed: {_compact_error(e, 200)}")
+    else:
+        # Unchecking the extension removes the copy this runner installed.
+        try:
+            await asyncio.to_thread(extensions.remove_firefox, profile_dir)
+        except Exception as e:
+            _safe_print(f"Warning: could not remove profile extensions: {_compact_error(e, 200)}")
+
+    proton = extension == "proton-vpn"
+    if proton and not installed_extensions:
+        _safe_print("LAUNCH_FAILED: the Proton VPN extension was not installed")
+        return 1
+    if proton and not proton_login.configured(profile_name):
+        _safe_print("LAUNCH_FAILED: no Proton account saved for this profile")
+        return 1
+
+    marionette_port = _free_tcp_port() if proton else 0
     launch_config = {
         "headless": HEADLESS,
         "os": os_type,
@@ -188,12 +232,40 @@ async def run_browser(
         "persistent_context": True,
         **geo_overrides(timezone, locale),
     }
+    if installed_extensions:
+        # Camoufox blocks add-on tabs by default; the VPN extension opens its
+        # sign-in tab with tabs.create, so allow it when the extension is used.
+        launch_config["allow_addon_new_tab"] = True
 
     proxy_config = parse_proxy(proxy_str)
     if proxy_config:
         launch_config["proxy"] = proxy_config
 
+    # Firefox's WebRTC can gather host/STUN candidates outside the browser
+    # proxy. Behind a proxy or the Proton extension that is the real IP; never
+    # emit host candidates and, when a proxy carries the traffic, only use it.
+    # WebRTC stays enabled (blocking it is itself a fingerprint) but has no
+    # candidate that reveals the machine.
+    webrtc_prefs = {
+        "media.peerconnection.ice.no_host": True,
+        "media.peerconnection.ice.default_address_only": True,
+        "media.peerconnection.ice.obfuscate_host_addresses": True,
+    }
+    if proton or proxy_config:
+        webrtc_prefs["media.peerconnection.ice.proxy_only"] = True
+    launch_config["firefox_user_prefs"] = webrtc_prefs
+
+    if proton:
+        # Marionette is the only way to open the extension's own pages; the
+        # Proton flow uses it for onboarding, the popup and its storage.
+        launch_config["args"] = ["--marionette", "-remote-allow-system-access"]
+        launch_config["firefox_user_prefs"].update(
+            {"marionette.port": marionette_port, "marionette.enabled": True}
+        )
+
     _safe_print(f"Starting browser for {profile_name}...")
+    for label in installed_extensions:
+        _safe_print(f"Extension: {label}")
 
     # Camoufox's own headless="virtual" starts Xvfb before it builds the launch
     # options and stops it only when the browser closes, so every failed launch
@@ -204,7 +276,11 @@ async def run_browser(
         # Blocking (up to ~30 s over a slow proxy), so off the event loop; inside
         # the try so a dead proxy reports LAUNCH_FAILED like any launch error.
         ip = await asyncio.to_thread(exit_ip, proxy_str)
-        launch_config["geoip"] = ip
+        # Camoufox's WebRTC spoof writes the geoip address into ICE candidates
+        # and overrides proxy_only, so a Proton profile would advertise the
+        # machine's pre-VPN IP. Leave WebRTC to the proxy prefs instead; the
+        # locale below is still derived from the real IP for a stable profile.
+        launch_config["geoip"] = False if proton else ip
         if not locale:
             launch_config["locale"] = await asyncio.to_thread(stable_locale, profile_dir, ip)
         pin_geoip_locale(launch_config["locale"])
@@ -217,6 +293,28 @@ async def run_browser(
         async with AsyncCamoufox(**launch_config) as context:
             if not context.pages:
                 await context.new_page()
+            # Do not report the profile ready (or restore tabs) until the
+            # extension has both signed in and connected.
+            if proton:
+                try:
+                    proton_ok = await asyncio.wait_for(
+                        proton_login.auto_login(
+                            context,
+                            profile_dir,
+                            "camoufox",
+                            profile_name,
+                            log=_safe_print,
+                            country=country,
+                            marionette_port=marionette_port,
+                        ),
+                        timeout=150,
+                    )
+                except asyncio.TimeoutError:
+                    _safe_print("LAUNCH_FAILED: Proton VPN setup timed out")
+                    return 1
+                if not proton_ok:
+                    _safe_print("LAUNCH_FAILED: Proton VPN sign-in or connection failed")
+                    return 1
             if RESTORE_TABS:
                 restored = await restore_tabs(context, session.load(profile_dir))
                 if restored:
@@ -287,14 +385,16 @@ async def run_browser(
 async def _async_main() -> int:
     loop = asyncio.get_running_loop()
     _setup_signals(loop)
-    return await run_browser(*sys.argv[1:6])
+    return await run_browser(*sys.argv[1:8])
 
 
 if __name__ == "__main__":
     _configure_stdio()
 
     if len(sys.argv) < 4:
-        _safe_print("Usage: python runner.py <name> <proxy> <os> [timezone] [locale]")
+        _safe_print(
+            "Usage: python runner.py <name> <proxy> <os> [timezone] [locale] [extension] [country]"
+        )
         sys.exit(1)
 
     exit_code = 1

@@ -210,6 +210,11 @@ def _device(profile: Profile, device: str) -> ft.Row:
 
 
 def _proxy(profile: Profile) -> ft.Control:
+    if profile.proxy_mode == "proton":
+        return _stack(
+            ft.Text(get_string("connection_proton"), size=13, color=COLORS["text_sub"]),
+            _minor(get_string("proton_vpn_short")),
+        )
     server = mask_proxy(profile.proxy)
     if not server:
         return _stack(

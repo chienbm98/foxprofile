@@ -275,8 +275,12 @@ def _check_members(names: list[str]) -> None:
             raise FetchError(f"Unsafe path in archive: {name}")
 
 
+def _tar_has_filters() -> bool:
+    return hasattr(tarfile, "data_filter")
+
+
 def _extract_tar(tf: tarfile.TarFile, dest: Path) -> None:
-    if hasattr(tarfile, "data_filter"):
+    if _tar_has_filters():
         tf.extractall(dest, filter="data")
     else:  # Python < 3.10.12 / 3.11.4: no filters, so keep only plain files and dirs
         tf.extractall(dest, members=[m for m in tf.getmembers() if m.isfile() or m.isdir()])

@@ -7,6 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.core import config
 from src.services.profile import manager as manager_module
 from src.services.profile.transfer import import_from_zip
 from src.services.proxy import geo_check
@@ -43,8 +44,8 @@ def test_runner_overrides_only_what_is_pinned():
 
 
 def test_manager_persists_timezone_and_locale(tmp_path, monkeypatch):
-    monkeypatch.setattr(manager_module, "PROFILES_FILE", str(tmp_path / "profiles.json"))
-    monkeypatch.setattr(manager_module, "DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(config, "PROFILES_FILE", str(tmp_path / "profiles.json"))
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path / "data"))
     pm = manager_module.ProfileManager()
     pm.add_profile("p", "", "windows", "Asia/Ho_Chi_Minh", "vi-VN")
 
@@ -154,8 +155,8 @@ def client(tmp_path, monkeypatch):
     from src.api.routes.profiles import router as profiles_router
     from src.api.routes.proxy import router as proxy_router
 
-    monkeypatch.setattr(manager_module, "PROFILES_FILE", str(tmp_path / "profiles.json"))
-    monkeypatch.setattr(manager_module, "DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(config, "PROFILES_FILE", str(tmp_path / "profiles.json"))
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path / "data"))
     app = FastAPI()
     app.state.container = types.SimpleNamespace(
         profile_manager=manager_module.ProfileManager(),
@@ -201,7 +202,7 @@ def test_api_ip_check(client, fake_lookups):
 def test_short_error_reports_root_cause_without_credentials():
     try:
         try:
-            raise ConnectionRefusedError("refused by http://bob:S3cret@10.0.0.1:8080")
+            raise ConnectionRefusedError("refused by http://bob:S3cret@203.0.113.10:8080")
         except ConnectionRefusedError as inner:
             raise RuntimeError("Max retries exceeded with url ... (long boilerplate)") from inner
     except RuntimeError as e:
@@ -231,8 +232,8 @@ def test_check_geo_gives_up_on_a_hanging_exit_lookup(monkeypatch, fake_lookups):
 def test_manager_drops_invalid_stored_values(tmp_path, monkeypatch):
     store = tmp_path / "profiles.json"
     store.write_text(json.dumps({"p": {"name": "p", "timezone": "Paris", "locale": "vi-VN"}}))
-    monkeypatch.setattr(manager_module, "PROFILES_FILE", str(store))
-    monkeypatch.setattr(manager_module, "DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(config, "PROFILES_FILE", str(store))
+    monkeypatch.setattr(config, "DATA_DIR", str(tmp_path / "data"))
     profile = manager_module.ProfileManager().profiles["p"]
     assert (profile.timezone, profile.locale) == (None, "vi-VN")
 
@@ -244,17 +245,17 @@ def test_spawn_passes_timezone_and_locale(monkeypatch):
     seen = {}
     monkeypatch.setattr(process.subprocess, "Popen", lambda args, **kw: seen.setdefault("a", args))
     process.spawn_browser(Profile("p", None, "linux", "Europe/Paris", None))
-    assert seen["a"][2:] == ["p", "None", "linux", "Europe/Paris", ""]
+    assert seen["a"][2:] == ["p", "None", "linux", "Europe/Paris", "", "", ""]
 
 
 @pytest.mark.parametrize(
     ("proxy", "expected"),
     [
-        ("socks5://u:p@1.2.3.4:1080", "socks5h://u:p@1.2.3.4:1080"),
-        ("SOCKS5://1.2.3.4:1080", "socks5h://1.2.3.4:1080"),
-        ("socks4://1.2.3.4:1080", "socks4a://1.2.3.4:1080"),
-        ("http://u:p@1.2.3.4:8080", "http://u:p@1.2.3.4:8080"),
-        ("1.2.3.4:8080:u:p", "http://u:p@1.2.3.4:8080"),
+        ("socks5://u:p@192.0.2.1:1080", "socks5h://u:p@192.0.2.1:1080"),
+        ("SOCKS5://192.0.2.1:1080", "socks5h://192.0.2.1:1080"),
+        ("socks4://192.0.2.1:1080", "socks4a://192.0.2.1:1080"),
+        ("http://u:p@192.0.2.1:8080", "http://u:p@192.0.2.1:8080"),
+        ("192.0.2.1:8080:u:p", "http://u:p@192.0.2.1:8080"),
         ("", None),
     ],
 )
@@ -268,10 +269,10 @@ def test_runner_looks_up_the_exit_ip_with_remote_dns(monkeypatch):
     from src.services.browser import runner
 
     seen = []
-    monkeypatch.setattr(ip, "public_ip", lambda proxy=None: seen.append(proxy) or "5.6.7.8")
-    assert runner.exit_ip("socks5://1.2.3.4:1080") == "5.6.7.8"
-    assert runner.exit_ip("") == "5.6.7.8"
-    assert seen == ["socks5h://1.2.3.4:1080", None]
+    monkeypatch.setattr(ip, "public_ip", lambda proxy=None: seen.append(proxy) or "198.51.100.5")
+    assert runner.exit_ip("socks5://192.0.2.1:1080") == "198.51.100.5"
+    assert runner.exit_ip("") == "198.51.100.5"
+    assert seen == ["socks5h://192.0.2.1:1080", None]
 
 
 def _fake_launch(monkeypatch, tmp_path, public_ip):
@@ -291,19 +292,21 @@ def _fake_launch(monkeypatch, tmp_path, public_ip):
     monkeypatch.setattr(runner, "load_or_create", lambda *_: {})
     # A deploy's .env may set HEADLESS=virtual; these tests must not start Xvfb.
     monkeypatch.setattr(runner, "HEADLESS", False)
+    # The GeoIP database does not list documentation addresses; the locale is not under test.
+    monkeypatch.setattr(runner, "stable_locale", lambda *_: "en-US")
     return runner, seen
 
 
 def test_runner_passes_the_looked_up_exit_ip_as_geoip(monkeypatch, tmp_path):
     asked = []
     runner, seen = _fake_launch(
-        monkeypatch, tmp_path, lambda proxy=None: asked.append(proxy) or "5.6.7.8"
+        monkeypatch, tmp_path, lambda proxy=None: asked.append(proxy) or "198.51.100.5"
     )
     # spawn_browser passes str(None) for a profile without a proxy.
     asyncio.run(runner.run_browser("p", "None", "windows"))
-    asyncio.run(runner.run_browser("p", "socks5://1.2.3.4:1080", "windows"))
-    assert seen["geoip"] == "5.6.7.8"
-    assert asked == [None, "socks5h://1.2.3.4:1080"]
+    asyncio.run(runner.run_browser("p", "socks5://192.0.2.1:1080", "windows"))
+    assert seen["geoip"] == "198.51.100.5"
+    assert asked == [None, "socks5h://192.0.2.1:1080"]
 
 
 def test_dead_proxy_reports_launch_failed(monkeypatch, tmp_path, capsys):
@@ -313,10 +316,11 @@ def test_dead_proxy_reports_launch_failed(monkeypatch, tmp_path, capsys):
         raise InvalidIP("Failed to get IP address")
 
     runner, _ = _fake_launch(monkeypatch, tmp_path, public_ip)
-    assert asyncio.run(runner.run_browser("p", "socks5://user:pass@1.2.3.4:1080", "windows")) == 1
+    assert asyncio.run(runner.run_browser("p", "socks5://user:pass@192.0.2.1:1080", "windows")) == 1
     out = capsys.readouterr().out
     assert (
-        "LAUNCH_FAILED: ProxyUnreachable: no internet connection through proxy 1.2.3.4:1080" in out
+        "LAUNCH_FAILED: ProxyUnreachable: no internet connection through proxy 192.0.2.1:1080"
+        in out
     )
     assert "Failed to get IP address" in out  # the raw error is still logged
     assert "user" not in out.split("LAUNCH_FAILED:", 1)[1]

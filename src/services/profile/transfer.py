@@ -5,11 +5,19 @@ import zipfile
 from datetime import datetime
 
 from ...core.logging import get_logger
-from ...models.profile import ENGINES, Profile
+from ...models.profile import (
+    ENGINES,
+    OS_TYPES,
+    Profile,
+    country_or_none,
+    extension_or_none,
+    proxy_mode_or_default,
+)
 from ...utils.validation import (
     valid_or_none,
     validate_locale,
     validate_profile_name,
+    validate_proxy_format,
     validate_timezone,
 )
 from ..browser.fingerprint import IDENTITY_FILES
@@ -88,16 +96,38 @@ def import_from_zip(
             if not valid:
                 return False, f"Invalid profile name in archive: {msg}"
 
+            # The same rules the create and update routes apply: an archive is
+            # user-supplied data, so an invalid OS or proxy must not be registered.
+            os_type = profile_data.get("os_type", "windows")
+            if os_type not in OS_TYPES:
+                return False, f"Invalid OS in archive: {os_type!r}"
+            mode = proxy_mode_or_default(
+                profile_data.get("proxy_mode"),
+                profile_data.get("proxy"),
+                profile_data.get("extension"),
+            )
+            if mode == "proxy":
+                proxy = profile_data.get("proxy") or ""
+                valid, msg = validate_proxy_format(proxy)
+                if not proxy or not valid:
+                    return False, f"Invalid proxy in archive: {msg or 'missing'}"
+
             profile = Profile(
                 name=name,
                 proxy=profile_data.get("proxy"),
-                os_type=profile_data.get("os_type", "windows"),
+                os_type=os_type,
                 timezone=valid_or_none(profile_data.get("timezone"), validate_timezone),
                 locale=valid_or_none(profile_data.get("locale"), validate_locale),
                 engine=profile_data.get("engine")
                 if profile_data.get("engine") in ENGINES
                 else "camoufox",
+                extension=extension_or_none(profile_data.get("extension")),
+                proton_country=country_or_none(profile_data.get("proton_country")),
             )
+            profile.proxy_mode = mode
+            profile.extension = "proton-vpn" if mode == "proton" else None
+            if mode != "proxy":
+                profile.proxy = None
 
             data_files = [f for f in zipf.namelist() if f.startswith("data/")]
             if data_files:

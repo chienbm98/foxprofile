@@ -169,7 +169,8 @@ def test_old_python_extraction_skips_links(tmp_path, fake_release, monkeypatch):
         info.size = 2
         tf.addfile(info, io.BytesIO(b"#!"))
     rel = fake_release(_release(archive, "tar.xz", "dir/chrome"))
-    monkeypatch.delattr(tarfile, "data_filter", raising=False)
+    # Take the branch for Pythons without tarfile filters, whatever this interpreter has.
+    monkeypatch.setattr(fetch, "_tar_has_filters", lambda: False)
     exe = fetch.install(rel.version, home=tmp_path / "home", host="test")
     assert exe.read_bytes() == b"#!"
     assert not (exe.parent / "escape").exists()

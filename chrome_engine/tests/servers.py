@@ -225,13 +225,22 @@ class Socks5Proxy(_Server):
         await _splice((reader, writer), upstream)
 
 
-async def http_get_via_proxy(proxy_port: int, url: str) -> tuple[int, bytes]:
+def _proxy_auth_line(auth: str | None) -> str:
+    return f"Proxy-Authorization: {auth}\r\n" if auth else ""
+
+
+async def http_get_via_proxy(
+    proxy_port: int, url: str, auth: str | None = None
+) -> tuple[int, bytes]:
     """GET `url` through an HTTP proxy at 127.0.0.1:proxy_port (absolute-form)."""
     reader, writer = await asyncio.open_connection("127.0.0.1", proxy_port)
     from urllib.parse import urlsplit
 
     host = urlsplit(url).netloc
-    writer.write(f"GET {url} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n".encode())
+    request = (
+        f"GET {url} HTTP/1.1\r\nHost: {host}\r\n{_proxy_auth_line(auth)}Connection: close\r\n\r\n"
+    )
+    writer.write(request.encode())
     await writer.drain()
     data = await reader.read()
     writer.close()
@@ -240,11 +249,14 @@ async def http_get_via_proxy(proxy_port: int, url: str) -> tuple[int, bytes]:
 
 
 async def http_get_via_connect(
-    proxy_port: int, host: str, port: int, path: str = "/"
+    proxy_port: int, host: str, port: int, path: str = "/", auth: str | None = None
 ) -> tuple[int, bytes]:
     """GET through a CONNECT tunnel opened on an HTTP proxy at 127.0.0.1:proxy_port."""
     reader, writer = await asyncio.open_connection("127.0.0.1", proxy_port)
-    writer.write(f"CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n\r\n".encode())
+    connect = (
+        f"CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n{_proxy_auth_line(auth)}\r\n"
+    )
+    writer.write(connect.encode())
     await writer.drain()
     head = await reader.readuntil(b"\r\n\r\n")
     status = int(head.split(b" ", 2)[1])
