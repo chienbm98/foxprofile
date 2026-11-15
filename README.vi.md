@@ -102,7 +102,7 @@ Trên Windows có thể bấm đúp `run_foxprofile.bat`. Ứng dụng mở cử
 
 ## Timezone, locale và Kiểm tra IP
 
-Mặc định, mỗi lần mở profile, cả hai engine đều tra IP đi ra (qua proxy của profile) và đặt timezone, locale, toạ độ theo IP đó; Camoufox còn báo IP này qua WebRTC. Có ba điều nên biết:
+Mặc định, mỗi lần mở profile, cả hai engine đều tra IP đi ra (qua proxy của profile) và đặt timezone, locale, toạ độ theo IP đó. Profile Camoufox chạy trực tiếp báo IP đó qua WebRTC; khi có proxy hoặc Proton VPN, Camoufox không phát candidate WebRTC nào có thể lộ máy thật. Có ba điều nên biết:
 
 - **Locale tự động được chọn một lần cho mỗi quốc gia rồi giữ cố định.** Lần mở đầu tiên từ một quốc gia sẽ chọn theo tỷ lệ người nói từng ngôn ngữ ở đó (IP Pháp cho `fr-FR` khoảng 60% số lần, còn lại là `en-FR`, `es-FR`…), và profile giữ locale đó ở mọi lần mở sau, cho đến khi proxy chuyển sang quốc gia khác. Muốn một locale cụ thể thì đặt tay. "Fingerprint mới" cũng xoá locale đang giữ.
 - **Các cơ sở dữ liệu GeoIP không phải lúc nào cũng thống nhất.** Cùng một IP có thể được Cloudflare xếp vào nước này, Google vào nước khác; Camoufox cũng có thể chọn một timezone cùng giờ nhưng khác tên (ví dụ IP Việt Nam ra `Asia/Bangkok` thay vì `Asia/Ho_Chi_Minh`).
@@ -185,7 +185,7 @@ Giới hạn đã biết:
 - **Cửa sổ hiện trên màn hình báo kích thước màn hình thật.** fingerprint-chromium 148 bỏ qua các switch giả kích thước màn hình, nên các profile trên cùng một máy có chung kích thước màn hình; trình duyệt chạy ẩn (headless) báo 1920x1080.
 - **Không có Widevine.** Bản build dựa trên ungoogled-chromium nên video có DRM (các dịch vụ streaming) không phát được, và trang web kiểm tra được điều này.
 - **Chậm hơn Chrome hiện hành vài phiên bản.** FoxProfile ghim fingerprint-chromium 148 vì bản 150 bị crash khi trang vẽ emoji lên canvas.
-- **WebRTC khi có proxy không gửi UDP**, giống chính sách của extension WebRTC Leak Prevent: không lộ địa chỉ nào, nhưng cuộc gọi WebRTC chỉ chạy được qua TURN server dùng TCP.
+- **WebRTC khi có proxy hoặc Proton VPN không gửi candidate UDP**, trên cả hai engine: không lộ địa chỉ, nhưng cuộc gọi WebRTC chỉ chạy được qua TURN server dùng TCP. Đây cũng là lý do profile Proton không lộ IP trước khi VPN kết nối.
 
 ## Cookie và fingerprint
 

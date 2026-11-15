@@ -276,7 +276,11 @@ async def run_browser(
         # Blocking (up to ~30 s over a slow proxy), so off the event loop; inside
         # the try so a dead proxy reports LAUNCH_FAILED like any launch error.
         ip = await asyncio.to_thread(exit_ip, proxy_str)
-        launch_config["geoip"] = ip
+        # Camoufox's WebRTC spoof writes the geoip address into ICE candidates
+        # and overrides proxy_only, so a Proton profile would advertise the
+        # machine's pre-VPN IP. Leave WebRTC to the proxy prefs instead; the
+        # locale below is still derived from the real IP for a stable profile.
+        launch_config["geoip"] = False if proton else ip
         if not locale:
             launch_config["locale"] = await asyncio.to_thread(stable_locale, profile_dir, ip)
         pin_geoip_locale(launch_config["locale"])

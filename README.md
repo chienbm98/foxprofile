@@ -102,7 +102,7 @@ On Windows you can also double-click `run_foxprofile.bat`. The app opens the man
 
 ## Timezone, locale and Check IP
 
-By default, every launch looks up the exit IP (through the profile's proxy) and sets the timezone, locale and geolocation from it, on both engines; Camoufox also reports that IP over WebRTC. Worth knowing:
+By default, every launch looks up the exit IP (through the profile's proxy) and sets the timezone, locale and geolocation from it, on both engines. A direct Camoufox profile reports that IP over WebRTC; with a proxy or Proton VPN, Camoufox emits no WebRTC candidate that could reveal the machine. Worth knowing:
 
 - **The automatic locale is picked once per country and then kept.** The first launch from a country draws it weighted by how many people speak each language there (a French IP gives `fr-FR` roughly 60% of the time, `en-FR`, `es-FR`… otherwise), and the profile keeps that locale on every later launch until its proxy moves to another country. Pin the locale if you want a specific one. "New fingerprint" also forgets the kept locale.
 - **GeoIP databases disagree.** Cloudflare may place an IP in one country and Google in another, and Camoufox may pick a same-offset timezone with a different name (a Vietnamese IP gets `Asia/Bangkok` rather than `Asia/Ho_Chi_Minh`).
@@ -185,7 +185,7 @@ Known limitations:
 - **A visible window reports the real monitor size.** fingerprint-chromium 148 ignores its screen-size switches, so profiles on one machine share that screen size; hidden (headless) browsers report 1920x1080.
 - **No Widevine.** The build is based on ungoogled-chromium, so DRM video (streaming services) does not play, and a page can check for it.
 - **It trails the current Chrome by a few versions.** FoxProfile pins fingerprint-chromium 148 because 150 crashes when a page draws emoji on a canvas.
-- **WebRTC behind a proxy sends no UDP at all**, the same policy as the WebRTC Leak Prevent extension: no address leaks, but WebRTC calls only work through a TURN server over TCP.
+- **WebRTC behind a proxy or Proton VPN sends no UDP candidates**, on both engines: no address leaks, but WebRTC calls only work through a TURN server over TCP. This is also what keeps a Proton profile from advertising the pre-VPN IP.
 
 ## Cookies and fingerprints
 
