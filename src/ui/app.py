@@ -1,10 +1,9 @@
 import asyncio
-import os
 import time
 
 import flet as ft
 
-from ..core.config import DATA_DIR
+from ..core.config import profile_data_dir
 from ..core.container import Container
 from ..core.logging import get_logger
 from ..core.strings import current_language, get_string, set_language
@@ -266,7 +265,7 @@ class App:
 
     @staticmethod
     def _device_label(name: str) -> str:
-        info = fingerprint.summary(os.path.join(DATA_DIR, name))
+        info = fingerprint.summary(profile_data_dir(name))
         if not info:
             return ""
         cpu = f"{info['hardware_concurrency']} CPU"

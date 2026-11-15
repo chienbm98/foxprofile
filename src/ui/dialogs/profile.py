@@ -1,12 +1,14 @@
 import contextlib
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 
 import flet as ft
 
 from ...core.strings import get_string
 from ...interfaces.protocols import IProxyService
 from ...models.profile import Profile
+from ...services import proton_account
 from ...services.proxy.geo_check import GeoCheckResult, check_geo
 from ...utils.validation import (
     validate_locale,
@@ -15,14 +17,36 @@ from ...utils.validation import (
     validate_timezone,
 )
 from ..theme.colors import COLORS, FONT_BOLD, FONT_DATA, FONT_SEMIBOLD
-from ..theme.page import build_engine_dropdown, build_os_dropdown
+from ..theme.page import (
+    build_connection_dropdown,
+    build_engine_dropdown,
+    build_os_dropdown,
+    build_proton_country_dropdown,
+)
 from ..theme.styles import ACCENT_STYLE, DLG_FIELD_KWARGS, OUTLINE_STYLE
+
+
+@dataclass
+class ProfileDraft:
+    """What the dialog collects; the manager derives the extension from the mode."""
+
+    name: str
+    proxy_mode: str
+    proxy: str
+    os_type: str
+    timezone: str
+    locale: str
+    engine: str
+    proton_user: str = ""
+    proton_password: str = ""
+    proton_totp: str = ""
+    proton_country: str = ""
 
 
 def open_profile_dialog(
     page: ft.Page,
     proxy_service: IProxyService,
-    on_save: Callable[[str, str, str, str, str, str], str | None],
+    on_save: Callable[[ProfileDraft], str | None],
     profile: Profile | None = None,
 ) -> None:
     is_edit = profile is not None
@@ -34,6 +58,7 @@ def open_profile_dialog(
     )
     save_label = get_string("save_changes") if is_edit else get_string("create_profile_btn")
     save_icon = ft.Icons.SAVE if is_edit else ft.Icons.ADD
+    saved_account = proton_account.load(profile.name) if profile is not None else None
 
     name_field = ft.TextField(
         value=profile.name if profile is not None else "",
@@ -81,6 +106,64 @@ def open_profile_dialog(
         page.update()
 
     engine_dropdown.on_select = on_engine_change
+
+    connection_dropdown = build_connection_dropdown(
+        profile.proxy_mode if profile is not None else ("proxy" if proxy_field.value else "direct")
+    )
+    proton_country = build_proton_country_dropdown(
+        profile.proton_country if profile is not None else ""
+    )
+    proton_user = ft.TextField(
+        value=saved_account.username if saved_account else "",
+        hint_text=get_string("proton_username"),
+        **DLG_FIELD_KWARGS,
+    )
+    proton_password = ft.TextField(
+        password=True,
+        can_reveal_password=True,
+        hint_text=get_string(
+            "proton_password_keep"
+            if saved_account and saved_account.password
+            else "proton_password"
+        ),
+        **DLG_FIELD_KWARGS,
+    )
+    proton_totp = ft.TextField(
+        hint_text=get_string(
+            "proton_totp_keep" if saved_account and saved_account.totp else "proton_totp"
+        ),
+        **DLG_FIELD_KWARGS,
+    )
+    proton_note = ft.Text(get_string("proton_profile_note"), size=12, color=COLORS["text_dim"])
+    proton_error = ft.Text("", size=12, color=COLORS["error"], visible=False)
+    proton_section = ft.Column(
+        spacing=4,
+        tight=True,
+        controls=[
+            _field(get_string("proton_country"), proton_country),
+            _field(get_string("proton_username"), proton_user),
+            _field(get_string("proton_password"), proton_password),
+            _field(get_string("proton_totp"), proton_totp),
+            proton_note,
+            proton_error,
+        ],
+    )
+    proxy_section = ft.Column(
+        spacing=4,
+        tight=True,
+        controls=[
+            _field(get_string("proxy_optional"), proxy_field, get_string("proxy_format_hint")),
+        ],
+    )
+
+    def sync_mode() -> None:
+        mode = connection_dropdown.value or "direct"
+        proxy_section.visible = mode == "proxy"
+        proton_section.visible = mode == "proton"
+        page.update()
+
+    connection_dropdown.on_select = lambda _: sync_mode()
+
     timezone_field = ft.TextField(
         value=(profile.timezone or "") if profile is not None else "",
         hint_text="Asia/Ho_Chi_Minh",
@@ -123,8 +206,15 @@ def open_profile_dialog(
         check_btn,
         proxy_service,
     )
+    proxy_section.controls.extend(
+        [
+            ft.Row(spacing=8, controls=[check_btn, ip_btn]),
+            proxy_error,
+        ]
+    )
 
     def on_submit(_: ft.ControlEvent) -> None:
+        mode = connection_dropdown.value or "direct"
         name = (name_field.value or "").strip()
         proxy = (proxy_field.value or "").strip()
         os_type = os_dropdown.value or "windows"
@@ -132,6 +222,7 @@ def open_profile_dialog(
         timezone = (timezone_field.value or "").strip()
         locale = (locale_field.value or "").strip()
         name_error.visible = proxy_error.visible = geo_error.visible = False
+        proton_error.visible = False
 
         valid_name, name_err = validate_profile_name(name)
         if not valid_name:
@@ -140,12 +231,28 @@ def open_profile_dialog(
             page.update()
             return
 
-        valid_proxy, proxy_err = validate_proxy_format(proxy)
-        if not valid_proxy:
-            proxy_error.value = proxy_err
-            proxy_error.visible = True
-            page.update()
-            return
+        if mode == "proxy":
+            valid_proxy, proxy_err = validate_proxy_format(proxy)
+            if not proxy or not valid_proxy:
+                proxy_error.value = proxy_err or get_string("proxy_required")
+                proxy_error.color = COLORS["error"]
+                proxy_error.visible = True
+                page.update()
+                return
+
+        if mode == "proton":
+            user = (proton_user.value or "").strip()
+            password = proton_password.value or ""
+            if not user:
+                proton_error.value = get_string("proton_username_required")
+                proton_error.visible = True
+                page.update()
+                return
+            if not password and not (saved_account and saved_account.password):
+                proton_error.value = get_string("proton_password_required")
+                proton_error.visible = True
+                page.update()
+                return
 
         for validate, value in ((validate_timezone, timezone), (validate_locale, locale)):
             valid, geo_err = validate(value)
@@ -155,7 +262,21 @@ def open_profile_dialog(
                 page.update()
                 return
 
-        error = on_save(name, proxy, os_type, timezone, locale, engine)
+        error = on_save(
+            ProfileDraft(
+                name=name,
+                proxy_mode=mode,
+                proxy=proxy,
+                os_type=os_type,
+                timezone=timezone,
+                locale=locale,
+                engine=engine,
+                proton_user=(proton_user.value or "").strip(),
+                proton_password=proton_password.value or "",
+                proton_totp=(proton_totp.value or "").strip(),
+                proton_country=proton_country.value or "",
+            )
+        )
         if error:
             name_error.value = error
             name_error.visible = True
@@ -163,12 +284,15 @@ def open_profile_dialog(
         else:
             page.pop_dialog()
 
+    connection_dropdown.label = None
     engine_dropdown.label = None
     os_dropdown.label = None
-    for dropdown in (engine_dropdown, os_dropdown):
+    proton_country.label = None
+    for dropdown in (connection_dropdown, engine_dropdown, os_dropdown, proton_country):
         # Text fields keep Material's 48px height so rows of fields and
         # dropdowns (which cannot go below 48px) line up.
         dropdown.text_size = 14
+    sync_mode()
     dlg = ft.AlertDialog(
         modal=True,
         bgcolor=COLORS["card_bg"],
@@ -212,11 +336,9 @@ def open_profile_dialog(
                         ],
                     ),
                     engine_note,
-                    _field(
-                        get_string("proxy_optional"), proxy_field, get_string("proxy_format_hint")
-                    ),
-                    ft.Row(spacing=8, controls=[check_btn, ip_btn]),
-                    proxy_error,
+                    _field(get_string("connection"), connection_dropdown),
+                    proxy_section,
+                    proton_section,
                     ft.Row(
                         spacing=12,
                         controls=[

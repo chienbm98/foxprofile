@@ -33,7 +33,12 @@ class Container:
     def profile_manager(self) -> IProfileManager:
         from ..services.profile.manager import ProfileManager
 
-        return self._get("pm", ProfileManager)
+        # The launcher's guard keeps deletes, renames, imports and exports away from
+        # a profile whose browser is running.
+        return self._get(
+            "pm",
+            lambda: ProfileManager(exclusive=self.browser_launcher.exclusive),
+        )
 
     @property
     def browser_launcher(self) -> IBrowserLauncher:

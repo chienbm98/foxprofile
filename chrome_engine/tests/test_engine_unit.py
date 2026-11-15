@@ -38,9 +38,10 @@ def test_build_args_offscreen():
     assert "--window-position=-32000,-32000" in args
 
 
-def test_build_args_proxy_and_extra_come_last():
-    args = build_args(P, proxy_url="http://127.0.0.1:5555", extra_args=["--foo"])
-    assert "--proxy-server=http://127.0.0.1:5555" in args
+def test_build_args_extra_come_last_and_carry_no_proxy():
+    # The proxy is Playwright's `proxy` option (with the bridge's credentials), not a switch.
+    args = build_args(P, extra_args=["--foo"])
+    assert not any(a.startswith("--proxy-server") for a in args)
     assert args[-1] == "--foo"
 
 
@@ -165,9 +166,18 @@ def test_geo_is_skipped_when_pinned(tmp_path, monkeypatch):
 
     import playwright.async_api as pw
 
-    class Fake:
-        async def start(self):
+    launched = {}
+
+    class Chromium:
+        async def launch_persistent_context(self, *args, **kwargs):
+            launched.update(kwargs)
             raise RuntimeError("stop before the browser")
+
+    class Fake:
+        chromium = Chromium()
+
+        async def start(self):
+            return self
 
     monkeypatch.setattr(pw, "async_playwright", lambda: Fake())
     with pytest.raises(RuntimeError, match="stop before the browser"):
@@ -175,7 +185,11 @@ def test_geo_is_skipped_when_pinned(tmp_path, monkeypatch):
     assert eng.persona.timezone == "Europe/Paris"
     assert eng.geo is None
     assert "--timezone=Europe/Paris" in eng.args
-    assert any(a.startswith("--proxy-server=http://127.0.0.1:") for a in eng.args)
+    assert not any(a.startswith("--proxy-server") for a in eng.args)
+    # Playwright sets --proxy-server from this option, with the bridge's credentials.
+    proxy = launched["proxy"]
+    assert proxy["server"].startswith("http://127.0.0.1:")
+    assert proxy["username"] == "foxprofile" and proxy["password"]
 
 
 def test_webrtc_policy_on_a_fresh_profile(tmp_path):

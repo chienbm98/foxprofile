@@ -8,9 +8,11 @@ import urllib.request
 from collections.abc import Callable, Iterator
 from typing import Any
 
+from ...core.errors import ProfileBusyError
 from ...core.logging import get_logger
 from ...core.strings import get_string
 from ...models.profile import Profile
+from ...utils.local_http import open_url
 from .control import TOKEN_HEADER
 from .process import spawn_browser, terminate, wait_for_exit
 
@@ -41,10 +43,6 @@ class _LaunchResult:
             self.ok = ok
             self.error = error
             self.settled.set()
-
-
-class ProfileBusyError(Exception):
-    """The profile's browser is running or another operation holds its data dir."""
 
 
 class BrowserControlError(Exception):
@@ -229,7 +227,7 @@ class BrowserLauncher:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            with open_url(request, timeout) as response:
                 body = json.loads(response.read())
         except urllib.error.HTTPError as e:
             body = json.loads(e.read() or b"{}")

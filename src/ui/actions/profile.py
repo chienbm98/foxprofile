@@ -2,10 +2,13 @@ from collections.abc import Callable
 
 import flet as ft
 
+from ...core.errors import ProfileBusyError, ProfileStoreError
 from ...core.strings import get_string
 from ...interfaces.protocols import IBrowserLauncher, IProfileManager, IProxyService
 from ...services.browser import chrome_prefetch
 from ..dialogs import open_confirm_dialog, open_profile_dialog
+from ..dialogs.profile import ProfileDraft
+from .errors import failure_message
 
 
 def delete_profile(
@@ -16,7 +19,11 @@ def delete_profile(
     refresh: Callable[[], None],
 ) -> None:
     def do_delete() -> None:
-        pm.delete_profile(name)
+        try:
+            pm.delete_profile(name)
+        except (ProfileBusyError, ProfileStoreError) as e:
+            log(failure_message(name, e))
+            return
         log(get_string("deleted_profile", name=name))
         refresh()
 
@@ -37,13 +44,32 @@ def edit_profile(
         return
     original = profile.name
 
-    def on_save(
-        new_name: str, new_proxy: str, new_os: str, timezone: str, locale: str, _engine: str
-    ) -> str | None:
-        if new_name != original and bl.is_running(original):
+    def on_save(draft: ProfileDraft) -> str | None:
+        if draft.name != original and bl.is_running(original):
             return get_string("stop_before_rename")
-        if pm.update_profile(original, new_name, new_proxy, new_os, timezone, locale):
-            log(get_string("updated_profile", old=original, new=new_name))
+        proton_args = {}
+        if draft.proxy_mode == "proton":
+            proton_args = {
+                "proton_user": draft.proton_user,
+                "proton_password": draft.proton_password or None,
+                "proton_totp": draft.proton_totp or None,
+                "proton_country": draft.proton_country,
+            }
+        try:
+            updated = pm.update_profile(
+                original,
+                draft.name,
+                draft.proxy,
+                draft.os_type,
+                draft.timezone,
+                draft.locale,
+                new_proxy_mode=draft.proxy_mode,
+                **proton_args,
+            )
+        except (ProfileBusyError, ProfileStoreError) as e:
+            return failure_message(original, e)
+        if updated:
+            log(get_string("updated_profile", old=original, new=draft.name))
             refresh()
             return None
         return get_string("update_failed")
@@ -58,14 +84,28 @@ def add_profile(
     log: Callable[[str], None],
     refresh: Callable[[], None],
 ) -> None:
-    def on_save(
-        name: str, proxy: str, os_type: str, timezone: str, locale: str, engine: str
-    ) -> str | None:
-        if engine == "chrome" and (reason := chrome_prefetch.unsupported_reason()):
+    def on_save(draft: ProfileDraft) -> str | None:
+        if draft.engine == "chrome" and (reason := chrome_prefetch.unsupported_reason()):
             return get_string("chrome_engine_unsupported", reason=reason)
-        if pm.add_profile(name, proxy, os_type, timezone, locale, engine):
-            log(get_string("created_profile", name=name))
-            if engine == "chrome":
+        try:
+            created = pm.add_profile(
+                draft.name,
+                draft.proxy,
+                draft.os_type,
+                draft.timezone,
+                draft.locale,
+                draft.engine,
+                proxy_mode=draft.proxy_mode,
+                proton_user=draft.proton_user,
+                proton_password=draft.proton_password,
+                proton_totp=draft.proton_totp,
+                proton_country=draft.proton_country,
+            )
+        except ProfileStoreError as e:
+            return str(e)
+        if created:
+            log(get_string("created_profile", name=draft.name))
+            if draft.engine == "chrome":
                 chrome_prefetch.start(log)
             refresh()
             return None

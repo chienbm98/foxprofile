@@ -135,14 +135,15 @@ def default_sandbox() -> bool:
 
 def build_args(
     persona: personas.Persona,
-    proxy_url: str | None = None,
     headless: bool | str = False,
     extra_args: tuple[str, ...] | list[str] = (),
 ) -> list[str]:
-    """Command-line switches for a launch (Playwright adds its own before these)."""
+    """Command-line switches for a launch (Playwright adds its own before these).
+
+    The proxy is not a switch: Playwright sets --proxy-server from its `proxy`
+    option, which carries the bridge's credentials.
+    """
     args = persona.to_args()
-    if proxy_url:
-        args.append(f"--proxy-server={proxy_url}")
     args += ["--no-first-run", "--no-default-browser-check", "--hide-crash-restore-bubble"]
     if headless is True:
         # Headless otherwise reports an 800x600 screen.
@@ -236,7 +237,6 @@ class ChromeEngine:
 
         self.args = build_args(
             persona,
-            proxy_url=self.bridge.url if self.bridge else None,
             headless=self.headless,
             extra_args=self._extra_args,
         )
@@ -253,6 +253,7 @@ class ChromeEngine:
             executable_path=str(executable),
             headless=self.headless is True,
             args=self.args,
+            proxy=self.bridge.proxy_credentials if self.bridge else None,
             ignore_default_args=self._ignored_default_args(),
             no_viewport=True,
             chromium_sandbox=self.sandbox,

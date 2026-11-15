@@ -179,6 +179,11 @@ pyrightconfig.json
 camoufox_data/
 profiles.json
 logs/
+proton_account.json
+proton_account.key
+proton_accounts.json
+proton_accounts.key
+proton_session*.json
 
 # Tooling artefacts
 uv.lock

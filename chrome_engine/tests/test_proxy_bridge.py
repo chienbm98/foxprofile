@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 from collections import deque
 
@@ -19,9 +20,9 @@ def run(coro):
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("http://u:p@1.2.3.4:8080", Upstream("http", "1.2.3.4", 8080, "u", "p")),
-        ("1.2.3.4:8080", Upstream("http", "1.2.3.4", 8080)),
-        ("1.2.3.4:8080:user:pass", Upstream("http", "1.2.3.4", 8080, "user", "pass")),
+        ("http://u:p@192.0.2.1:8080", Upstream("http", "192.0.2.1", 8080, "u", "p")),
+        ("192.0.2.1:8080", Upstream("http", "192.0.2.1", 8080)),
+        ("192.0.2.1:8080:user:pass", Upstream("http", "192.0.2.1", 8080, "user", "pass")),
         ("socks5://u:p@h.example:1080", Upstream("socks5", "h.example", 1080, "u", "p")),
         ("socks5h://h.example:1080", Upstream("socks5", "h.example", 1080)),
         ("https://proxy.example:443", Upstream("https", "proxy.example", 443)),
@@ -45,6 +46,54 @@ def test_basic_auth_header():
     assert Upstream("http", "h", 1).basic_auth() is None
 
 
+# --- the bridge's own credentials -------------------------------------------------
+
+
+def test_playwright_gets_the_bridge_credentials():
+    bridge = ProxyBridge(Upstream("http", "127.0.0.1", 9), token="tok")
+    assert bridge.proxy_credentials == {
+        "server": bridge.url,
+        "username": "foxprofile",
+        "password": "tok",
+    }
+    assert bridge.authorization == "Basic " + base64.b64encode(b"foxprofile:tok").decode()
+
+
+def test_each_bridge_gets_its_own_credentials():
+    first = ProxyBridge(Upstream("http", "127.0.0.1", 9))
+    second = ProxyBridge(Upstream("http", "127.0.0.1", 9))
+    assert first.password and first.password != second.password
+
+
+@pytest.mark.parametrize(
+    "header",
+    [
+        None,  # no credentials at all
+        "Proxy-Authorization: Basic Zm9vOmJhcg==",  # foo:bar
+        "Proxy-Authorization: Bearer token",  # wrong scheme
+    ],
+)
+def test_clients_without_the_bridge_credentials_get_407(header):
+    async def test():
+        bridge = await ProxyBridge(Upstream("http", "127.0.0.1", 9)).start()
+        try:
+            reader, writer = await asyncio.open_connection("127.0.0.1", bridge.port)
+            extra = f"{header}\r\n" if header else ""
+            writer.write(f"CONNECT example.com:443 HTTP/1.1\r\n{extra}\r\n".encode())
+            await writer.drain()
+            reply = await reader.read()
+            writer.close()
+            assert reply.startswith(b"HTTP/1.1 407")
+            assert b"Proxy-Authenticate: Basic" in reply
+            # Refused before the request is parsed: nothing is counted or forwarded.
+            assert bridge.connections == 0
+            assert bridge.errors[-1] == "refused a client without the bridge credentials"
+        finally:
+            await bridge.stop()
+
+    run(test())
+
+
 # --- forwarding --------------------------------------------------------------
 
 
@@ -63,7 +112,9 @@ async def _with_servers(test, proxy_cls):
 @pytest.mark.parametrize("proxy_cls", [HttpProxy, Socks5Proxy])
 def test_connect_tunnel_through_authenticated_upstream(proxy_cls):
     async def test(origin, upstream, bridge):
-        status, body = await http_get_via_connect(bridge.port, "127.0.0.1", origin.port)
+        status, body = await http_get_via_connect(
+            bridge.port, "127.0.0.1", origin.port, auth=bridge.authorization
+        )
         assert status == 200
         assert b"origin-ok" in body
         assert origin.hits == ["/"]
@@ -74,7 +125,9 @@ def test_connect_tunnel_through_authenticated_upstream(proxy_cls):
 @pytest.mark.parametrize("proxy_cls", [HttpProxy, Socks5Proxy])
 def test_plain_http_through_authenticated_upstream(proxy_cls):
     async def test(origin, upstream, bridge):
-        status, body = await http_get_via_proxy(bridge.port, f"{origin.url}/echo?x=1")
+        status, body = await http_get_via_proxy(
+            bridge.port, f"{origin.url}/echo?x=1", auth=bridge.authorization
+        )
         assert status == 200
         echoed = json.loads(body)
         assert echoed["path"] == "/echo?x=1"
@@ -86,7 +139,7 @@ def test_plain_http_through_authenticated_upstream(proxy_cls):
 
 def test_http_upstream_receives_credentials_and_target():
     async def test(origin, upstream, bridge):
-        await http_get_via_connect(bridge.port, "localhost", origin.port)
+        await http_get_via_connect(bridge.port, "localhost", origin.port, auth=bridge.authorization)
         assert upstream.requests == [("CONNECT", f"localhost:{origin.port}")]
         assert upstream.rejected == 0
 
@@ -95,7 +148,7 @@ def test_http_upstream_receives_credentials_and_target():
 
 def test_socks_upstream_resolves_names_remotely():
     async def test(origin, upstream, bridge):
-        await http_get_via_connect(bridge.port, "localhost", origin.port)
+        await http_get_via_connect(bridge.port, "localhost", origin.port, auth=bridge.authorization)
         # The hostname went to the proxy as a name: no local DNS lookup.
         assert upstream.targets == [("domain", "localhost", origin.port)]
 
@@ -104,7 +157,7 @@ def test_socks_upstream_resolves_names_remotely():
 
 def test_socks_upstream_ip_targets_use_ip_addressing():
     async def test(origin, upstream, bridge):
-        await http_get_via_connect(bridge.port, "127.0.0.1", origin.port)
+        await http_get_via_connect(bridge.port, "127.0.0.1", origin.port, auth=bridge.authorization)
         assert upstream.targets == [("ipv4", "127.0.0.1", origin.port)]
 
     run(_with_servers(test, Socks5Proxy))
@@ -119,7 +172,9 @@ def test_wrong_credentials_give_502(proxy_cls):
         bad = Upstream(good.scheme, good.host, good.port, good.username, "wrong")
         bridge = await ProxyBridge(bad).start()
         try:
-            status, _ = await http_get_via_connect(bridge.port, "127.0.0.1", origin.port)
+            status, _ = await http_get_via_connect(
+                bridge.port, "127.0.0.1", origin.port, auth=bridge.authorization
+            )
             assert status == 502
             assert origin.hits == []
             assert bridge.errors
@@ -138,7 +193,9 @@ def test_upstream_down_gives_502():
         await dead.stop()
         bridge = await ProxyBridge(Upstream("http", "127.0.0.1", port, "u", "p")).start()
         try:
-            status, _ = await http_get_via_connect(bridge.port, "example.com", 443)
+            status, _ = await http_get_via_connect(
+                bridge.port, "example.com", 443, auth=bridge.authorization
+            )
             assert status == 502
         finally:
             await bridge.stop()
@@ -154,7 +211,9 @@ def test_target_unreachable_via_socks_gives_502():
         await closed.stop()
         bridge = await ProxyBridge(Upstream.parse(upstream.url)).start()
         try:
-            status, _ = await http_get_via_connect(bridge.port, "127.0.0.1", port)
+            status, _ = await http_get_via_connect(
+                bridge.port, "127.0.0.1", port, auth=bridge.authorization
+            )
             assert status == 502
             assert "connection refused" in bridge.errors[-1]
         finally:
@@ -169,7 +228,9 @@ def test_malformed_request_gives_400():
         bridge = await ProxyBridge(Upstream("http", "127.0.0.1", 9)).start()
         try:
             reader, writer = await asyncio.open_connection("127.0.0.1", bridge.port)
-            writer.write(b"NONSENSE\r\n\r\n")
+            writer.write(
+                f"NONSENSE\r\nProxy-Authorization: {bridge.authorization}\r\n\r\n".encode()
+            )
             await writer.drain()
             assert (await reader.read()).startswith(b"HTTP/1.1 400")
             writer.close()
@@ -182,7 +243,12 @@ def test_malformed_request_gives_400():
 def test_many_concurrent_tunnels():
     async def test(origin, upstream, bridge):
         results = await asyncio.gather(
-            *(http_get_via_connect(bridge.port, "127.0.0.1", origin.port) for _ in range(25))
+            *(
+                http_get_via_connect(
+                    bridge.port, "127.0.0.1", origin.port, auth=bridge.authorization
+                )
+                for _ in range(25)
+            )
         )
         assert all(status == 200 for status, _ in results)
         assert bridge.connections == 25
@@ -193,7 +259,10 @@ def test_many_concurrent_tunnels():
 def test_large_body_is_streamed_intact():
     async def test(origin, upstream, bridge):
         reader, writer = await asyncio.open_connection("127.0.0.1", bridge.port)
-        writer.write(f"CONNECT 127.0.0.1:{origin.port} HTTP/1.1\r\n\r\n".encode())
+        writer.write(
+            f"CONNECT 127.0.0.1:{origin.port} HTTP/1.1\r\n"
+            f"Proxy-Authorization: {bridge.authorization}\r\n\r\n".encode()
+        )
         await writer.drain()
         assert (await reader.readuntil(b"\r\n\r\n")).startswith(b"HTTP/1.1 200")
         payload = b"x" * (3 * 1024 * 1024)
@@ -214,7 +283,10 @@ def test_large_body_is_streamed_intact():
 def test_stop_closes_open_tunnels():
     async def test(origin, upstream, bridge):
         reader, writer = await asyncio.open_connection("127.0.0.1", bridge.port)
-        writer.write(f"CONNECT 127.0.0.1:{origin.port} HTTP/1.1\r\n\r\n".encode())
+        writer.write(
+            f"CONNECT 127.0.0.1:{origin.port} HTTP/1.1\r\n"
+            f"Proxy-Authorization: {bridge.authorization}\r\n\r\n".encode()
+        )
         await writer.drain()
         await reader.readuntil(b"\r\n\r\n")
         await bridge.stop()
@@ -240,7 +312,9 @@ def test_bad_connect_port_gives_400(target):
         bridge = await ProxyBridge(Upstream("http", "127.0.0.1", 9)).start()
         try:
             reader, writer = await asyncio.open_connection("127.0.0.1", bridge.port)
-            writer.write(f"CONNECT {target} HTTP/1.1\r\n\r\n".encode())
+            writer.write(
+                f"CONNECT {target} HTTP/1.1\r\nProxy-Authorization: {bridge.authorization}\r\n\r\n".encode()
+            )
             await writer.drain()
             assert (await reader.read()).startswith(b"HTTP/1.1 400")
             writer.close()
@@ -271,7 +345,10 @@ def test_non_http_absolute_target_gives_400():
         bridge = await ProxyBridge(Upstream("http", "127.0.0.1", 9)).start()
         try:
             reader, writer = await asyncio.open_connection("127.0.0.1", bridge.port)
-            writer.write(b"GET ftp://example.com/ HTTP/1.1\r\n\r\n")
+            writer.write(
+                f"GET ftp://example.com/ HTTP/1.1\r\nProxy-Authorization: {bridge.authorization}"
+                "\r\n\r\n".encode()
+            )
             await writer.drain()
             assert (await reader.read()).startswith(b"HTTP/1.1 400")
             writer.close()

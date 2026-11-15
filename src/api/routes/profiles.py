@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-import os
 import pathlib
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 
-from ...core.config import DATA_DIR
+from ...core.config import profile_data_dir
+from ...core.errors import ProfileBusyError
 from ...core.logging import get_logger
-from ...models.profile import ENGINES
+from ...models.profile import ENGINES, OS_TYPES, PROXY_MODES
+from ...services import proton_account
 from ...services.browser import chrome_prefetch, cookies, fingerprint
-from ...services.browser.launcher import ProfileBusyError
+from ...services.browser.proton_countries import BY_CODE as PROTON_COUNTRIES
 from ...services.proxy.geo_check import check_geo
 from ...utils.validation import (
     validate_locale,
@@ -46,14 +47,12 @@ logger = get_logger("api.profiles")
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
-_OS_TYPES = ("windows", "macos", "linux")
-
 
 def _require_os(os_type: str) -> None:
-    if os_type not in _OS_TYPES:
+    if os_type not in OS_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"os_type must be one of: {', '.join(_OS_TYPES)}",
+            detail=f"os_type must be one of: {', '.join(OS_TYPES)}",
         )
 
 
@@ -74,12 +73,33 @@ def _require_geo(timezone: str | None, locale: str | None) -> None:
             raise HTTPException(status_code=400, detail=msg)
 
 
+def _require_country(country: str | None) -> None:
+    if country and country.upper() not in PROTON_COUNTRIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown Proton country code: {country}",
+        )
+
+
+def _require_proxy_mode(mode: str) -> None:
+    if mode not in PROXY_MODES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"proxy_mode must be one of: {', '.join(PROXY_MODES)}",
+        )
+
+
 @router.get("", response_model=ProfileListResponse)
 def list_profiles(
     pm: IProfileManager = Depends(get_profile_manager),
     bl: IBrowserLauncher = Depends(get_browser_launcher),
 ) -> ProfileListResponse:
-    profiles = [profile_response(p, bl) for p in pm.list_profiles()]
+    # One read of the Proton accounts file for the whole list: the panel refreshes it every few seconds.
+    accounts = proton_account.load_all()
+    profiles = [
+        profile_response(p, bl, accounts.get(p.name, proton_account.ProtonAccount()))
+        for p in pm.list_profiles()
+    ]
     return ProfileListResponse(profiles=profiles, total=len(profiles))
 
 
@@ -102,10 +122,22 @@ def create_profile(
     _require_engine(body.engine)
     _require_geo(body.timezone, body.locale)
 
-    if body.proxy:
+    mode = body.proxy_mode or (
+        "proton" if body.extension == "proton-vpn" else ("proxy" if body.proxy else "direct")
+    )
+    _require_proxy_mode(mode)
+    if mode == "proxy":
+        if not body.proxy:
+            raise HTTPException(status_code=400, detail="proxy is required in proxy mode")
         valid, msg = validate_proxy_format(body.proxy)
         if not valid:
             raise HTTPException(status_code=400, detail=msg)
+    if mode == "proton":
+        _require_country(body.proton_country)
+        if not (body.proton_user or "").strip():
+            raise HTTPException(status_code=400, detail="Proton username is required")
+        if not (body.proton_password or ""):
+            raise HTTPException(status_code=400, detail="Proton password is required")
 
     if not pm.add_profile(
         body.name,
@@ -114,6 +146,11 @@ def create_profile(
         body.timezone or None,
         body.locale or None,
         body.engine,
+        proxy_mode=mode,
+        proton_user=body.proton_user or "",
+        proton_password=body.proton_password or "",
+        proton_totp=body.proton_totp or "",
+        proton_country=body.proton_country or "",
     ):
         raise HTTPException(status_code=409, detail="Profile already exists")
 
@@ -159,6 +196,14 @@ def update_profile(
     new_timezone = supplied.get("timezone", profile.timezone)
     new_locale = supplied.get("locale", profile.locale)
 
+    if "proxy_mode" in supplied:
+        mode = supplied["proxy_mode"] or "direct"
+    elif "proxy" in supplied and profile.proxy_mode != "proton":
+        mode = "proxy" if new_proxy else "direct"
+    else:
+        mode = profile.proxy_mode
+    _require_proxy_mode(mode)
+
     if "name" in supplied:
         valid, msg = validate_profile_name(new_name)
         if not valid:
@@ -178,13 +223,39 @@ def update_profile(
         _require_os(new_os)
     _require_geo(supplied.get("timezone"), supplied.get("locale"))
 
-    if "proxy" in supplied and new_proxy:
+    if mode == "proxy":
+        if not new_proxy:
+            raise HTTPException(status_code=400, detail="proxy is required in proxy mode")
         valid, msg = validate_proxy_format(new_proxy)
         if not valid:
             raise HTTPException(status_code=400, detail=msg)
+    new_proton_user = supplied.get("proton_user")
+    new_proton_country = supplied.get("proton_country")
+    if mode == "proton":
+        _require_country(new_proton_country)
+        account = proton_account.load(name)
+        if new_proton_user is None and (
+            supplied.get("proton_password") is not None or supplied.get("proton_totp") is not None
+        ):
+            new_proton_user = account.username
+        user = (new_proton_user if new_proton_user is not None else account.username).strip()
+        if not user:
+            raise HTTPException(status_code=400, detail="Proton username is required")
+        if not account.password and not supplied.get("proton_password"):
+            raise HTTPException(status_code=400, detail="Proton password is required")
 
     if not pm.update_profile(
-        name, new_name, new_proxy or "", new_os, new_timezone or None, new_locale or None
+        name,
+        new_name,
+        new_proxy or "",
+        new_os,
+        new_timezone or None,
+        new_locale or None,
+        new_proxy_mode=mode,
+        proton_user=new_proton_user,
+        proton_password=supplied.get("proton_password"),
+        proton_totp=supplied.get("proton_totp"),
+        proton_country=new_proton_country,
     ):
         raise HTTPException(status_code=409, detail="Update failed (name conflict?)")
 
@@ -226,7 +297,7 @@ def get_data_dir(
     pm: IProfileManager = Depends(get_profile_manager),
 ) -> DataDirResponse:
     require_profile(name, pm)
-    data_dir = os.path.join(os.getcwd(), DATA_DIR, name)
+    data_dir = profile_data_dir(name)
     return DataDirResponse(
         name=name,
         data_dir=data_dir,
@@ -350,7 +421,7 @@ def get_fingerprint(
 ) -> FingerprintResponse:
     """Show the fingerprint the profile presents on every launch."""
     require_profile(name, pm)
-    info = fingerprint.summary(os.path.join(DATA_DIR, name))
+    info = fingerprint.summary(profile_data_dir(name))
     if info is None:
         return FingerprintResponse(name=name, exists=False)
     return FingerprintResponse(name=name, exists=True, **info)
@@ -369,7 +440,11 @@ def reset_fingerprint(
     """Discard the saved fingerprint; the next launch generates a new device."""
     require_profile(name, pm)
     _require_stopped(name, bl, "resetting the fingerprint")
-    removed = fingerprint.reset(os.path.join(DATA_DIR, name))
+    try:
+        with bl.exclusive(name):
+            removed = fingerprint.reset(profile_data_dir(name))
+    except ProfileBusyError as e:
+        raise HTTPException(status_code=409, detail=_BUSY_DETAIL) from e
     logger.info("API reset fingerprint for %s (existed=%s)", name, removed)
     return SuccessResponse(message=f"Fingerprint reset for '{name}'")
 
@@ -388,7 +463,7 @@ def check_profile_ip(
     Goes out through the profile's proxy to Cloudflare, ipinfo and ip-api (~10s).
     """
     profile = require_profile(name, pm)
-    data_dir = os.path.join(os.getcwd(), DATA_DIR, profile.name)
+    data_dir = profile_data_dir(profile.name)
     return GeoCheckResponse.from_result(
         check_geo(profile.proxy, profile.timezone, profile.locale, data_dir)
     )

@@ -23,7 +23,7 @@ sys.path.insert(
 
 from camoufox.async_api import AsyncCamoufox
 
-from src.core.config import DATA_DIR
+from src.core.config import profile_data_dir
 from src.models.profile import ENGINES
 from src.services.browser.fingerprint import load_or_create
 from src.utils.validation import validate_profile_name
@@ -47,7 +47,7 @@ def _open(profile_dir: str, os_type: str, engine: str) -> Any:
 async def _run(
     action: str, profile_name: str, os_type: str, payload: list, engine: str = "camoufox"
 ) -> dict:
-    profile_dir = os.path.join(os.getcwd(), DATA_DIR, profile_name)
+    profile_dir = profile_data_dir(profile_name)
     async with _open(profile_dir, os_type, engine) as context:
         if action == "export":
             return {"cookies": await context.cookies()}

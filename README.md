@@ -56,6 +56,7 @@ FoxProfile is free and open source, built in my spare time, and will stay that w
 
 - **Persistent per-profile fingerprint.** The first launch generates a device (screen, GPU, CPU cores, fonts, canvas/audio noise) and stores it; later launches reuse the same device. Generate a new one on demand.
 - **Two engines.** Camoufox (Firefox, default) or Chrome (fingerprint-chromium), chosen when the profile is created. The Chrome build is downloaded automatically when needed.
+- **Connection modes.** Each profile goes direct, through its own proxy, or through Proton VPN: the extension plus a per-profile Proton account, chosen in the profile form.
 - **Sessions that stick.** History, cookies and logins live in the profile directory; the tabs that were open are reopened on the next launch.
 - **Per-profile proxy**: HTTP/HTTPS/SOCKS4/SOCKS5, with or without auth, including the `host:port:user:pass` format, plus a proxy checker.
 - **Timezone and locale** follow the exit IP or can be pinned per profile. **Check IP** compares the exit IP across Cloudflare, ipinfo and ip-api and warns about country/timezone mismatches and datacenter IPs.
@@ -207,12 +208,32 @@ Everything is optional. To override defaults, copy `.env.example` to `.env`.
 | `FOXPROFILE_LOG_DIR` | `logs` | Log directory |
 | `FOXPROFILE_LOG_LEVEL` | `INFO` | Log level |
 | `FOXPROFILE_PROXY_TIMEOUT` | `10` | Proxy check timeout (seconds) |
-| `FOXPROFILE_LAUNCH_TIMEOUT` | `90` | How long the API waits for a browser to finish launching (seconds) |
+| `FOXPROFILE_LAUNCH_TIMEOUT` | `180` | How long the API waits for a browser to finish launching (seconds) |
 | `FOXPROFILE_HEADLESS` | `false` (`true` in server mode) | Hidden browsers: `true`, `false` or `virtual` (Linux + Xvfb) |
 | `FOXPROFILE_RESTORE_TABS` | `true` | Reopen the tabs from the previous run |
 | `FOXPROFILE_API_TOKEN` | *(empty)* | Token for the API, web panel and MCP. Required when the API listens beyond `127.0.0.1` |
 | `FOXPROFILE_API_HOST` | `127.0.0.1` | API host |
 | `FOXPROFILE_API_PORT` | `8000` | API port |
+
+### Connection: direct, proxy or Proton VPN
+
+Each profile picks how it reaches the internet in the profile form:
+
+- **Direct** — no proxy.
+- **Proxy** — the proxy field below (format in the next section).
+- **Proton VPN** — the profile gets the Proton VPN extension and its own Proton account: username, password, the TOTP secret when 2FA is enabled, and the exit country (or Auto for the fastest server). The extension is installed into that profile only, on its next launch; switching back to Direct or Proxy removes it on the following launch.
+
+The builds are downloaded once from addons.mozilla.org and the Chrome Web Store (Proton VPN is GPL-3.0; nothing is bundled with FoxProfile) and cached outside the profile data. While the VPN is connected the exit IP is Proton's, so timezone and locale no longer follow a proxy; pin them in the profile if needed. Update the cached builds with `python -m src.services.browser.extensions fetch`.
+
+Sign-in and connection are automatic on both engines. Chrome drives the extension popup with Playwright; Camoufox opens the extension's own pages through Marionette. FoxProfile presses **Sign in**, fills the account page (or the TOTP prompt), waits for the extension to store its session, then connects the chosen country. The profile is not reported as ready until the VPN is connected; if sign-in or connection fails, the browser is closed and the launch reports an error. The extension receives the session itself. Each profile's account is stored next to `profiles.json` (`proton_accounts.json`, password encrypted with a local key) and is never written to `profiles.json`, logs or profile exports. A captcha, or 2FA without a TOTP secret, fails the launch rather than leaving the browser open.
+
+Chrome profiles can also be prepared from the CLI, before the app opens the browser:
+
+```bash
+python -m src.services.proton_session prepare <profile> --country US
+```
+
+This logs in headlessly, connects the chosen country, and leaves the session in the profile. `harvest` writes the session tokens to a 0600 file and `inject` writes such a file into a profile; one session belongs to one profile because the refresh token rotates.
 
 ### Proxy format
 
@@ -263,6 +284,8 @@ Prefix `/api/v1`. The full reference is at `/docs` while the app is running.
 | `GET` / `POST` | `/browser/{name}/page/tabs` | List tabs / open a new tab |
 | `POST` / `DELETE` | `/browser/{name}/page/tabs/{index}/select` · `/page/tabs/{index}` | Select / close a tab |
 | `GET` | `/mcp/setup?base_url=...` | MCP configs for each AI app (used by the Connect AI dialog) |
+
+Profiles accept `proxy_mode` (`direct`, `proxy`, `proton`) and, in `proton` mode, `proton_user`, `proton_password`, `proton_totp` and `proton_country` (ISO code, empty = Quick Connect). The password is never returned by the API; `GET /proton/countries` lists the codes.
 
 With `FOXPROFILE_API_TOKEN` set, every request except `/health` and `/info` needs `Authorization: Bearer <token>`.
 

@@ -1,9 +1,13 @@
 """A loopback proxy that lets Chromium use proxies with credentials.
 
 Chromium cannot take proxy credentials on the command line, and it cannot
-authenticate to SOCKS5 proxies at all. The bridge listens on 127.0.0.1 without
-authentication, Chromium is pointed at it as a plain HTTP proxy, and the bridge
-opens every connection through the real upstream proxy with its credentials.
+authenticate to SOCKS5 proxies at all. The bridge listens on 127.0.0.1, Chromium
+is pointed at it as a plain HTTP proxy, and the bridge opens every connection
+through the real upstream proxy with its credentials.
+
+The bridge answers only clients that present its per-launch credentials (Basic
+Proxy-Authorization). Any other local process gets 407 and cannot borrow the
+upstream account. Chromium receives the credentials from Playwright's proxy option.
 
 Target hostnames are always passed to the upstream (HTTP CONNECT or SOCKS5
 domain addressing), never resolved here, so DNS does not leak past the proxy.
@@ -15,6 +19,7 @@ import asyncio
 import base64
 import contextlib
 import ipaddress
+import secrets
 import ssl
 from collections import deque
 from dataclasses import dataclass
@@ -24,6 +29,11 @@ _HEAD_LIMIT = 64 * 1024
 _BUFFER = 64 * 1024
 CONNECT_TIMEOUT = 20.0
 _HOP_HEADERS = {"proxy-authorization", "proxy-connection", "connection", "keep-alive"}
+_PROXY_AUTH_REQUIRED = (
+    b"HTTP/1.1 407 Proxy Authentication Required\r\n"
+    b'Proxy-Authenticate: Basic realm="FoxProfile"\r\n'
+    b"Connection: close\r\nContent-Length: 0\r\n\r\n"
+)
 
 
 class UpstreamError(Exception):
@@ -252,7 +262,12 @@ def _rewrite_request(head: bytes, origin_form: bool, auth: str | None) -> bytes:
 class ProxyBridge:
     """Loopback HTTP proxy forwarding through an authenticated upstream proxy."""
 
-    def __init__(self, upstream: Upstream, host: str = "127.0.0.1") -> None:
+    def __init__(
+        self,
+        upstream: Upstream,
+        host: str = "127.0.0.1",
+        token: str | None = None,
+    ) -> None:
         self.upstream = upstream
         self.host = host
         self.port = 0
@@ -260,10 +275,30 @@ class ProxyBridge:
         self.errors: deque[str] = deque(maxlen=20)
         self._server: asyncio.base_events.Server | None = None
         self._clients: set[asyncio.Task] = set()
+        self.username = "foxprofile"
+        self.password = token or secrets.token_urlsafe(24)
 
     @property
     def url(self) -> str:
         return f"http://{self.host}:{self.port}"
+
+    @property
+    def authorization(self) -> str:
+        """The Proxy-Authorization value a client must send to be served."""
+        raw = f"{self.username}:{self.password}".encode()
+        return "Basic " + base64.b64encode(raw).decode()
+
+    @property
+    def proxy_credentials(self) -> dict[str, str]:
+        """The `proxy` option for Playwright's launch: the bridge and its credentials."""
+        return {"server": self.url, "username": self.username, "password": self.password}
+
+    def _authorized(self, head: bytes) -> bool:
+        for line in head.decode("latin-1").split("\r\n")[1:]:
+            name, _, value = line.partition(":")
+            if name.strip().lower() == "proxy-authorization":
+                return secrets.compare_digest(value.strip(), self.authorization)
+        return False
 
     async def start(self) -> ProxyBridge:
         self._server = await asyncio.start_server(self._accept, self.host, 0, limit=_HEAD_LIMIT)
@@ -305,6 +340,11 @@ class ProxyBridge:
         try:
             head = await _read_head(reader)
         except (asyncio.IncompleteReadError, ConnectionError):
+            return
+        if not self._authorized(head):
+            # Checked before anything else: unauthenticated clients learn nothing about the request.
+            self.errors.append("refused a client without the bridge credentials")
+            writer.write(_PROXY_AUTH_REQUIRED)
             return
         request_line = head.split(b"\r\n", 1)[0].decode("latin-1")
         parts = request_line.split(" ")

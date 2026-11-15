@@ -2,11 +2,13 @@ from collections.abc import Callable
 
 import flet as ft
 
+from ...core.errors import ProfileBusyError, ProfileStoreError
 from ...core.strings import get_string
 from ...interfaces.protocols import IBrowserLauncher, IProfileManager
 from ..dialogs import open_confirm_dialog
 from ..state import AppState
 from .browser import launch_or_stop
+from .errors import failure_message
 
 
 def bulk_delete_profiles(
@@ -22,7 +24,11 @@ def bulk_delete_profiles(
 
     def do_bulk_delete() -> None:
         for name in names:
-            pm.delete_profile(name)
+            try:
+                pm.delete_profile(name)
+            except (ProfileBusyError, ProfileStoreError) as e:
+                log(failure_message(name, e))
+                continue  # the others are still deleted; this one is kept
             log(get_string("deleted_profile", name=name))
         on_done()
         refresh()

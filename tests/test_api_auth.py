@@ -37,15 +37,27 @@ def test_token_required(monkeypatch, headers, status):
     assert _client(monkeypatch, TOKEN).get("/secret", headers=headers).status_code == status
 
 
-@pytest.mark.parametrize("host", ["127.0.0.1", "localhost", "::1", ""])
+@pytest.mark.parametrize("host", ["127.0.0.1", "localhost", "::1"])
 def test_loopback_without_token_is_allowed(host):
     auth.check_bind_safety(host, "")
 
 
-@pytest.mark.parametrize("host", ["0.0.0.0", "192.168.1.5", "::", "my-vps.example.com"])
+@pytest.mark.parametrize(
+    "host",
+    # "" binds every interface, so it must be refused like 0.0.0.0.
+    ["0.0.0.0", "192.0.2.5", "::", "my-vps.example.com", "", "   "],
+)
 def test_public_bind_without_token_refused(host):
     with pytest.raises(SystemExit):
         auth.check_bind_safety(host, "")
+
+
+@pytest.mark.parametrize("value", ["", "   "])
+def test_blank_api_host_setting_falls_back_to_loopback(value):
+    from src.core import config
+
+    assert config._api_host(value) == "127.0.0.1"
+    assert config._api_host("0.0.0.0") == "0.0.0.0"
 
 
 def test_short_token_refused():
