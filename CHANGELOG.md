@@ -4,8 +4,13 @@
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-11-18
+
 ### Sửa
 - CI: kiểm tra timezone của Chrome engine không còn báo sai khi hệ điều hành dùng tz database mới (Linux gần đây đã bỏ các tên cũ như `Asia/Saigon`, `Asia/Calcutta`, `Europe/Kiev`). Các tên cũ được quy về tên chuẩn trước khi so sánh, không còn phụ thuộc hệ thống còn giữ tên cũ hay không.
+
+### Phụ thuộc
+- Nâng `camoufox` lên `>=0.5.9`, `tzdata` lên `>=2026.6`; `flet` lên `>=1.1.2` (đã chạy thử app desktop với bản mới). Dev: `pytest` `>=9.2.0`, `ruff` `>=0.17.4`.
 
 ## [2.4.0] - 2026-10-30
 
