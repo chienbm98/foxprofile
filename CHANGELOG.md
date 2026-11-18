@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Sửa
+- CI: kiểm tra timezone của Chrome engine không còn báo sai khi hệ điều hành dùng tz database mới (Linux gần đây đã bỏ các tên cũ như `Asia/Saigon`, `Asia/Calcutta`, `Europe/Kiev`). Các tên cũ được quy về tên chuẩn trước khi so sánh, không còn phụ thuộc hệ thống còn giữ tên cũ hay không.
+
 ## [2.4.0] - 2026-10-30
 
 ### Thay đổi
