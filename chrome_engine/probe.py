@@ -256,9 +256,37 @@ _BRAND = {"Chrome": "Google Chrome", "Edge": "Microsoft Edge"}
 _IDENTITY_KEYS = ("userAgent", "platform", "languages", "hardwareConcurrency", "timezone")
 
 
+# Legacy IANA names ICU/Chrome still reports, mapped to the modern canonical
+# zone. Newer tz databases (notably on recent Linux) no longer ship the legacy
+# name, so ZoneInfo(<legacy>) raises there. We canonicalise names first so the
+# check does not depend on the running system still carrying the old name.
+_TZ_ALIAS = {
+    "Asia/Calcutta": "Asia/Kolkata",
+    "Asia/Saigon": "Asia/Ho_Chi_Minh",
+    "Asia/Rangoon": "Asia/Yangon",
+    "Asia/Katmandu": "Asia/Kathmandu",
+    "Asia/Chungking": "Asia/Chongqing",
+    "Asia/Ulan_Bator": "Asia/Ulaanbaatar",
+    "Asia/Thimbu": "Asia/Thimphu",
+    "Asia/Dacca": "Asia/Dhaka",
+    "Europe/Kiev": "Europe/Kyiv",
+    "Europe/Uzhgorod": "Europe/Kyiv",
+    "Europe/Zaporozhye": "Europe/Kyiv",
+    "America/Godthab": "America/Nuuk",
+    "Pacific/Ponape": "Pacific/Pohnpei",
+    "Pacific/Truk": "Pacific/Chuuk",
+    "Pacific/Enderbury": "Pacific/Kanton",
+}
+
+
+def _canonical_tz(name: str) -> str:
+    return _TZ_ALIAS.get(name, name)
+
+
 def same_timezone(a: str, b: str) -> bool:
     """True when two IANA names are the same zone (Chrome reports Asia/Saigon
     for Asia/Ho_Chi_Minh: ICU keeps the older canonical names)."""
+    a, b = _canonical_tz(a), _canonical_tz(b)
     if a == b:
         return True
     from datetime import datetime, timezone

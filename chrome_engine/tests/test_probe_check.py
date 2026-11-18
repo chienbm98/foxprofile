@@ -172,6 +172,27 @@ def test_same_timezone(a, b, same):
     assert probe.same_timezone(a, b) is same
 
 
+def test_same_timezone_when_legacy_name_missing(monkeypatch):
+    """Newer Linux tz databases drop legacy names like Asia/Saigon, so
+    ZoneInfo(<legacy>) raises there. The alias canonicalisation must still
+    report the zones as equal without ever constructing the legacy name."""
+    import zoneinfo
+
+    real = zoneinfo.ZoneInfo
+    dropped = {"Asia/Saigon", "Asia/Calcutta", "Europe/Kiev"}
+
+    def fake_zoneinfo(name, *args, **kwargs):
+        if name in dropped:
+            raise zoneinfo.ZoneInfoNotFoundError(name)
+        return real(name, *args, **kwargs)
+
+    monkeypatch.setattr(zoneinfo, "ZoneInfo", fake_zoneinfo)
+    assert probe.same_timezone("Asia/Saigon", "Asia/Ho_Chi_Minh") is True
+    assert probe.same_timezone("Asia/Calcutta", "Asia/Kolkata") is True
+    assert probe.same_timezone("Europe/Kiev", "Europe/Kyiv") is True
+    assert probe.same_timezone("Not/AZone", "UTC") is False
+
+
 @pytest.mark.parametrize(
     ("renderer", "platform", "ok"),
     [
