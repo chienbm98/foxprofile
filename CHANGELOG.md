@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-11-25
+
 ### Thêm
 - App desktop và web panel có thêm link "Buy me a coffee" ở cuối thanh bên cùng dòng phiên bản, bản quyền và giấy phép (bấm vào mở trang GitHub). Đây chỉ là link, không tải gì từ mạng cho tới khi người dùng bấm. Khi khởi động, server mode và app desktop in thêm một dòng link ủng hộ.
 
@@ -78,7 +80,9 @@
 
 Phát hành đầu tiên của FoxProfile: vân tay cố định theo profile, proxy riêng, xuất/nhập cookie (JSON và Netscape), REST API, giao diện tiếng Việt/tiếng Anh.
 
-[Unreleased]: https://github.com/chienbm98/foxprofile/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/chienbm98/foxprofile/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/chienbm98/foxprofile/compare/v2.4.1...v2.5.0
+[2.4.1]: https://github.com/chienbm98/foxprofile/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/chienbm98/foxprofile/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/chienbm98/foxprofile/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/chienbm98/foxprofile/compare/v2.2.0...v2.3.0
