@@ -38,6 +38,7 @@ def main() -> None:
 
     from src.api.app import create_app
     from src.api.auth import check_bind_safety
+    from src.core.about import SUPPORT_URL
     from src.core.config import API_HOST, API_PORT, API_TOKEN
     from src.core.container import Container
     from src.core.logging import get_logger
@@ -51,6 +52,7 @@ def main() -> None:
     logger = get_logger("server")
     logger.info("FoxProfile server on http://%s:%s (panel at /)", host, port)
     print(f"FoxProfile panel: http://{host}:{port}/   API docs: http://{host}:{port}/docs")
+    print(f"Like FoxProfile? Support it: {SUPPORT_URL}")
     try:
         uvicorn.run(app, host=host, port=port, log_level="warning")
     finally:

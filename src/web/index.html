@@ -101,6 +101,8 @@ input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(-
 .rail-foot { display: flex; flex-direction: column; gap: 8px; }
 .rail-link { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 7px; border: 0; background: transparent; color: var(--cover-ink); text-decoration: none; cursor: pointer; font-weight: 500; }
 .rail-link:hover { background: var(--cover-deep); }
+.rail-copy { font-family: var(--data); font-size: 11px; color: var(--cover-muted); text-align: center; text-decoration: none; }
+.rail-copy:hover { color: var(--cover-ink); text-decoration: underline; }
 .seg { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 8px; background: var(--cover-deep); }
 .seg button { height: 30px; border: 0; border-radius: 6px; background: transparent; color: var(--cover-muted); cursor: pointer; font-size: 13px; font-weight: 500; }
 .seg button.active { background: var(--cover); color: var(--cover-ink); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
@@ -301,6 +303,7 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
   <symbol id="i-reload" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6l2.5 2.5M20.5 3.5v5h-5"/></symbol>
   <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="2.5"/><path d="M12 9V5.5M9 14h.01M15 14h.01"/><circle cx="12" cy="4.5" r="1.5"/></symbol>
   <symbol id="i-docs" viewBox="0 0 24 24"><path d="M14 3h7v7M10 14 21 3M19 13.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5.5"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M17 8h1.5a3 3 0 0 1 0 6H17M3 8h14v6a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6ZM7 2.5v2.5M11 2.5v2.5M15 2.5v2.5"/></symbol>
   <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5.5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2H9M16 17l5-5-5-5M21 12H9"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4.2 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0ZM12 9.5v4M12 17h.01"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
@@ -340,8 +343,10 @@ code { font-family: var(--data); font-size: 12.5px; background: var(--paper-sunk
     <div class="rail-foot">
       <button class="rail-link" id="mcp-btn"><svg class="i"><use href="#i-bot"/></svg><span data-t="mcp_button"></span></button>
       <a class="rail-link" href="/docs" target="_blank" rel="noopener"><svg class="i"><use href="#i-docs"/></svg><span data-t="api_docs"></span></a>
+      <a class="rail-link" href="https://buymeacoffee.com/chienbm98" target="_blank" rel="noopener" title="buymeacoffee.com/chienbm98"><svg class="i"><use href="#i-coffee"/></svg><span data-t="support_button"></span></a>
       <button class="rail-link hidden" id="logout-btn"><svg class="i"><use href="#i-logout"/></svg><span data-t="logout"></span></button>
       <div class="seg" role="group" aria-label="Language"><button data-lang="vi">Tiếng Việt</button><button data-lang="en">English</button></div>
+      <a class="rail-copy" id="rail-copy" href="https://github.com/chienbm98/foxprofile" target="_blank" rel="noopener" title="github.com/chienbm98/foxprofile">© 2026 chienbm98 · MIT</a>
     </div>
   </aside>
   <main>
@@ -409,7 +414,7 @@ const I18N = {
     confirm_reset: "Tạo fingerprint mới cho “{name}”? Trang web sẽ thấy đây là một máy khác.", close: "Đóng",
     launching: "Đang mở {name}...", started: "Đã mở {name}", stopped: "Đã dừng {name}", created: "Đã tạo {name}", saved: "Đã lưu",
     deleted: "Đã xoá {name}", deleted_n: "Đã xoá {n} profile", exported: "Đã xuất {n} cookie", imported: "Đã nhập {n} cookie", fp_reset: "Đã tạo fingerprint mới",
-    mcp_button: "Kết nối AI (MCP)", mcp_title: "Kết nối AI agent qua MCP",
+    mcp_button: "Kết nối AI (MCP)", support_button: "Mời mình ly cà phê", mcp_title: "Kết nối AI agent qua MCP",
     mcp_intro: "Cho Claude, Cursor hay VS Code tự quản lý profile và lướt web giúp bạn: mở trang, đọc nội dung, click, gõ và chụp màn hình.",
     mcp_endpoint: "Địa chỉ MCP", mcp_pick: "1. Chọn ứng dụng AI bạn dùng", mcp_paste: "2. Dán vào: {where}",
     mcp_copy: "Sao chép", mcp_copied: "Đã sao chép", mcp_insert_token: "Chèn token đang đăng nhập vào cấu hình",
@@ -460,7 +465,7 @@ const I18N = {
     confirm_reset: "Create a new fingerprint for “{name}”? Sites will see a different machine.", close: "Close",
     launching: "Launching {name}...", started: "Started {name}", stopped: "Stopped {name}", created: "Created {name}", saved: "Saved",
     deleted: "Deleted {name}", deleted_n: "Deleted {n} profiles", exported: "Exported {n} cookies", imported: "Imported {n} cookies", fp_reset: "New fingerprint created",
-    mcp_button: "Connect AI (MCP)", mcp_title: "Connect an AI agent over MCP",
+    mcp_button: "Connect AI (MCP)", support_button: "Buy me a coffee", mcp_title: "Connect an AI agent over MCP",
     mcp_intro: "Let Claude, Cursor or VS Code manage profiles and browse for you: open pages, read them, click, type and take screenshots.",
     mcp_endpoint: "MCP endpoint", mcp_pick: "1. Pick your AI app", mcp_paste: "2. Paste into: {where}",
     mcp_copy: "Copy", mcp_copied: "Copied", mcp_insert_token: "Insert the token you are logged in with",
@@ -1129,6 +1134,7 @@ document.addEventListener("keydown", (e) => {
     const res = await fetch("/api/v1/info");
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     const info = await res.json();
+    if (info.version) $("rail-copy").textContent = `v${info.version} · © 2026 chienbm98 · MIT`;
     if (info.auth_required && !token) return showLogin();
     try { await showApp(info.auth_required); } catch { showLogin(); }
   } catch (e) {
