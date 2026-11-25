@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Thêm
+- App desktop và web panel có thêm link "Buy me a coffee" ở cuối thanh bên cùng dòng phiên bản, bản quyền và giấy phép (bấm vào mở trang GitHub). Đây chỉ là link, không tải gì từ mạng cho tới khi người dùng bấm. Khi khởi động, server mode và app desktop in thêm một dòng link ủng hộ.
+
 ## [2.4.1] - 2026-11-18
 
 ### Sửa

@@ -2,6 +2,8 @@ from collections.abc import Callable
 
 import flet as ft
 
+from ...api.app import VERSION
+from ...core.about import COPYRIGHT_HOLDER, COPYRIGHT_YEAR, REPO_URL, SUPPORT_URL
 from ...core.strings import get_string
 from ..theme.colors import COLORS, FONT_BOLD, FONT_DATA, FONT_MEDIUM, FONT_SEMIBOLD
 from ..theme.styles import ACCENT_STYLE, RAIL_STYLE
@@ -174,10 +176,52 @@ def build_sidebar(
                     style=RAIL_STYLE,
                     on_click=on_mcp,
                 ),
+                _support_link(),
                 ft.Container(height=8),
                 _language_switch(language, on_language),
+                ft.Container(height=8),
+                _copyright_line(),
             ],
         ),
+    )
+
+
+def _support_link() -> ft.Container:
+    """Opens the Buy Me a Coffee page in the user's browser; nothing is loaded until clicked."""
+    return ft.Container(
+        height=32,
+        margin=ft.Margin.only(top=4),
+        border_radius=7,
+        padding=ft.Padding.symmetric(horizontal=10),
+        ink=True,
+        url=SUPPORT_URL,
+        tooltip=SUPPORT_URL,
+        content=ft.Row(
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(ft.Icons.COFFEE_OUTLINED, size=18, color=COLORS["cover_ink"]),
+                ft.Text(
+                    get_string("support_button"),
+                    size=13.5,
+                    font_family=FONT_MEDIUM,
+                    color=COLORS["cover_ink"],
+                ),
+            ],
+        ),
+    )
+
+
+def _copyright_line() -> ft.Container:
+    """Version, copyright and licence; links to the repository."""
+    text = get_string(
+        "copyright_line", version=VERSION, year=COPYRIGHT_YEAR, holder=COPYRIGHT_HOLDER
+    )
+    return ft.Container(
+        alignment=ft.Alignment(0, 0),
+        url=REPO_URL,
+        tooltip=REPO_URL,
+        content=ft.Text(text, size=10, font_family=FONT_DATA, color=COLORS["cover_muted"]),
     )
 
 

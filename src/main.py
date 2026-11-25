@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.api.app import create_app
 from src.api.auth import check_bind_safety
 from src.api.server import APIServer
+from src.core.about import SUPPORT_URL
 from src.core.config import API_HOST, API_PORT, API_TOKEN
 from src.core.container import Container
 from src.core.logging import get_logger
@@ -22,6 +23,7 @@ def main() -> None:
     api_server = APIServer(fastapi_app)
     api_server.start()
     logger.info("API available at http://%s:%s/api/v1", API_HOST, API_PORT)
+    logger.info("Like FoxProfile? Support it: %s", SUPPORT_URL)
 
     try:
         gui = App(container)
